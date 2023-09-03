@@ -1,5 +1,6 @@
 from datetime import datetime
 import os
+import requests
 import pandas as pd
 
 def format_date(date_str):
@@ -27,8 +28,8 @@ for file in files:
     df = df[df['dd'] < 30] # filter dusk and dawn maximum 30%
     df = df.drop(['ac', 'ab'], axis=1)
     df['UT'] = df['UT'].apply(format_date)
-    if not df[df['cloudy'] > 50].empty:
-        continue
+    # if not df[df['cloudy'] > 50].empty:
+    #     continue
     df_list.append(df)
 
 # Concatenate all dataframes
@@ -36,3 +37,9 @@ big_df = pd.concat(df_list, ignore_index=True)
 
 # Write the big dataframe to a new CSV file
 big_df.to_csv('big_file.csv', index=False)
+
+# for a in big_df['UT'].apply(lambda x: str(x)[:6]).unique():
+#     date = str(a)
+#     url = f'https://space.fmi.fi/image/www/data_download_month.php?random=0.9336604565135802&source=image_web_page&starttime={date}&sample_rate=60&compress=undefined&stations=all'
+#     data = requests.get(url)
+#     print(data.json()['iaga_tar']['url'])
