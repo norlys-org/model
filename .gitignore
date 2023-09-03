@@ -1,3 +1,5 @@
 data/imagery
 data/tromsoe_csv
 data/iaga
+data/magnetograms
+data/allsky-state.csv
