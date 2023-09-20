@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error
-import plotly.graph_objects as go
+import plotly.express as px
 from scipy.interpolate import griddata
 from suncalc import get_position, get_times
 import math
@@ -60,6 +60,7 @@ def read_and_format(station):
 
     df.replace([np.inf, -np.inf], np.nan, inplace=True)
     df.dropna(inplace=True)
+    df = df.drop('StationId', axis=1)
 
     df['UT'] = pd.to_datetime(df['UT'])
     df.set_index('UT', inplace=True)
@@ -174,8 +175,8 @@ def get_substracted_data(station):
     df = read_and_format(station)
     baseline = compute_long_term_baseline(station, '2018-01-01', '2019-01-01', df)
 
-    data_hourly = df['2018-01-01':'2019-01-01']
-    baseline_hourly = baseline['2018-01-01':'2019-01-01']
+    data_hourly = df['2019-01-01':'2020-01-01']
+    baseline_hourly = baseline['2019-01-01':'2020-01-01']
     return data_hourly - baseline_hourly
 
 def read_allsky_state():
@@ -185,7 +186,7 @@ def read_allsky_state():
 
     def determine_class(row):
         classes = ['nodata', 'arc', 'discrete', 'diffuse', 'clear']
-        if row['cloudy'] > 70 or  row['dd'] > 70:
+        if row['cloudy'] > 70 or row['dd'] > 70:
             return classes.index('nodata')
 
         for col in classes[1:]:
@@ -194,7 +195,7 @@ def read_allsky_state():
         return classes.index('clear')
     
     def class_h(row):
-        return determine_class(row) * 10
+        return determine_class(row)
 
     df['class'] = df.apply(class_h, axis=1)
     return df
@@ -202,73 +203,90 @@ def read_allsky_state():
 df = get_substracted_data('TRO')
 df_class = read_allsky_state()
 df = df.merge(df_class[['UT', 'class']], left_on='UT', right_on='UT', how='left')
+df['class'].fillna(0, inplace=True)
+
+# df.set_index('UT', inplace=True)
+
+# df['is_daytime'] = df.apply(lambda row: is_daytime(h_med_threshold_values['TRO']['lat'], h_med_threshold_values['TRO']['lon'], row.UT), axis=1)
+# df.loc[df['is_daytime'], ['X', 'Y', 'Z']] = 0
+# df.dropna(inplace=True)
+
+# N = 15
+# df['train'] = None
+# for i in range(len(df)):
+#     try:
+#         class_val = df.loc[i, 'class']
+#         if class_val is None:
+#             # or math.isnan(class_val):
+#             continue
+#     except KeyError:
+#         continue
+
+#     values = df.loc[i-N:i, 'X']
+#     # df.at[i, 'train'] = values
+#     df.at[i, 'train'] = values.sum()
+
+# pruned_df = df.dropna(subset=['train', 'class'])
+# X, y = df['X'].values, df['class'].values
+# pruned_df['train_viz'] = pruned_df['train'].apply(lambda x: x.sum() if not x.empty else None)
 df.set_index('UT', inplace=True)
+df = df.dropna(subset=['X', 'Y', 'Z'])
 
-data = load_breast_cancer()
-X = data.data
-y= data.target
-print(X)
-print(y)
+# .sample(frac=0.2, random_state=42)
 
-X_train, X_test, y_train, y_test = train_test_split(
-    # np.concatenate([df['X'].values, df['Y'].values, df['Z'].values]),
-    df['X'].values,
-    df['class'].values,
-    test_size=.5,
-    random_state=123,
-)
+# X_train, X_test, y_train, y_test = train_test_split(
+#     # np.concatenate([df['X'].values, df['Y'].values, df['Z'].values]),
+#     X,
+#     y,
+#     test_size=.2,
+#     random_state=64,
+# )
 
-clf = LazyClassifier(verbose=0, ignore_warnings=True, custom_metric=None)
-models,predictions = clf.fit(X_train, X_test, y_train, y_test)
+# clf = LazyClassifier(verbose=0, ignore_warnings=True, custom_metric=None)
+# models,predictions = clf.fit(X_train, X_test, y_train, y_test)
+# # base_clf = GaussianNB()
+# # base_clf.fit(X_train, y_train)
+# # calibrated_clf = CalibratedClassifierCV(base_clf, cv="prefit")
+# # calibrated_clf.fit(X_calib, y_calib)
 
-print(models)
+# print(models)
 
 # df.to_csv('test-model.csv')
-data_m = df['2018-11-06 00:00:00':'2018-11-08 23:00:00'].interpolate(limit_direction='both')
-data_mean = data_m.resample('7T').mean()
-data_ewm = data_m.ewm(alpha=0.01, adjust=False).mean()
-data_ewm_m = data_mean.ewm(alpha=0.05, adjust=False).mean()
+# data_m = df['2018-11-06 00:00:00':'2018-11-08 23:00:00'].interpolate(limit_direction='both')
+# data_mean = data_m.resample('7T').mean()
+# data_ewm = data_m.ewm(alpha=0.01, adjust=False).mean()
+# data_ewm_m = data_mean.ewm(alpha=0.05, adjust=False).mean()
 
+# df['X'] = df['X'].interpolate()
+
+# df = df['2018-10-01 00:00:00':'2018-11-08 23:00:00']
 # Create traces for the original data and the median data
-trace_X_data = go.Scatter(
-    x=data_m.index,
-    y=data_m['X'],
-    mode='lines',
-    name='X'
+# trace_X_data = px.scatter(
+#     df,
+#     x=df.index,
+#     # y=pruned_df['train'].apply(lambda x: x[14] if x is not None else None),
+#     y="X",
+#     color="class"
+# )
+# trace_X_data.show()
+
+df['timestamp'] = df.index.strftime('%Y-%m-%dT%H:%M:%S.000Z')
+df = df.melt(id_vars='timestamp', var_name='series', value_name='value')
+df['label'] = None
+# df.set_index('timestamp', inplace=True)
+df[['series', 'timestamp', 'value', 'label']].to_csv('to-label.csv', index=False)
+
+trace_X_data = px.scatter(
+    df,
+    x=df.index,
+    y="X",
+    color="class"
 )
+trace_X_data.show()
 
-trace_X_ewm = go.Scatter(
-    x=data_ewm.index,
-    y=data_ewm['X'],
-    mode='lines',
-    name='X EWM'
-)
-
-trace_X_mean = go.Scatter(
-    x=data_mean.index,
-    y=data_mean['X'],
-    mode='lines',
-    name='X mean'
-)
-
-trace_X_mean_ewm = go.Scatter(
-    x=data_ewm_m.index,
-    y=data_ewm_m['X'],
-    mode='lines',
-    name='X EWM mean'
-)
-
-layout = go.Layout(
-    title="X Component over Time (2020-2021)",
-    xaxis_title="Time",
-    yaxis_title="X"
-)
-
-fig = go.Figure(data=[
-    trace_X_data,
-    trace_X_ewm,
-    trace_X_mean,
-    trace_X_mean_ewm,
-], layout=layout)
-
-fig.show()
+# Auroral oval reconstruction model 
+# Model for Graphical Reconstruction of Aurora Oval
+# Machine learning model for representation of aurora over northern europe
+# MORANE
+# MAGnetometriske Nordlys Estimater NOR-LYS
+# Northern lights Oval Representation using Data for Live Information over Scandinavi 
