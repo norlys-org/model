@@ -1,6 +1,9 @@
 import pandas as pd
 
-og_df = pd.read_csv('to-label-labeled.csv')
+buf = []
+for year in ['2018', '2020']:
+	buf.append(pd.read_csv(f'to-label-{year}-labeled.csv'))
+og_df = pd.concat(buf)
 
 # Assuming you want to aggregate the values for duplicate timestamps
 # If you have a specific aggregation function, replace 'mean' with that function

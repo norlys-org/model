@@ -173,10 +173,10 @@ def is_daytime(latitude, longitude, timestamp):
 
 def get_substracted_data(station):
     df = read_and_format(station)
-    baseline = compute_long_term_baseline(station, '2018-01-01', '2019-01-01', df)
+    baseline = compute_long_term_baseline(station, '2020-01-01', '2021-01-01', df)
 
-    data_hourly = df['2019-01-01':'2020-01-01']
-    baseline_hourly = baseline['2019-01-01':'2020-01-01']
+    data_hourly = df['2020-01-01':'2021-01-01']
+    baseline_hourly = baseline['2020-01-01':'2021-01-01']
     return data_hourly - baseline_hourly
 
 def read_allsky_state():
@@ -275,14 +275,6 @@ df = df.melt(id_vars='timestamp', var_name='series', value_name='value')
 df['label'] = None
 # df.set_index('timestamp', inplace=True)
 df[['series', 'timestamp', 'value', 'label']].to_csv('to-label.csv', index=False)
-
-trace_X_data = px.scatter(
-    df,
-    x=df.index,
-    y="X",
-    color="class"
-)
-trace_X_data.show()
 
 # Auroral oval reconstruction model 
 # Model for Graphical Reconstruction of Aurora Oval

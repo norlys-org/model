@@ -3,3 +3,5 @@ data/tromsoe_csv
 data/iaga
 data/magnetograms
 data/allsky-state.csv
+to-label-*.csv
+*.joblib
