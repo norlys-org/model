@@ -6,28 +6,22 @@ from sklearn.model_selection import train_test_split
 from numpy.lib.stride_tricks import sliding_window_view
 from datetime import timedelta
 from sklearn.ensemble import ExtraTreesClassifier
+from sklearn.preprocessing import LabelEncoder
 from sklearn.metrics import accuracy_score
 from joblib import dump, load
+import plotly.express as px
 
 df = pd.read_csv('train.csv')
+sw_df = pd.read_csv('sw.csv')
+df = pd.merge(df, sw_df, on='timestamp')
 df['timestamp'] = pd.to_datetime(df['timestamp'])
-
-# import plotly.express as px
-# trace_X_data = px.scatter(
-#     df,
-#     x='timestamp',
-#     # y=pruned_df['train'].apply(lambda x: x[14] if x is not None else None),
-#     y="X",
-#     color="label"
-# )
-# trace_X_data.show()
 
 def filter_events(df):
 	"""
 	Filter the dataset to include only ±8h before and after each event to avoid overtraining
 	on label 'clear'
 	"""
-	hours = 3
+	hours = 2
 	event_df = df.copy()
 	event_df['label'] = event_df['label'].replace(['explosion', 'build', 'recovery'], 'event')
 
@@ -48,11 +42,13 @@ def filter_events(df):
 	return pd.concat(result).drop_duplicates()
 
 df = filter_events(df)
-# df = df.head(25000)
+df = df.head(2000)
 
 # Create rolling windows for X, Y and Z and happen N columns for each component
 window_size = 45
-for component in ['X', 'Y', 'Z']:
+# components = ['X', 'Y', 'Z', 'Bz', 'Bt', 'Density', 'Speed', 'Temperature']
+components = ['X', 'Y', 'Z']
+for component in components:
 	columns = []
 	for i in range(window_size):
 		columns.append(f'{component}{i}')
@@ -63,22 +59,28 @@ for component in ['X', 'Y', 'Z']:
 
 		df.loc[window.index.max(), columns] = window.to_list()
 
-df = df.drop(['X', 'Y', 'Z'], axis=1)
-df.dropna(inplace=True)
+df = df.drop(components, axis=1)
+df = df.drop(['Bz', 'Bt', 'Density', 'Speed', 'Temperature'], axis=1)
+df = df.drop(['Bx', 'By'], axis=1)
 
 def percentage_of_day(dt):
 	"""
 	Express time of the day as a percentage (100 = 24 hours)
 	"""
-    total_seconds_in_day = 24 * 60 * 60
-    seconds_since_midnight = (dt - dt.replace(hour=0, minute=0, second=0, microsecond=0)).total_seconds()
-    return seconds_since_midnight / total_seconds_in_day
+	total_seconds_in_day = 24 * 60 * 60
+	seconds_since_midnight = (dt - dt.replace(hour=0, minute=0, second=0, microsecond=0)).total_seconds()
+	return seconds_since_midnight / total_seconds_in_day
 
 df['time'] = df.index.to_series().apply(percentage_of_day)
+df['label_forecast_5mn'] = df['label'].shift(15)
+# df['label_forecast_5mn'] = LabelEncoder().fit_transform(df['label_forecast_5mn'])
+df = df.drop(['label'], axis=1)
+df.dropna(inplace=True)
 
-y = df.pop('label').to_numpy()
+# y = df.pop('label').to_numpy()
+y = df.pop('label_forecast_5mn').to_numpy()
 X = df
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=.2, random_state=42, stratify=y)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=.3, random_state=42, stratify=y)
 
 clf = ExtraTreesClassifier(n_estimators=100, random_state=42)
 clf.fit(X_train, y_train)
@@ -86,7 +88,7 @@ y_pred = clf.predict(X_test)
 accuracy = accuracy_score(y_test, y_pred)
 print(accuracy)
 
-dump(clf, 'model.joblib') 
+# dump(clf, 'model.joblib') 
 
 # clf = LazyClassifier(verbose=0, ignore_warnings=True)
 # models, predictions = clf.fit(X_train, X_test, y_train, y_test)

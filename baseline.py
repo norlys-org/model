@@ -275,10 +275,3 @@ df = df.melt(id_vars='timestamp', var_name='series', value_name='value')
 df['label'] = None
 # df.set_index('timestamp', inplace=True)
 df[['series', 'timestamp', 'value', 'label']].to_csv('to-label.csv', index=False)
-
-# Auroral oval reconstruction model 
-# Model for Graphical Reconstruction of Aurora Oval
-# Machine learning model for representation of aurora over northern europe
-# MORANE
-# MAGnetometriske Nordlys Estimater NOR-LYS
-# Northern lights Oval Representation using Data for Live Information over Scandinavi 

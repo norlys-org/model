@@ -16,4 +16,6 @@ df = df.drop_duplicates(subset='timestamp', keep='first')
 df = df.drop('class', axis=1)
 df['label'] = df['label'].fillna('clear')
 
+df['timestamp'] = pd.to_datetime(df['timestamp'])
+df['timestamp'] = df['timestamp'].dt.tz_localize(None)
 df.to_csv('train.csv', index=False)

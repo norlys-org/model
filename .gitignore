@@ -5,3 +5,4 @@ data/magnetograms
 data/allsky-state.csv
 to-label-*.csv
 *.joblib
+data/solarwind
