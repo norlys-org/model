@@ -9,9 +9,9 @@ def read_training_dataset(solar_wind=False):
 	if `solar_wind` is set to true, the solar wind dataset from DSCOVR will be merged.
 	"""
 
-	df = pd.read_csv('train.csv')
+	df = pd.read_csv(config.TRAIN_PATH)
 	if solar_wind:
-		sw_df = pd.read_csv('sw.csv')
+		sw_df = pd.read_csv(config.SOLAR_WIND_PATH)
 		df = pd.merge(df, sw_df, on='timestamp')
 	df['timestamp'] = pd.to_datetime(df['timestamp'])
 	return df
