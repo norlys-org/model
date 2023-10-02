@@ -19,3 +19,5 @@ def train_0m_classifier(log=True):
 	y_pred = clf.predict(X_test)
 	accuracy = accuracy_score(y_test, y_pred)
 	logging.info(f'Trained ExtraTreesClassifier 0m, accurary: {accuracy * 100}%')
+
+train_0m_classifier()
