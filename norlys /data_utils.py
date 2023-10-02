@@ -4,6 +4,16 @@ from tqdm import tqdm
 import config
 from sklearn.model_selection import train_test_split
 
+def get_training_data(y_column, rw_components=['X', 'Y', 'Z'], solar_wind=False):
+	"""
+	Return the fully ready data for training using all other formatting functions.
+	"""
+
+	df = read_training_dataset(solar_wind=solar_wind)
+	df = filter_events(df)
+	df = get_rolling_window(df, components=rw_components)
+	return training_format(df, y_column=y_column)
+
 def read_training_dataset(solar_wind=False):
 	"""
 	Read the training datasets and returning a pandas DataFrame.
@@ -63,12 +73,13 @@ def get_rolling_window(df, components=['X', 'Y', 'Z']):
 	
 	return df.drop(components, axis=1)
 
-def get_train_data(df, y_column):
+def training_format(df, y_column):
 	"""
 	Split the given DataFrame into X and y for testing and training the models.
 	"""
 
 	df.dropna(inplace=True)
+	df['time'] = df.index.to_series() # Add time as a feature in the dataset
 
 	y = df.pop(y_column).to_numpy()
 	X = df
