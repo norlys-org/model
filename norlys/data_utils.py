@@ -4,13 +4,13 @@ from tqdm import tqdm
 import config
 from sklearn.model_selection import train_test_split
 
-def get_training_data(y_column, rw_components=['X', 'Y', 'Z'], solar_wind=False):
+def get_training_data(y_column, rw_components=[], solar_wind=False):
 	return get_data(y_column, rw_components=rw_components, solar_wind=solar_wind)
 
-def get_formatted_data(rw_components=['X', 'Y', 'Z'], solar_wind=False):
+def get_formatted_data(rw_components=[], solar_wind=False):
 	return get_data('', rw_components=rw_components, solar_wind=solar_wind, model=False)
 
-def get_data(y_column, rw_components=['X', 'Y', 'Z'], solar_wind=False, model=True):
+def get_data(y_column, rw_components=[], solar_wind=False, model=True):
 	"""
 	Return the fully ready data for training using all other formatting functions.
 	if model is set to True the data will be split into X and Y and test + train.
@@ -69,9 +69,9 @@ def get_rolling_window(df, components=[]):
 	Create rolling windows for X, Y and Z and happen N columns for each component
 	"""
 
-	components = components.append(['X', 'Y', 'Z'])
+	components += ['X', 'Y', 'Z']
 	# Do not write 'label' into the components to not drop it later
-	for component in components.append('label'):
+	for component in components + ['label']:
 		columns = []
 		for i in range(config.ROLLING_WINDOW_SIZE):
 			columns.append(f'{component}{i}')
