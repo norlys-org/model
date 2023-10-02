@@ -2,6 +2,7 @@ import pandas as pd
 from datetime import timedelta
 from tqdm import tqdm
 import config
+from sklearn.model_selection import train_test_split
 
 def read_training_dataset(solar_wind=False):
 	"""
@@ -61,3 +62,14 @@ def get_rolling_window(df, components=['X', 'Y', 'Z']):
 			df.loc[window.index.max(), columns] = window.to_list()
 	
 	return df.drop(components, axis=1)
+
+def get_train_data(df, y_column):
+	"""
+	Split the given DataFrame into X and y for testing and training the models.
+	"""
+
+	df.dropna(inplace=True)
+
+	y = df.pop(y_column).to_numpy()
+	X = df
+	return train_test_split(X, y, test_size=.3, random_state=42, stratify=y)
