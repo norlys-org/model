@@ -2,6 +2,7 @@ import data_utils as dutils
 from sklearn.ensemble import ExtraTreesClassifier
 from sklearn.metrics import accuracy_score
 import logging
+import joblib
 
 def train_0m_classifier(log=True):
 	"""
@@ -19,5 +20,8 @@ def train_0m_classifier(log=True):
 	y_pred = clf.predict(X_test)
 	accuracy = accuracy_score(y_test, y_pred)
 	logging.info(f'Trained ExtraTreesClassifier 0m, accurary: {accuracy * 100}%')
+
+	logging.info('Saving model to `0m-model.joblib`')
+	joblib.dump(clf, '0m-model.joblib')
 
 train_0m_classifier()

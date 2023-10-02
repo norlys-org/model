@@ -2,3 +2,4 @@ pre-commit
 pandas
 tqdm
 scikit-learn
+joblib
