@@ -64,12 +64,14 @@ def filter_events(df):
 		result.append(df.loc[row['start_time']:row['end_time']])
 	return pd.concat(result).drop_duplicates()
 
-def get_rolling_window(df, components=['X', 'Y', 'Z']):
+def get_rolling_window(df, components=[]):
 	"""
 	Create rolling windows for X, Y and Z and happen N columns for each component
 	"""
 
-	for component in components:
+	components = components.append(['X', 'Y', 'Z'])
+	# Do not write 'label' into the components to not drop it later
+	for component in components.append('label'):
 		columns = []
 		for i in range(config.ROLLING_WINDOW_SIZE):
 			columns.append(f'{component}{i}')
