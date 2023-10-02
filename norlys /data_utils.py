@@ -1,5 +1,6 @@
 import pandas as pd
 from datetime import timedelta
+from tqdm import tqdm
 import config
 
 def read_training_dataset(solar_wind=False):
@@ -42,3 +43,21 @@ def filter_events(df):
 	for _, row in event_info.loc['event'].iterrows():
 		result.append(df.loc[row['start_time']:row['end_time']])
 	return pd.concat(result).drop_duplicates()
+
+def get_rolling_window(df, components=['X', 'Y', 'Z']):
+	"""
+	Create rolling windows for X, Y and Z and happen N columns for each component
+	"""
+
+	for component in components:
+		columns = []
+		for i in range(config.ROLLING_WINDOW_SIZE):
+			columns.append(f'{component}{i}')
+
+		for _, window in tqdm(enumerate(df[component].rolling(window=config.ROLLING_WINDOW_SIZE))):
+			if len(window) != config.ROLLING_WINDOW_SIZE: 
+				continue
+
+			df.loc[window.index.max(), columns] = window.to_list()
+	
+	return df.drop(components, axis=1)
