@@ -1,4 +1,4 @@
-import data_utils as dutils
+from norlys.data_utils import get_training_data
 from sklearn.ensemble import ExtraTreesClassifier
 from sklearn.metrics import accuracy_score
 import logging
@@ -10,7 +10,7 @@ def train_0m_classifier(log=True):
 	"""
 
 	logging.info('Gathering training data...')
-	X_train, X_test, y_train, y_test = dutils.get_training_data('label')
+	X_train, X_test, y_train, y_test = get_training_data('label')
 
 	logging.info('Training classifier...')
 	clf = ExtraTreesClassifier(n_estimators=100, random_state=42)
@@ -23,5 +23,3 @@ def train_0m_classifier(log=True):
 
 	logging.info('Saving model to `0m-model.joblib`')
 	joblib.dump(clf, '0m-model.joblib')
-
-train_0m_classifier()
