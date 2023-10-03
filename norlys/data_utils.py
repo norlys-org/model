@@ -15,7 +15,7 @@ def get_clipped_data():
 	df = filter_events(df)
 	return df.head(572) # Testing arbitrary because build period ends after 486th element
 
-def get_data(y_column, rw_components=[], solar_wind=False, model=True, clip=False):
+def get_data(y_column, rw_components=[], solar_wind=False, model=True):
 	"""
 	Return the fully ready data for training using all other formatting functions.
 	if model is set to True the data will be split into X and Y and test + train.
@@ -23,8 +23,7 @@ def get_data(y_column, rw_components=[], solar_wind=False, model=True, clip=Fals
 
 	df = read_training_dataset(solar_wind=solar_wind)
 	df = filter_events(df)
-	if clip:
-		df = df.head(2000)
+	# df = df.head(2000)
 	df = get_rolling_window(df, components=rw_components)
 	if not model:
 		return df
@@ -78,12 +77,15 @@ def get_rolling_window(df, components=[]):
 
 	components += ['X', 'Y', 'Z']
 	# Do not write 'label' into the components to not drop it later
-	for component in components + ['label']:
+	# for component in components + ['label']:
+	for component in components:
+		print(f'Rolling window: {component}')
 		columns = []
 		for i in range(config.ROLLING_WINDOW_SIZE):
 			columns.append(f'{component}{i}')
 
-		for _, window in tqdm(enumerate(df[component].rolling(window=config.ROLLING_WINDOW_SIZE))):
+		pbar = tqdm(enumerate(df[component].rolling(window=config.ROLLING_WINDOW_SIZE)))
+		for _, window in pbar:
 			if len(window) != config.ROLLING_WINDOW_SIZE: 
 				continue
 
@@ -91,13 +93,21 @@ def get_rolling_window(df, components=[]):
 	
 	return df.drop(components, axis=1)
 
+def percentage_of_day(dt):
+	"""
+	Express time of the day as a percentage (100 = 24 hours)
+	"""
+	total_seconds_in_day = 24 * 60 * 60
+	seconds_since_midnight = (dt - dt.replace(hour=0, minute=0, second=0, microsecond=0)).total_seconds()
+	return seconds_since_midnight / total_seconds_in_day
+
 def training_format(df, y_column):
 	"""
 	Split the given DataFrame into X and y for testing and training the models.
 	"""
 
 	df.dropna(inplace=True)
-	df['time'] = df.index.to_series() # Add time as a feature in the dataset
+	df['time'] = df.index.to_series().apply(percentage_of_day) # Add time as a feature in the dataset
 
 	y = df.pop(y_column).to_numpy()
 	X = df
