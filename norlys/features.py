@@ -28,7 +28,7 @@ def get_quantiles(df):
 		end_time=('timestamp', 'max'),
 		duration=('timestamp', lambda x: x.max() - x.min()),
 		deflection=('X', lambda x: x.max() - x.min()),
-		anomalies=('anomaly', lambda x: x.value_counts().sum())
+		anomalies=('anomaly', lambda x: x.value_counts().get(-1, 0))
 	)
 
 	print(event_info)
