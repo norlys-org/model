@@ -10,7 +10,12 @@ def get_training_data(y_column, rw_components=[], solar_wind=False):
 def get_formatted_data(rw_components=[], solar_wind=False):
 	return get_data('', rw_components=rw_components, solar_wind=solar_wind, model=False)
 
-def get_data(y_column, rw_components=[], solar_wind=False, model=True):
+def get_clipped_data():
+	df = read_training_dataset()
+	df = filter_events(df)
+	return df.head(572) # Testing arbitrary because build period ends after 486th element
+
+def get_data(y_column, rw_components=[], solar_wind=False, model=True, clip=False):
 	"""
 	Return the fully ready data for training using all other formatting functions.
 	if model is set to True the data will be split into X and Y and test + train.
@@ -18,6 +23,8 @@ def get_data(y_column, rw_components=[], solar_wind=False, model=True):
 
 	df = read_training_dataset(solar_wind=solar_wind)
 	df = filter_events(df)
+	if clip:
+		df = df.head(2000)
 	df = get_rolling_window(df, components=rw_components)
 	if not model:
 		return df
