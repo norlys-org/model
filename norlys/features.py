@@ -53,3 +53,6 @@ def deflection_score(embedding):
 			# Return the index to indicate a score, not a value
 			return i + 1
 	return 5
+
+def anomaly_score(embedding):
+	print(embedding)
