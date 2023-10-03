@@ -1,4 +1,4 @@
-from norlys.data_utils import get_formatted_data
+from norlys.data_utils import read_training_dataset
 
 # Features needed
 # - deflection score for explosion label, only if >= 5 data points. percentile of deflection for 50%, 60%, 70%, 80% and 90%
@@ -23,15 +23,33 @@ def get_deflection_quantiles(df):
 
 	return event_info.loc['explosion']['deflection'].quantile([0.5, 0.6, 0.7, 0.8, 0.9]).values
 
-historical_data = get_formatted_data()
+historical_data = read_training_dataset()
 deflection_quantiles = get_deflection_quantiles(historical_data)
 
 # TODO: modify embedding structure by adding labels into the rolling window 
 
 def deflection_score(embedding):
-	for i in range(len(q)):
-		quantile = q[i]
-		if val <= quantile:
+	"""
+	Calculate the deflection score of the given embedding for the last event. 
+	The last event must be an explosion, otherwise it will return None. 
+	The score is based on a scale of 1 to 5 each assigned to a percentile starting at 50% and increasing by 10% for each level.
+	"""
+
+	event_df = embedding.copy().reset_index()
+	event_identifier = (event_df['label'] != event_df['label'].shift()).cumsum()
+	event_info = event_df.groupby(['label', event_identifier]).agg(
+		duration=('timestamp', lambda x: x.max() - x.min()),
+		deflection=('X', lambda x: x.max() - x.min())
+	)	
+	last_event = event_info.xs(len(event_info), level=1)
+	last_event = last_event.reset_index()
+
+	if not (last_event['label'] == 'explosion').all():
+		return None
+	
+	for i in range(len(deflection_quantiles)):
+		quantile = deflection_quantiles[i]
+		if last_event['deflection'].item() <= quantile:
 			# Return the index to indicate a score, not a value
 			return i + 1
 	return 5
