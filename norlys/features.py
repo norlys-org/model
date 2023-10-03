@@ -1,4 +1,5 @@
 from norlys.data_utils import read_training_dataset
+from sklearn.ensemble import IsolationForest
 
 # Features needed
 # - deflection score for explosion label, only if >= 5 data points. percentile of deflection for 50%, 60%, 70%, 80% and 90%
@@ -11,20 +12,31 @@ from norlys.data_utils import read_training_dataset
 # - length of build-up if one occured in the past 45 minutes
 # - position of arc depending on the derivative of Z
 
-def get_deflection_quantiles(df):
+def get_quantiles(df):
+	X = df[['X']].values 
+	model = IsolationForest(random_state=42)
+	model.fit(X)
+
+	df['anomaly'] = model.predict(X)
+
+	print(df)
+
 	event_df = df.copy().reset_index()
 	event_identifier = (event_df['label'] != event_df['label'].shift()).cumsum()
 	event_info = event_df.groupby(['label', event_identifier]).agg(
 		start_time=('timestamp', 'min'),
 		end_time=('timestamp', 'max'),
 		duration=('timestamp', lambda x: x.max() - x.min()),
-		deflection=('X', lambda x: x.max() - x.min())
+		deflection=('X', lambda x: x.max() - x.min()),
+		anomalies=('anomaly', lambda x: x.value_counts().sum())
 	)
+
+	print(event_info)
 
 	return event_info.loc['explosion']['deflection'].quantile([0.5, 0.6, 0.7, 0.8, 0.9]).values
 
 historical_data = read_training_dataset()
-deflection_quantiles = get_deflection_quantiles(historical_data)
+deflection_quantiles = get_quantiles(historical_data)
 
 # TODO: modify embedding structure by adding labels into the rolling window 
 
@@ -55,4 +67,4 @@ def deflection_score(embedding):
 	return 5
 
 def anomaly_score(embedding):
-	print(embedding)
+	print('test')
