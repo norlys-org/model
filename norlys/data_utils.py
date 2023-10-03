@@ -23,7 +23,6 @@ def get_data(y_column, rw_components=[], solar_wind=False, model=True):
 
 	df = read_training_dataset(solar_wind=solar_wind)
 	df = filter_events(df)
-	# df = df.head(2000)
 	df = get_rolling_window(df, components=rw_components)
 	if not model:
 		return df
