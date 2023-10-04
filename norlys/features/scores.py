@@ -1,6 +1,6 @@
 import pandas as pd
 from datetime import timedelta
-from norlys.features.quantiles import historical_data, event_info, deflection_q, explosion_anomalies_q, build_anomalies_q
+from norlys.features.quantiles import historical_data, event_info, deflection_q, explosion_anomalies_q, build_anomalies_q, isolation_forest
 
 # Features needed
 # - deflection score for explosion label, only if >= 5 data points. percentile of deflection for 50%, 60%, 70%, 80% and 90%
@@ -32,7 +32,7 @@ def compute_scale_helper(data, label, column, compute_feature, quantiles, event_
 			time_elapsed = index - row['start_time']
 			scores = scores.append({ 
 				'time elapsed': time_elapsed,
-				'deflection': compute_feature(points),
+				column: compute_feature(points),
 				'score': score
 			}, ignore_index=True)
 	
@@ -50,38 +50,46 @@ def compute_duration_scales(df, event_info):
 	deflection_scores = compute_scale_helper(df, 'explosion', 'deflection', compute_deflection, deflection_q, event_info)
 
 	count_anomalies = lambda x: x['anomaly'].value_counts().get(-1, 0)
-	anomalies_explosion_scores = compute_scale_helper(df, 'explosion', 'anomalies', count_anomalies, explosion_anomalies_q, event_info)
-	anomalies_build_scores = compute_scale_helper(df, 'build', 'anomalies', count_anomalies, build_anomalies_q, event_info)
+	anomalies_explosion_scores = compute_scale_helper(df, 'explosion', 'anomaly', count_anomalies, explosion_anomalies_q, event_info)
+	anomalies_build_scores = compute_scale_helper(df, 'build', 'anomaly', count_anomalies, build_anomalies_q, event_info)
 
 	return (deflection_scores, anomalies_explosion_scores, anomalies_build_scores)
 
 deflection_scale, anomaly_explosion_scale, anomaly_build_scale = compute_duration_scales(historical_data, event_info)
 
-def deflection_score(embedding):
+def compute_scores(embedding):
 	"""
-	Calculate the deflection score of the given embedding for the last event. 
-	The last event must be an explosion, otherwise it will return None. 
+	Calculate the scores of the given embedding for the last event. 
 	The score is based on a scale of 1 to 5 each assigned to a percentile starting at 50% and increasing by 10% for each level.
 	"""
 
 	event_df = embedding.copy().reset_index()
+	event_df['anomaly'] = isolation_forest.predict(event_df[['X']].values)
 	event_identifier = (event_df['label'] != event_df['label'].shift()).cumsum()
 	event_info = event_df.groupby(['label', event_identifier]).agg(
 		duration=('timestamp', lambda x: x.max() - x.min()),
-		deflection=('X', lambda x: x.max() - x.min())
+		deflection=('X', lambda x: x.max() - x.min()),
+		anomaly=('anomaly', lambda x: x.value_counts().get(-1, 0))
 	)	
 	last_event = event_info.xs(len(event_info), level=1)
 	last_event = last_event.reset_index()
 
-	if not (last_event['label'] == 'explosion').all():
-		return None
+	if (last_event['label'] == 'explosion').all():
+		deflection_score = get_score_from_scale(last_event, deflection_scale, 'deflection')
+		anomaly_score = get_score_from_scale(last_event, anomaly_explosion_scale, 'anomaly')
+	elif (last_event['label'] == 'build').all():
+		deflection_score = None
+		anomaly_score = get_score_from_scale(last_event, anomaly_build_scale, 'anomaly')
 
+	return (deflection_score, anomaly_score)
+
+def get_score_from_scale(last_event, scale, column):
 	# Get the 'local' scale that represents all mean values for each score at the specified duration
 	# through the event. If the specified duration is longer than the historical data, take the maximum duration's scores
 	duration = last_event['duration'].item()
 	while True:
 		try:
-			local_scale = deflection_scale.xs(duration, level=1)
+			local_scale = scale.xs(duration, level=1)
 			if local_scale.shape[0] > 1: 
 				break
 		except KeyError:
@@ -93,12 +101,9 @@ def deflection_score(embedding):
 	# until we find a scale with at least two indexes
 	while local_scale.shape[0] <= 1:
 		duration -= timedelta(minutes=1)
-		local_scale = deflection_scale.xs(duration, level=1)
+		local_scale = scale.xs(duration, level=1)
 
 	local_scale = local_scale.reindex([1,2,3,4,5])
-	local_scale['deflection'] = local_scale['deflection'].interpolate()
+	local_scale[column] = local_scale[column].interpolate()
 
-	return find_matching_quantile(local_scale['deflection'].values, last_event['deflection'].item())
-
-def anomaly_score(embedding):
-	print('test')
+	return find_matching_quantile(local_scale[column].values, last_event[column].item())
