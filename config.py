@@ -7,6 +7,7 @@ EVENT_WINDOW_OFFSET = 2 # hours
 ROLLING_WINDOW_SIZE = 45 # minutes (since it is 1m data)
 CLASSES = ['explosion', 'build', 'recovery', 'energy_entry']
 
+QUANTILES = [0.5, 0.6, 0.7, 0.8, 0.9]
 STATIONS = {
     'NAL': { 'X': 14, 'Y': 13, 'lat': 78.92, 'lon': 11.95 },
     'LYR': { 'X': 16, 'Y': 15, 'lat': 78.20, 'lon': 15.82 },
