@@ -1,6 +1,7 @@
 from norlys.data_utils import read_training_dataset
 from sklearn.ensemble import IsolationForest
 import pandas as pd
+from datetime import timedelta
 
 # Features needed
 # - deflection score for explosion label, only if >= 5 data points. percentile of deflection for 50%, 60%, 70%, 80% and 90%
@@ -89,8 +90,25 @@ def deflection_score(embedding):
 	if not (last_event['label'] == 'explosion').all():
 		return None
 
-	# Get all the values for different scores given the duration and interpolate values if some scores are missing
-	local_scale = deflection_scale.xs(last_event['duration'].item(), level=1)
+	# Get the 'local' scale that represents all mean values for each score at the specified duration
+	# through the event. If the specified duration is longer than the historical data, take the maximum duration's scores
+	duration = last_event['duration'].item()
+	while True:
+		try:
+			local_scale = deflection_scale.xs(duration, level=1)
+			if local_scale.shape[0] > 1: 
+				break
+		except KeyError:
+			pass
+		
+		duration -= timedelta(minutes=1)
+
+	# If there is only one index no interpolation is possible so we reduce with one minute
+	# until we find a scale with at least two indexes
+	while local_scale.shape[0] <= 1:
+		duration -= timedelta(minutes=1)
+		local_scale = deflection_scale.xs(duration, level=1)
+
 	local_scale = local_scale.reindex([1,2,3,4,5])
 	local_scale['deflection'] = local_scale['deflection'].interpolate()
 
