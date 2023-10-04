@@ -2,7 +2,7 @@ import pandas as pd
 import plotly.graph_objects as go
 from sklearn.ensemble import IsolationForest
 
-df = pd.read_csv('train.csv')
+df = pd.read_csv('data/train.csv')
 df['timestamp'] = pd.to_datetime(df['timestamp'])
 df.set_index('timestamp', inplace=True)
 
