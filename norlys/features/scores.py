@@ -1,6 +1,6 @@
 import pandas as pd
 from datetime import timedelta
-from norlys.features.quantiles import historical_data, event_info, deflection_q
+from norlys.features.quantiles import historical_data, event_info, deflection_q, explosion_anomalies_q, build_anomalies_q
 
 # Features needed
 # - deflection score for explosion label, only if >= 5 data points. percentile of deflection for 50%, 60%, 70%, 80% and 90%
@@ -21,28 +21,41 @@ def find_matching_quantile(quantiles, value):
 			return i + 1
 	return 5
 
-def compute_deflection_duration_scale(df, deflection_q, event_info):
+def compute_scale_helper(data, label, column, compute_feature, quantiles, event_info):
+	df = data.set_index('timestamp')
+	scores = pd.DataFrame()
+	for _, row in event_info.loc[label].iterrows():
+		points = df.loc[row['start_time']:row['end_time']]
+		score = find_matching_quantile(quantiles, row[column])
+
+		for index, _ in points.iterrows():
+			time_elapsed = index - row['start_time']
+			scores = scores.append({ 
+				'time elapsed': time_elapsed,
+				'deflection': compute_feature(points),
+				'score': score
+			}, ignore_index=True)
+	
+	return scores.groupby(['score', 'time elapsed']).mean()
+
+def compute_duration_scales(df, event_info):
 	"""
-	Compute a DataFrame with two indexes, deflection score and elapsed time with a value which is the deflection value average.
+	Compute a DataFrame with two indexes, deflection and anomaly score and elapsed time with a value which is the deflection value average.
 	Using this DataFrame we can estimate in real time what the score will be because the model will process real time data and thus
 	cannot compute an accurate deflection score. So we estimate using the score (computed using the deflection at the end of the event)
 	and the mean values at the given duration in the event.
 	"""
 
-	df.set_index('timestamp', inplace=True)
-	scores_by_elapsed_time = pd.DataFrame()
-	for _, row in event_info.loc['explosion'].iterrows():
-		points = df.loc[row['start_time']:row['end_time']]
-		score = find_matching_quantile(deflection_q, row['deflection'])
+	compute_deflection = lambda x: x['X'].max() - x['X'].min()
+	deflection_scores = compute_scale_helper(df, 'explosion', 'deflection', compute_deflection, deflection_q, event_info)
 
-		for index, _ in points.iterrows():
-			time_elapsed = index - row['start_time']
-			new_row = {'time elapsed': time_elapsed, 'deflection': points['X'].max() - points['X'].min(), 'score': score}
-			scores_by_elapsed_time = scores_by_elapsed_time.append(new_row, ignore_index=True)
+	count_anomalies = lambda x: x['anomaly'].value_counts().get(-1, 0)
+	anomalies_explosion_scores = compute_scale_helper(df, 'explosion', 'anomalies', count_anomalies, explosion_anomalies_q, event_info)
+	anomalies_build_scores = compute_scale_helper(df, 'build', 'anomalies', count_anomalies, build_anomalies_q, event_info)
 
-	return scores_by_elapsed_time.groupby(['score', 'time elapsed']).mean()
+	return (deflection_scores, anomalies_explosion_scores, anomalies_build_scores)
 
-deflection_scale = compute_deflection_duration_scale(historical_data, deflection_q, event_info)
+deflection_scale, anomaly_explosion_scale, anomaly_build_scale = compute_duration_scales(historical_data, event_info)
 
 def deflection_score(embedding):
 	"""
