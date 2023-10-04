@@ -1,7 +1,6 @@
-from norlys.data_utils import read_training_dataset
-from sklearn.ensemble import IsolationForest
 import pandas as pd
 from datetime import timedelta
+from norlys.features.quantiles import historical_data, event_info, deflection_q
 
 # Features needed
 # - deflection score for explosion label, only if >= 5 data points. percentile of deflection for 50%, 60%, 70%, 80% and 90%
@@ -13,6 +12,7 @@ from datetime import timedelta
 # Features to be added to the model
 # - length of build-up if one occured in the past 45 minutes
 # - position of arc depending on the derivative of Z
+
 
 def find_matching_quantile(quantiles, value):
 	for i in range(len(quantiles)):
@@ -42,34 +42,7 @@ def compute_deflection_duration_scale(df, deflection_q, event_info):
 
 	return scores_by_elapsed_time.groupby(['score', 'time elapsed']).mean()
 
-def get_quantiles(df):
-	X = df[['X']].values 
-	model = IsolationForest(random_state=42)
-	model.fit(X)
-
-	df['anomaly'] = model.predict(X)
-
-	event_df = df.copy().reset_index()
-	event_identifier = (event_df['label'] != event_df['label'].shift()).cumsum()
-	event_info = event_df.groupby(['label', event_identifier]).agg(
-		start_time=('timestamp', 'min'),
-		end_time=('timestamp', 'max'),
-		duration=('timestamp', lambda x: x.max() - x.min()),
-		deflection=('X', lambda x: x.max() - x.min()),
-		anomalies=('anomaly', lambda x: x.value_counts().get(-1, 0))
-	)
-
-	q = [0.5, 0.6, 0.7, 0.8, 0.9]
-	deflection_q = event_info.loc['explosion']['deflection'].quantile(q).values
-
-	return (
-		compute_deflection_duration_scale(df, deflection_q, event_info),
-		event_info.loc['explosion']['anomalies'].quantile(q).values,
-		event_info.loc['build']['anomalies'].quantile(q).values,
-	)
-
-historical_data = read_training_dataset()
-deflection_scale, explosion_anomalies_q, build_anomalies_q = get_quantiles(historical_data)
+deflection_scale = compute_deflection_duration_scale(historical_data, deflection_q, event_info)
 
 def deflection_score(embedding):
 	"""
