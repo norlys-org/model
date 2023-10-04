@@ -1,5 +1,6 @@
 from norlys.data_utils import read_training_dataset
 from sklearn.ensemble import IsolationForest
+import pandas as pd
 
 # Features needed
 # - deflection score for explosion label, only if >= 5 data points. percentile of deflection for 50%, 60%, 70%, 80% and 90%
@@ -12,14 +13,40 @@ from sklearn.ensemble import IsolationForest
 # - length of build-up if one occured in the past 45 minutes
 # - position of arc depending on the derivative of Z
 
+def find_matching_quantile(quantiles, value):
+	for i in range(len(quantiles)):
+		quantile = quantiles[i]
+		if value <= quantile:
+			return i + 1
+	return 5
+
+def compute_deflection_duration_scale(df, deflection_q, event_info):
+	"""
+	Compute a DataFrame with two indexes, deflection score and elapsed time with a value which is the deflection value average.
+	Using this DataFrame we can estimate in real time what the score will be because the model will process real time data and thus
+	cannot compute an accurate deflection score. So we estimate using the score (computed using the deflection at the end of the event)
+	and the mean values at the given duration in the event.
+	"""
+
+	df.set_index('timestamp', inplace=True)
+	scores_by_elapsed_time = pd.DataFrame()
+	for _, row in event_info.loc['explosion'].iterrows():
+		points = df.loc[row['start_time']:row['end_time']]
+		score = find_matching_quantile(deflection_q, row['deflection'])
+
+		for index, _ in points.iterrows():
+			time_elapsed = index - row['start_time']
+			new_row = {'time elapsed': time_elapsed, 'deflection': points['X'].max() - points['X'].min(), 'score': score}
+			scores_by_elapsed_time = scores_by_elapsed_time.append(new_row, ignore_index=True)
+
+	return scores_by_elapsed_time.groupby(['score', 'time elapsed']).mean()
+
 def get_quantiles(df):
 	X = df[['X']].values 
 	model = IsolationForest(random_state=42)
 	model.fit(X)
 
 	df['anomaly'] = model.predict(X)
-
-	print(df)
 
 	event_df = df.copy().reset_index()
 	event_identifier = (event_df['label'] != event_df['label'].shift()).cumsum()
@@ -31,14 +58,17 @@ def get_quantiles(df):
 		anomalies=('anomaly', lambda x: x.value_counts().get(-1, 0))
 	)
 
-	print(event_info)
+	q = [0.5, 0.6, 0.7, 0.8, 0.9]
+	deflection_q = event_info.loc['explosion']['deflection'].quantile(q).values
 
-	return event_info.loc['explosion']['deflection'].quantile([0.5, 0.6, 0.7, 0.8, 0.9]).values
+	return (
+		compute_deflection_duration_scale(df, deflection_q, event_info),
+		event_info.loc['explosion']['anomalies'].quantile(q).values,
+		event_info.loc['build']['anomalies'].quantile(q).values,
+	)
 
 historical_data = read_training_dataset()
-deflection_quantiles = get_quantiles(historical_data)
-
-# TODO: modify embedding structure by adding labels into the rolling window 
+deflection_scale, explosion_anomalies_q, build_anomalies_q = get_quantiles(historical_data)
 
 def deflection_score(embedding):
 	"""
@@ -58,13 +88,13 @@ def deflection_score(embedding):
 
 	if not (last_event['label'] == 'explosion').all():
 		return None
-	
-	for i in range(len(deflection_quantiles)):
-		quantile = deflection_quantiles[i]
-		if last_event['deflection'].item() <= quantile:
-			# Return the index to indicate a score, not a value
-			return i + 1
-	return 5
+
+	# Get all the values for different scores given the duration and interpolate values if some scores are missing
+	local_scale = deflection_scale.xs(last_event['duration'].item(), level=1)
+	local_scale = local_scale.reindex([1,2,3,4,5])
+	local_scale['deflection'] = local_scale['deflection'].interpolate()
+
+	return find_matching_quantile(local_scale['deflection'].values, last_event['deflection'].item())
 
 def anomaly_score(embedding):
 	print('test')
