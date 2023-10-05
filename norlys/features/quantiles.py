@@ -9,6 +9,7 @@ def get_quantiles(df):
 	isolation_forest.fit(X)
 
 	df['anomaly'] = isolation_forest.predict(X)
+	df['mean'] = (df['X'] + df['Y'] + df['Z']) / 3
 
 	event_df = df.copy().reset_index()
 	event_identifier = (event_df['label'] != event_df['label'].shift()).cumsum()
@@ -17,15 +18,19 @@ def get_quantiles(df):
 		end_time=('timestamp', 'max'),
 		duration=('timestamp', lambda x: x.max() - x.min()),
 		deflection=('X', lambda x: x.max() - x.min()),
-		anomaly=('anomaly', lambda x: x.value_counts().get(-1, 0))
+		anomaly=('anomaly', lambda x: x.value_counts().get(-1, 0)),
 	)
+
+	def get_quantile(label, column):
+		return event_info.loc[label][column].quantile(config.QUANTILES).values
 
 	return (
 		event_info,
-		event_info.loc['explosion']['deflection'].quantile(config.QUANTILES).values,
-		event_info.loc['explosion']['anomaly'].quantile(config.QUANTILES).values,
-		event_info.loc['build']['anomaly'].quantile(config.QUANTILES).values,
+		get_quantile('explosion', 'deflection'),
+		get_quantile('explosion', 'anomaly'),
+		get_quantile('build', 'anomaly'),
+		df['mean'].quantile(config.QUANTILES).values
 	)
 
 historical_data = read_training_dataset()
-event_info, deflection_q, explosion_anomalies_q, build_anomalies_q = get_quantiles(historical_data)
+event_info, deflection_q, explosion_anomalies_q, build_anomalies_q, mean_q = get_quantiles(historical_data)

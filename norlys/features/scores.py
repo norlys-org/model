@@ -1,6 +1,6 @@
 import pandas as pd
 from datetime import timedelta
-from norlys.features.quantiles import historical_data, event_info, deflection_q, explosion_anomalies_q, build_anomalies_q, isolation_forest
+from norlys.features.quantiles import historical_data, event_info, deflection_q, explosion_anomalies_q, build_anomalies_q, isolation_forest, mean_q
 
 # Features needed
 # - deflection score for explosion label, only if >= 5 data points. percentile of deflection for 50%, 60%, 70%, 80% and 90%
@@ -81,7 +81,11 @@ def compute_scores(embedding):
 		deflection_score = None
 		anomaly_score = get_score_from_scale(last_event, anomaly_build_scale, 'anomaly')
 
-	return (deflection_score, anomaly_score)
+	# Compute mean of all components and return its score (which quantile it belongs to)
+	last_row = event_df.resample("D", on="timestamp").max()
+	mean_score = find_matching_quantile(mean_q, (last_row['X'] + last_row['Y'] + last_row['Z']).item() / 3)
+
+	return (deflection_score, anomaly_score, mean_score)
 
 def get_score_from_scale(last_event, scale, column):
 	# Get the 'local' scale that represents all mean values for each score at the specified duration
