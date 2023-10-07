@@ -111,3 +111,10 @@ def get_score_from_scale(last_event, scale, column):
 	local_scale[column] = local_scale[column].interpolate()
 
 	return find_matching_quantile(local_scale[column].values, last_event[column].item())
+
+def compute_y_component():
+	"""
+	Compute the Y component which is the degree to which the aurora is north or south of the observer, i.e. the magnetometre.
+	"""
+
+	
