@@ -54,12 +54,23 @@ anomaly_df = anomaly_df[anomaly_df['anomaly'] == -1]
 labels = ['clear', 'build', 'explosion', 'recovery', 'energy_entry']
 df['label'] = df['label'].apply(lambda x: labels.index(x)) 
 
-# Plot
-trace1 = go.Scatter(x=df.index, y=df.X, mode='markers', marker=dict(color=df['label']), name='Magnetogram X')
-trace2 = go.Scatter(x=anomaly_df.index, y=anomaly_df.anomaly, mode='markers', name='X anomalies')
-trace3 = go.Bar(x=df.index, y=df.deflection, name='Explosion deflections', opacity=0.8, marker=dict(color='blue'))
+# df = df.loc['2018-11-18':'2018-11-20']
 
-fig = go.Figure(data=[trace1, trace2, trace3])
+# Plot
+filter = df[df['label'] == 1]
+df['NS'] = df['Z'].diff().rolling(window=45).sum()
+trace1 = go.Scatter(x=df.index, y=df.X, mode='markers', marker=dict(color=df['label']), name='Magnetogram X')
+trace2 = go.Scatter(x=df.index, y=df['Z'], mode='markers', name='Magnetogram Z')
+trace3 = go.Scatter(x=df.index, y=df['NS'], mode='markers', name='Magnetogram Z derivative')
+# trace1 = go.Scatter(x=filter.index, y=filter['X'], mode='markers', name='Magnetogram X')
+# trace2 = go.Scatter(x=anomaly_df.index, y=anomaly_df.anomaly, mode='markers', name='X anomalies')
+# trace3 = go.Bar(x=df.index, y=df.deflection, name='Explosion deflections', opacity=0.8, marker=dict(color='blue'))
+
+fig = go.Figure(data=[
+	trace1, 
+	trace2, 
+	trace3,
+])
 
 fig.update_layout(
     title='Magnetogram extracted features',
