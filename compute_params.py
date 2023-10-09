@@ -1,6 +1,9 @@
 import pandas as pd
 import plotly.graph_objects as go
 from sklearn.ensemble import IsolationForest
+import config
+from norlys.baseline import get_substracted_data
+from tqdm import tqdm
 
 df = pd.read_csv('data/train.csv')
 df['timestamp'] = pd.to_datetime(df['timestamp'])
@@ -56,20 +59,37 @@ df['label'] = df['label'].apply(lambda x: labels.index(x))
 
 # df = df.loc['2018-11-18':'2018-11-20']
 
+aurora_oval = pd.DataFrame()
+for station in tqdm(config.STATIONS):
+	data = get_substracted_data(station)
+	try:
+		val = data.loc['2018-12-07 19:00:00']
+		aurora_oval = aurora_oval.append({
+			'lat': config.STATIONS[station]['lat'],
+			'val': val['Z'],
+		}, ignore_index=True)
+		
+	except:
+		pass
+
+print(aurora_oval)
+
+# df.loc['2018-11-18 19:00:00']
+
 # Plot
 filter = df[df['label'] == 1]
-df['NS'] = df['Z'].diff().rolling(window=45).sum()
+df['NS'] = df['Z'].diff()
 trace1 = go.Scatter(x=df.index, y=df.X, mode='markers', marker=dict(color=df['label']), name='Magnetogram X')
 trace2 = go.Scatter(x=df.index, y=df['Z'], mode='markers', name='Magnetogram Z')
+trace4 = go.Scatter(x=df.index, y=df['Y'], mode='markers', name='Magnetogram Y')
 trace3 = go.Scatter(x=df.index, y=df['NS'], mode='markers', name='Magnetogram Z derivative')
+trace = go.Scatter(x=aurora_oval['lat'], y=aurora_oval['val'], name='Lat', connectgaps=True)
 # trace1 = go.Scatter(x=filter.index, y=filter['X'], mode='markers', name='Magnetogram X')
 # trace2 = go.Scatter(x=anomaly_df.index, y=anomaly_df.anomaly, mode='markers', name='X anomalies')
 # trace3 = go.Bar(x=df.index, y=df.deflection, name='Explosion deflections', opacity=0.8, marker=dict(color='blue'))
 
 fig = go.Figure(data=[
-	trace1, 
-	trace2, 
-	trace3,
+	trace
 ])
 
 fig.update_layout(
