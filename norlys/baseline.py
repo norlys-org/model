@@ -138,10 +138,10 @@ def is_daytime(latitude, longitude, timestamp):
 
 def get_substracted_data(station):
     df = read_and_format(station)
-    baseline = compute_long_term_baseline(station, '2020-01-01', '2021-01-01', df)
+    baseline = compute_long_term_baseline(station, '2018-11-01', '2018-12-30', df)
 
-    data_hourly = df['2020-01-01':'2021-01-01']
-    baseline_hourly = baseline['2020-01-01':'2021-01-01']
+    data_hourly = df['2018-11-01':'2018-12-30']
+    baseline_hourly = baseline['2018-11-01':'2018-12-30']
     return data_hourly - baseline_hourly
 
 # df = get_substracted_data('TRO')
