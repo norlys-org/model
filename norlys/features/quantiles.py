@@ -10,6 +10,8 @@ def get_quantiles(df):
 
 	df['anomaly'] = isolation_forest.predict(X)
 	df['mean'] = (df['X'] + df['Y'] + df['Z']) / 3
+	df['gradient'] = df['X'].diff().rolling(5).mean()
+	df.dropna(inplace=True)
 
 	event_df = df.copy().reset_index()
 	event_identifier = (event_df['label'] != event_df['label'].shift()).cumsum()
@@ -29,8 +31,9 @@ def get_quantiles(df):
 		get_quantile('explosion', 'deflection'),
 		get_quantile('explosion', 'anomaly'),
 		get_quantile('build', 'anomaly'),
-		df['mean'].quantile(config.QUANTILES).values
+		df['mean'].quantile(config.QUANTILES).values,
+		df['gradient'].quantile(config.QUANTILES).values
 	)
 
 historical_data = read_training_dataset()
-event_info, deflection_q, explosion_anomalies_q, build_anomalies_q, mean_q = get_quantiles(historical_data)
+event_info, deflection_q, explosion_anomalies_q, build_anomalies_q, mean_q, gradient_q = get_quantiles(historical_data)
