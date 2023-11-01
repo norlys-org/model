@@ -1,6 +1,6 @@
 import pandas as pd
 from datetime import timedelta
-from norlys.features.quantiles import historical_data, event_info, deflection_q, explosion_anomalies_q, build_anomalies_q, isolation_forest, mean_q
+from norlys.features.quantiles import historical_data, event_info, deflection_q, explosion_anomalies_q, build_anomalies_q, isolation_forest, mean_q, gradient_q
 
 # Features needed
 # - deflection score for explosion label, only if >= 5 data points. percentile of deflection for 50%, 60%, 70%, 80% and 90%
@@ -21,10 +21,10 @@ def find_matching_quantile(quantiles, value):
 			return i + 1
 	return 5
 
-def compute_scale_helper(data, label, column, compute_feature, quantiles, event_info):
+def compute_scale_helper(data, column, compute_feature, quantiles, event_info):
 	df = data.set_index('timestamp')
 	scores = pd.DataFrame()
-	for _, row in event_info.loc[label].iterrows():
+	for _, row in event_info.iterrows():
 		points = df.loc[row['start_time']:row['end_time']]
 		score = find_matching_quantile(quantiles, row[column])
 
@@ -47,11 +47,11 @@ def compute_duration_scales(df, event_info):
 	"""
 
 	compute_deflection = lambda x: x['X'].max() - x['X'].min()
-	deflection_scores = compute_scale_helper(df, 'explosion', 'deflection', compute_deflection, deflection_q, event_info)
+	deflection_scores = compute_scale_helper(df, 'deflection', compute_deflection, deflection_q, event_info.loc['explosion'])
 
 	count_anomalies = lambda x: x['anomaly'].value_counts().get(-1, 0)
-	anomalies_explosion_scores = compute_scale_helper(df, 'explosion', 'anomaly', count_anomalies, explosion_anomalies_q, event_info)
-	anomalies_build_scores = compute_scale_helper(df, 'build', 'anomaly', count_anomalies, build_anomalies_q, event_info)
+	anomalies_explosion_scores = compute_scale_helper(df, 'anomaly', count_anomalies, explosion_anomalies_q, event_info.loc['explosion'])
+	anomalies_build_scores = compute_scale_helper(df, 'anomaly', count_anomalies, build_anomalies_q, event_info.loc['build'])
 
 	return (deflection_scores, anomalies_explosion_scores, anomalies_build_scores)
 
@@ -64,6 +64,7 @@ def compute_scores(embedding):
 	"""
 
 	event_df = embedding.copy().reset_index()
+	event_df['gradient'] = event_df['X'].diff()
 	event_df['anomaly'] = isolation_forest.predict(event_df[['X']].values)
 	event_identifier = (event_df['label'] != event_df['label'].shift()).cumsum()
 	event_info = event_df.groupby(['label', event_identifier]).agg(
@@ -84,8 +85,9 @@ def compute_scores(embedding):
 	# Compute mean of all components and return its score (which quantile it belongs to)
 	last_row = event_df.resample("D", on="timestamp").max()
 	mean_score = find_matching_quantile(mean_q, (last_row['X'] + last_row['Y'] + last_row['Z']).item() / 3)
+	gradient_score = find_matching_quantile(gradient_q, event_df.set_index('timestamp')['gradient'].last('5T').mean())
 
-	return (deflection_score, anomaly_score, mean_score)
+	return (deflection_score, anomaly_score, mean_score, gradient_score)
 
 def get_score_from_scale(last_event, scale, column):
 	# Get the 'local' scale that represents all mean values for each score at the specified duration
@@ -111,10 +113,3 @@ def get_score_from_scale(last_event, scale, column):
 	local_scale[column] = local_scale[column].interpolate()
 
 	return find_matching_quantile(local_scale[column].values, last_event[column].item())
-
-def compute_y_component():
-	"""
-	Compute the Y component which is the degree to which the aurora is north or south of the observer, i.e. the magnetometre.
-	"""
-
-	
