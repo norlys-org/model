@@ -23,3 +23,7 @@ def train_0m_classifier(log=True):
 
 	logging.info('Saving model to `0m-model.joblib`')
 	joblib.dump(clf, '0m-model.joblib')
+
+def load_0m_classifier():
+	logging.info('Loading 0m-model.joblib...')
+	return joblib.load('0m-model.joblib')
