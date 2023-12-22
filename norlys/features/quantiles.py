@@ -1,39 +1,65 @@
 from norlys.data_utils import read_training_dataset
 from sklearn.ensemble import IsolationForest
 import config
+import json
 
-isolation_forest = IsolationForest(random_state=42)
+QUANTILES_PATH = 'data/quantiles.json'
 
-def get_quantiles(df):
-	X = df[['X']].values 
-	isolation_forest.fit(X)
+def find_quantile_range(quantiles, value):
+    for i in range(len(quantiles)):
+        quantile = quantiles[i]
+        if value <= quantile:
+            return i + 1
+    return 9
 
-	df['anomaly'] = isolation_forest.predict(X)
-	df['mean'] = (df['X'] + df['Y'] + df['Z']) / 3
-	df['gradient'] = df['X'].diff().rolling(5).mean()
-	df.dropna(inplace=True)
+def get_scores(df):
+    values = get_quantiles(df, False)
 
-	event_df = df.copy().reset_index()
-	event_identifier = (event_df['label'] != event_df['label'].shift()).cumsum()
-	event_info = event_df.groupby(['label', event_identifier]).agg(
-		start_time=('timestamp', 'min'),
-		end_time=('timestamp', 'max'),
-		duration=('timestamp', lambda x: x.max() - x.min()),
-		deflection=('X', lambda x: x.max() - x.min()),
-		anomaly=('anomaly', lambda x: x.value_counts().get(-1, 0)),
-	)
+    result = {}
+    with open(QUANTILES_PATH, 'r') as file:
+        data = json.load(file)
+        for key in data:
+            quantiles = data[key]
+            value = values[key]
+            result[key] = find_quantile_range(quantiles, value)
+    
+    return result
 
-	def get_quantile(label, column):
-		return event_info.loc[label][column].quantile(config.QUANTILES).values
 
-	return (
-		event_info,
-		get_quantile('explosion', 'deflection'),
-		get_quantile('explosion', 'anomaly'),
-		get_quantile('build', 'anomaly'),
-		df['mean'].quantile(config.QUANTILES).values,
-		df['gradient'].quantile(config.QUANTILES).values
-	)
+def get_quantiles(df, quantiles=True):
+    for component in ['X', 'Y', 'Z']:
+        # Anomalies with Isolation forest
+        isolation_forest = IsolationForest(random_state=42)
+        X = df[[component]].values 
+        isolation_forest.fit(X)
 
-historical_data = read_training_dataset()
-event_info, deflection_q, explosion_anomalies_q, build_anomalies_q, mean_q, gradient_q = get_quantiles(historical_data)
+        df[f'{component}_anomaly'] = isolation_forest.predict(X)
+        df[f'{component}_anomalies'] = (df[f'{component}_anomaly'] == -1).astype(int).rolling(15).sum()
+
+        # Gradient over the last 15 minutes
+        df[f'{component}_gradient'] = df[component].diff().rolling(15).mean()
+        # Deflection over the past 45 minutes
+        df[f'{component}_deflection'] = df[component].rolling(45).apply(lambda x: x.max() - x.min())
+    
+    df.dropna(inplace=True)
+
+    result = {}
+    for component in ['X', 'Y', 'Z']:
+        def get_result(slug):
+            if quantiles:
+                return df[f'{component}_{slug}'].quantile(config.QUANTILES).tolist()
+            
+            return df[f'{component}_{slug}'].iloc[-1]
+
+        result[f'{component}_anomalies'] = get_result('anomalies')
+        result[f'{component}_gradient'] = get_result('gradient')
+        result[f'{component}_deflection'] = get_result('deflection')
+
+    return result
+
+def save_quantiles():
+    historical_data = read_training_dataset()
+    quantiles = get_quantiles(historical_data)
+
+    with open(QUANTILES_PATH, 'w') as fp:
+        json.dump(quantiles, fp)

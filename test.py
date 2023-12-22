@@ -1,9 +1,10 @@
 from norlys.data_utils import get_clipped_data, get_rolling_window, get_training_data, percentage_of_day
-from norlys.features.scores import compute_scores
+from norlys.features.quantiles import get_scores
 from norlys.model import load_0m_classifier
+import pandas as pd
 
 df = get_clipped_data()
-print(compute_scores(df))
+print(get_scores(df.copy()))
 
 clf = load_0m_classifier()
 
