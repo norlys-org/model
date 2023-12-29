@@ -5,6 +5,8 @@ from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error
 from suncalc import get_position
 import math
+import plotly.express as px
+from datetime import datetime
 import config
 
 def read_and_format(station):
@@ -19,12 +21,13 @@ def read_and_format(station):
     df['Y'] = df['Y'] / 10
     df['Z'] = df['Z'] / 10
 
+    df['UT'] = pd.to_datetime(df['UT'])
+    df.set_index('UT', inplace=True)
+    df = df.sort_index()
+
     df.replace([np.inf, -np.inf], np.nan, inplace=True)
     df.dropna(inplace=True)
     df = df.drop('StationId', axis=1)
-
-    df['UT'] = pd.to_datetime(df['UT'])
-    df.set_index('UT', inplace=True)
 
     return df
 
@@ -41,51 +44,72 @@ def compute_long_term_baseline(station, start, end, df):
     if quietest_day == '':
         return baseline
 
-    tp = template(df, baseline, quietest_day)
+    # tp = template(df, baseline, quietest_day)
 
-    return tp
+    return baseline
 
 def template(df, baseline, quietest_day):
     """
-    Compute template curve and extrapolate it over the year, based on Fast Fourier Transform harmonics.
+    Generate a template curve based on the quietest day's magnetic data following the paper's instructions.
     """
 
-    start = quietest_day
-    end = start + timedelta(days=1)
+    # Align the dataframe to the baseline
+    df_aligned = df.reindex(baseline.index).fillna(method='ffill')
+    # Calculate residual
+    residual = df_aligned - baseline
 
-    baseline_resampled = baseline.loc[str(start) : str(end)]
-    df_resampled = df.loc[str(start) : str(end)]
-    residual = df_resampled - baseline_resampled
+    # Create a time series for the quietest day at minute resolution
+    time_series = pd.date_range(start=quietest_day, periods=1440, freq='T')
+    template_data = {'UT': time_series, 'X': [], 'Y': [], 'Z': []}
 
-    data = {'UT': [f"{quietest_day + pd.Timedelta(minutes=i)}" for i in range(1440)], 'X': [], 'Y': [], 'Z': []}
+    # Calculate the FFT for each component and reconstruct the signal
     for component in ['X', 'Y', 'Z']:
-        frequencies = np.fft.fft(residual[component])[:10]
-        for i in range(0, 1440):
-            sum_v = 0
-            for h in range(0, 10): 
-                amplitude = abs(frequencies[h])
-                phase = np.angle(frequencies[h])
-                sum_v += amplitude * np.cos(2 * np.pi * h * i * 60 / 86400 + phase)
-            data[component].append(sum_v)
+        # Calculate FFT and take the first 7 harmonics as per paper's suggestion
+        frequencies = np.fft.fft(residual[component])[:7]
 
-    tp = pd.DataFrame(data)
-    tp['UT'] = pd.to_datetime(tp['UT'])
+        # Reconstruct the template curve for each minute
+        for time in time_series:
+            # Calculate the time in seconds since midnight
+            seconds_since_midnight = (time - quietest_day).total_seconds()
+            sum_v = 0
+            for h in range(7):  # Using 7 harmonics including the 0th
+                amplitude = np.abs(frequencies[h])
+                phase = np.angle(frequencies[h])
+                sum_v += amplitude * np.cos(2 * np.pi * h * seconds_since_midnight / 86400 + phase)
+            template_data[component].append(sum_v)
+
+    # Create a DataFrame from the template data
+    tp = pd.DataFrame(template_data)
     tp.set_index('UT', inplace=True)
 
+    # Repeat the template for the desired number of days
     num_days = 365
-    repeated_data = [tp.copy() for _ in range(num_days)]
-    for i in range(num_days):
-        repeated_data[i].index = tp.index + pd.Timedelta(days=i)
+    repeated_template = pd.concat([tp] * num_days)
+    repeated_template.index = pd.date_range(start=quietest_day, periods=len(repeated_template), freq='T')
 
-    result = pd.concat(repeated_data)
-    for component in ['X', 'Y', 'Z']:
-        result[component] = result[component] / baseline[component] + baseline[component]
-    return result
+    return repeated_template
 
 def compute_quietest_and_disturbed_days(station, start, end, df):
     """
     Compute the array of σ_hmax see 2.3 Manual. 
-    Start and end date required of the format YYYY-MM-DD
+    Analyze magnetic data to identify the quietest and most disturbed days within a specified date range.
+
+    The function iterates through each day in the given date range and calculates the standard deviation of 
+    the 'X' and 'Z' components of the magnetic data for each hour. A day is marked as disturbed if the median 
+    of the hourly standard deviations in the 'X' component exceeds a predefined threshold specific to the station.
+    
+    The quietest day is determined based on the day with the lowest maximum sum of standard deviations ('h_max') 
+    in both 'X' and 'Z' components. This day signifies the least variation in magnetic data, indicating minimal 
+    magnetic disturbance.
+
+    Parameters:
+        station (str): The name of the magnetic station.
+        start (str): The start date for analysis in 'YYYY-MM-DD' format.
+        end (str): The end date for analysis in 'YYYY-MM-DD' format.
+        df (DataFrame): A DataFrame containing magnetic data for the station.
+
+    Returns:
+        tuple: A tuple containing a list of disturbed days and the quietest day within the given date range.
     """
 
     h_max = pd.DataFrame(columns=['h_max'])
@@ -112,9 +136,11 @@ def compute_quietest_and_disturbed_days(station, start, end, df):
                 new_data[component] = std_dev
 
             std_devs = pd.concat([std_devs, pd.DataFrame(new_data, index=[hour])])
- 
+        
+        std_devs.dropna(inplace=True)
+
         h_max = pd.concat([h_max, pd.DataFrame(
-            { 'h_max' :max(std_devs['X'] + std_devs['Z']) },
+            { 'h_max': max(std_devs['X'] + std_devs['Z']) },
             index=[day]
         )])
 
@@ -136,13 +162,20 @@ def is_daytime(latitude, longitude, timestamp):
 
     return get_position(timestamp, longitude, latitude)['altitude'] * 180/math.pi > -12
 
+import plotly.graph_objects as go
 def get_substracted_data(station):
     df = read_and_format(station)
-    baseline = compute_long_term_baseline(station, '2018-11-01', '2018-12-30', df)
+    start = df.index.min()
+    end = df.index.max()
+    baseline = compute_long_term_baseline(station, start, end, df)    
 
-    data_hourly = df['2018-11-01':'2018-12-30']
-    baseline_hourly = baseline['2018-11-01':'2018-12-30']
-    return data_hourly - baseline_hourly
+    r = df[start:end] - baseline[start:end]
+
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=r.index, y=r['X'], mode='lines', name='Result'))
+    fig.show()
+
+    return df[start:end] - baseline[start:end]
 
 # df = get_substracted_data('TRO')
 # df_class = read_allsky_state()
