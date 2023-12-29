@@ -78,12 +78,11 @@ def get_rolling_window(df, components=[]):
 	# Do not write 'label' into the components to not drop it later
 	# for component in components + ['label']:
 	for component in components:
-		print(f'Rolling window: {component}')
 		columns = []
 		for i in range(config.ROLLING_WINDOW_SIZE):
 			columns.append(f'{component}{i}')
 
-		pbar = tqdm(enumerate(df[component].rolling(window=config.ROLLING_WINDOW_SIZE)))
+		pbar = enumerate(df[component].rolling(window=config.ROLLING_WINDOW_SIZE))
 		for _, window in pbar:
 			if len(window) != config.ROLLING_WINDOW_SIZE: 
 				continue
