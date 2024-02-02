@@ -1,4 +1,7 @@
 import math
+import config
+import json
+import numpy as np
 
 def haversine(lat1, lon1, lat2, lon2):
     # Radius of the Earth in kilometers
@@ -24,20 +27,27 @@ def haversine(lat1, lon1, lat2, lon2):
 
 def update_points_within_radius(points, center_lat, center_lon, radius, new_value):
     for point in points:
-        lat, lon = point[0]
-        if haversine(center_lat, center_lon, lat, lon) <= radius:
-            point[1] = new_value
+        if haversine(center_lat, center_lon, point['lat'], point['lon']) <= radius:
+            point['n'] = point['n'] + 1
+            point['score'] = point['score'] + new_value
 
-# Example usage
-lats = [lat / 10 for lat in reversed(range(560, 810, 5))]
-lons = range(1, 40)
-points = [[[lat, lon], 0] for lon in lons for lat in lats]
+def create_matrix(scores):
+    lats = [lat / 10 for lat in reversed(range(560, 810, 5))]
+    lons = range(1, 40)
+    matrix = [{ 
+        'lat': lat,
+        'lon': lon,
+        'n': 0,
+        'score': 0
+    } for lon in lons for lat in lats]
 
-# Given point and value
-center_lat = 60  # example latitude
-center_lon = 20  # example longitude
-radius = 300  # radius in kilometers
-new_value = 10  # new value to set
+    for key in scores:
+        station = config.STATIONS[key]
+        update_points_within_radius(matrix, station['lat'], station['lon'], 400, scores[key][0])
 
-# Update points within the radius
-update_points_within_radius(points, center_lat, center_lon, radius, new_value)
+    for row in matrix:
+        if row['n'] == 0:
+            continue
+        row['score'] = row['score'] / row['n']
+
+    return matrix
