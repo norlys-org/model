@@ -139,18 +139,19 @@ def compute_quietest_and_disturbed_days(station, start, end, df):
         
         std_devs.dropna(inplace=True)
 
-        h_max = pd.concat([h_max, pd.DataFrame(
-            { 'h_max': max(std_devs['X'] + std_devs['Z']) },
-            index=[day]
-        )])
+        # h_max = pd.concat([h_max, pd.DataFrame(
+        #     { 'h_max': max(std_devs['X'] + std_devs['Z']) },
+        #     index=[day]
+        # )])
 
         if np.median(std_devs['X'].to_numpy()) > config.STATIONS[station]['X']:
             disturbed_days.append(day.date())
  
-    if len(h_max['h_max']) == 0:
-        quietest_day = ''
-    else:
-        quietest_day = h_max['h_max'].idxmin()
+    quietest_day = ''
+    # if len(h_max['h_max']) == 0:
+    #     quietest_day = ''
+    # else:
+    #     quietest_day = h_max['h_max'].idxmin()
 
     return disturbed_days, quietest_day
 
@@ -162,18 +163,12 @@ def is_daytime(latitude, longitude, timestamp):
 
     return get_position(timestamp, longitude, latitude)['altitude'] * 180/math.pi > -12
 
-import plotly.graph_objects as go
 def get_substracted_data(station):
     df = read_and_format(station)
+
     start = df.index.min()
     end = df.index.max()
     baseline = compute_long_term_baseline(station, start, end, df)    
-
-    r = df[start:end] - baseline[start:end]
-
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=r.index, y=r['X'], mode='lines', name='Result'))
-    fig.show()
 
     return df[start:end] - baseline[start:end]
 
