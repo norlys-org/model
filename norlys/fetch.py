@@ -59,6 +59,8 @@ def fetch_mag(slug, station_source):
                 })
 
     df = pd.DataFrame(data)
+    if df.empty:
+        return pd.DataFrame()
     df.set_index('date', inplace=True)
 
     # return df[df.index >= df.index.max() - pd.Timedelta(minutes=45)]
