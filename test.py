@@ -84,7 +84,7 @@ clf = load_0m_classifier()
 result = {}
 lines_df, line_lon = initialize_lines_df()
 
-for key in config.STATIONS:
+for key in ['NAL']:
     logging.info(f'Fetching {key}...')
     station = config.STATIONS[key]
 
@@ -111,10 +111,21 @@ for key in config.STATIONS:
     result_df.dropna(inplace=True)
     result_df = result_df[result_df.index >= result_df.index.max() - pd.Timedelta(minutes=45)]
 
+    # fig = go.Figure(data=[
+    #     go.Scatter(x=result_df.index, y=result_df.X, mode='lines', name='Magnetogram X')
+    # ])
+    # fig.update_layout(
+    #     title='Magnetogram extracted features',
+    #     xaxis=dict(title='Time'),
+    #     yaxis=dict(title='X (nT)')
+    # )
+    # fig.show()
+
+
     logging.info(f'Computing scores for {key}...')
     scores = get_scores(result_df.copy(), key)
+    print(scores)
     mean = mean_score(scores)
-    print(mean)
 
     logging.info(f'Getting model prediction for {key}')
     model_df = get_rolling_window(result_df)
