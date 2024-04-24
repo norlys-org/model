@@ -40,7 +40,7 @@ def compute_long_term_baseline(station, start, end, df):
     df_daily_median = df.resample('D').median()
     disturbed_days, quietest_day = compute_quietest_and_disturbed_days(station, start, end, df)
 
-    baseline = df_daily_median.drop(disturbed_days).resample('T').mean().interpolate(method='linear')
+    baseline = df_daily_median.drop(disturbed_days).resample('min').mean().interpolate(method='linear')
     if quietest_day == '':
         return baseline
 
@@ -135,7 +135,16 @@ def compute_quietest_and_disturbed_days(station, start, end, df):
                 std_dev = np.sqrt(mean_squared_error(Y, model.predict(X)))
                 new_data[component] = std_dev
 
-            std_devs = pd.concat([std_devs, pd.DataFrame(new_data, index=[hour])])
+            # Exclude columns with all NA values
+            std_devs = std_devs.dropna(axis=1, how='all')
+            new_data = pd.DataFrame(new_data, index=[hour]).dropna(axis=1, how='all')
+
+            # Exclude empty columns
+            std_devs = std_devs.loc[:, (std_devs != 0).any(axis=0)]
+            new_data = new_data.loc[:, (new_data != 0).any(axis=0)]
+
+            # Now perform the concatenation
+            std_devs = pd.concat([std_devs, new_data])
         
         std_devs.dropna(inplace=True)
 

@@ -36,12 +36,12 @@ def get_quantiles(df, quantiles=True):
         isolation_forest.fit(X)
 
         df[f'{component}_anomaly'] = isolation_forest.predict(X)
-        df[f'{component}_anomalies'] = (df[f'{component}_anomaly'] == -1).astype(int).rolling('15T').sum()
+        df[f'{component}_anomalies'] = (df[f'{component}_anomaly'] == -1).astype(int).rolling('15min').sum()
 
         # Gradient over the last 15 minutes
-        df[f'{component}_gradient'] = df[component].diff().rolling('15T').mean()
+        df[f'{component}_gradient'] = df[component].diff().rolling('15min').mean()
         # Deflection over the past 45 minutes
-        df[f'{component}_deflection'] = df[component].rolling('45T').apply(lambda x: x.max() - x.min())
+        df[f'{component}_deflection'] = df[component].rolling('45min').apply(lambda x: x.max() - x.min())
     
     df.dropna(inplace=True)
 
