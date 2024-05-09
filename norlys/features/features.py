@@ -36,3 +36,14 @@ features = {
   'rolling_gradient': rolling_gradient,
   'deflection': deflection
 }
+
+def get_features_column_list(component):
+  return [f'{component}_{slug}' for slug in features].append(component)
+
+def apply_features(df):
+  for component in ['X', 'Y', 'Z']:
+    for feature_slug in features:
+      df[f'{component}_{feature_slug}'] = features[feature_slug](df, component)
+    
+  df.dropna(inplace=True)
+  return df

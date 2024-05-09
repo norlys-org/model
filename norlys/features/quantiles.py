@@ -1,11 +1,10 @@
 from norlys.baseline import get_substracted_data
-from norlys.features import features
+from norlys.features import apply_features, get_features_column_list
 from sklearn.ensemble import IsolationForest
 import config
 import json
-import pandas as pd
 import logging
-
+import concurrent.futures
 
 def find_quantile_range(quantiles, value):
     """
@@ -19,37 +18,33 @@ def find_quantile_range(quantiles, value):
     return 9
 
 def compute_scores(df, station):
-    values = compute_quantiles(df, False)
+    # TODO refactor
+    df = apply_features(df)
+    values = {}
+    for component in ['X', 'Y', 'Z']:
+        for slug in get_features_column_list(component):
+            values[slug] = df[slug].iloc[-1]
 
     result = {}
     with open(config.QUANTILES_PATH, 'r') as file:
-        data = json.load(file)
-        for key in data[station]:
-            quantiles = data[station][key]
+        quantiles_data = json.load(file)
+        for key in quantiles_data[station]:
+            quantiles = quantiles_data[station][key]
             value = values[key]
             result[key] = find_quantile_range(quantiles, value)
     
     return result
 
-
-def compute_quantiles(df, quantiles=True):
-    for component in ['X', 'Y', 'Z']:
-        for feature_slug in features:
-            df[f'{component}_{feature_slug}'] = features[feature_slug](df, component)
-    
-    df.dropna(inplace=True)
+# TODO remove that quantiles parameter and split into two functions
+def compute_quantiles(df):
+    df = apply_features(df)
 
     result = {}
     for component in ['X', 'Y', 'Z']:
-      for slug in [f'{component}_{slug}' for slug in features].append(component):
-        if quantiles:
+      for slug in get_features_column_list(component):
           result[slug] = df[slug].quantile(config.QUANTILES).tolist()
-        else:
-          result[slug] = df[slug].iloc[-1]
 
     return result
-
-import concurrent.futures
 
 def save_quantiles():
     result = {}
