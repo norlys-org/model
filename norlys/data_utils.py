@@ -17,7 +17,7 @@ def get_clipped_data():
 
 def get_data(y_column, rw_components=[], solar_wind=False, model=True):
 	"""
-	Return the fully ready data for training using all other formatting functions.
+	Returns the fully ready data for training using all other formatting functions.
 	if model is set to True the data will be split into X and Y and test + train.
 	"""
 
