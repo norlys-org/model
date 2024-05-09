@@ -1,6 +1,7 @@
 # Paths
 TRAIN_PATH = 'data/train.csv'
 SOLAR_WIND_PATH = 'data/sw.csv'
+QUANTILES_PATH = 'data/quantiles.json'
 
 # Model
 EVENT_WINDOW_OFFSET = 2 # hours
