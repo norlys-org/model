@@ -29,12 +29,16 @@ def deflection(df, component):
 
   return df[component].rolling('45min').apply(lambda x: x.max() - x.min())
 
+def mean(df, component):
+  return df[component].mean()
+
 # the order matters due to dependencies
 features = {
   'anomaly': anomaly,
   'rolling_anomalies': rolling_anomalies,
   'rolling_gradient': rolling_gradient,
-  'deflection': deflection
+  'deflection': deflection,
+  'mean': mean
 }
 
 def get_features_column_list(component):
