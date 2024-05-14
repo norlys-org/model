@@ -1,10 +1,10 @@
 from norlys.baseline import get_substracted_data
-from norlys.features import apply_features, get_features_column_list
-from sklearn.ensemble import IsolationForest
+from norlys.features.features import apply_features, get_features_column_list
 import config
 import json
 import logging
-import concurrent.futures
+from multiprocessing import Pool, cpu_count
+
 
 def find_quantile_range(quantiles, value):
     """
@@ -46,23 +46,20 @@ def compute_quantiles(df):
 
     return result
 
+def process_station(station):
+  logging.info(f'Computing and substracting baseline for {station}') 
+  df = get_substracted_data(station)
+  df.dropna(inplace=True)
+
+  logging.info(f'Computing quantiles for {station}') 
+  return compute_quantiles(df)
+
 def save_quantiles():
     result = {}
-    with concurrent.futures.ThreadPoolExecutor() as executor:
-        # Map the processing function to each station in parallel
-        results = executor.map(process_station, config.STATIONS)
-        # Iterate through the results and store them in the result dictionary
-        for station, quantiles in zip(config.STATIONS, results):
-            result[station] = quantiles
 
-    logging.info(f'Saving computed quantiles') 
+    with Pool(processes=cpu_count()) as pool:
+      results = pool.map(process_station, config.STATIONS)
+      result.update(results)
+
     with open(config.QUANTILES_PATH, 'w') as fp:
         json.dump(result, fp)
-
-def process_station(station):
-    logging.info(f'Computing and substracting baseline for {station}') 
-    df = get_substracted_data(station)
-    df.dropna(inplace=True)
-
-    logging.info(f'Computing quantiles for {station}') 
-    return compute_quantiles(df)
