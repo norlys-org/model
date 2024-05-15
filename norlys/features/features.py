@@ -42,7 +42,7 @@ features = {
 }
 
 def get_features_column_list(component):
-  return [f'{component}_{slug}' for slug in features].append(component)
+  return [f'{component}_{slug}' for slug in features]
 
 def apply_features(df):
   for component in ['X', 'Y', 'Z']:

@@ -26,6 +26,8 @@ def read_and_format(station):
     df.dropna(inplace=True)
     df = df.drop('StationId', axis=1)
 
+    df = df.head(1000)
+
     return df
 
 def compute_long_term_baseline(station, start, end, df):

@@ -52,14 +52,15 @@ def process_station(station):
   df.dropna(inplace=True)
 
   logging.info(f'Computing quantiles for {station}') 
-  return compute_quantiles(df)
+  return {station: compute_quantiles(df)}
 
 def save_quantiles():
     result = {}
 
     with Pool(processes=cpu_count()) as pool:
       results = pool.map(process_station, config.STATIONS)
-      result.update(results)
+      for item in results:
+        result.update(item)
 
     with open(config.QUANTILES_PATH, 'w') as fp:
         json.dump(result, fp)
