@@ -35,7 +35,6 @@ def compute_scores(df, station):
     
     return result
 
-# TODO remove that quantiles parameter and split into two functions
 def compute_quantiles(df):
     df = apply_features(df)
 
