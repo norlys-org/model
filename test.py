@@ -1,7 +1,7 @@
 import logging
 from norlys.baseline import compute_long_term_baseline, get_substracted_data
 from norlys.data_utils import get_clipped_data, get_rolling_window, get_training_data, percentage_of_day
-from norlys.features.quantiles import get_scores
+from norlys.features.quantiles import compute_scores
 from norlys.fetch import fetch_mag
 from norlys.model import load_0m_classifier
 import pandas as pd
@@ -9,6 +9,8 @@ import config
 from norlys.rendering import create_matrix
 import plotly.graph_objects as go
 import numpy as np
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning) # TODO
 
 logging.basicConfig(
     level=logging.INFO,
@@ -32,10 +34,9 @@ def mean_score(scores):
     """
 
     table = {
-        'X_anomalies': 1, 'Y_anomalies': 1, 'Z_anomalies': 1,
-        'X_gradient': 1, 'Y_gradient': 1, 'Z_gradient': 1,
-        'X_deflection': 1, 'Y_deflection': 1, 'Z_deflection': 1,
-        'X': 1, 'Y': 1, 'Z': 1,
+        'X_rolling_anomalies': 1, 'X_rolling_gradient': 1, 'X_deflection': 1, 'X_mean': 1, 
+        'Y_rolling_anomalies': 1, 'Y_rolling_gradient': 1, 'Y_deflection': 1, 'Y_mean': 1, 
+        'Z_rolling_anomalies': 1, 'Z_rolling_gradient': 1, 'Z_deflection': 1, 'Z_mean': 1
     }
 
     sum = 0
@@ -84,7 +85,7 @@ clf = load_0m_classifier()
 result = {}
 lines_df, line_lon = initialize_lines_df()
 
-for key in ['NAL']:
+for key in config.STATIONS:
     logging.info(f'Fetching {key}...')
     station = config.STATIONS[key]
 
@@ -123,7 +124,7 @@ for key in ['NAL']:
 
 
     logging.info(f'Computing scores for {key}...')
-    scores = get_scores(result_df.copy(), key)
+    scores = compute_scores(result_df.copy(), key)
     print(scores)
     mean = mean_score(scores)
 
@@ -141,8 +142,12 @@ for key in ['NAL']:
     if key in lines[1]:
         set_z_val(lines_df[1])
 
-    result[key] = (mean, clf.predict(model_df)[0])
-    print(clf.predict(model_df)[0])
+    try:
+      result[key] = (mean, clf.predict(model_df)[0])
+      print(clf.predict(model_df)[0])
+    except Exception as e:
+      logging.error(f'Error occurred for {key}: {str(e)}')
+      continue
 
 def interpolate_df(df):
     """
