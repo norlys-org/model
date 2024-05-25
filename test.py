@@ -9,6 +9,7 @@ import config
 from norlys.rendering import create_matrix
 import plotly.graph_objects as go
 import numpy as np
+from multiprocessing import Pool, cpu_count
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning) # TODO
 
@@ -33,10 +34,15 @@ def mean_score(scores):
     float: The calculated weighted mean score.
     """
 
+    # table = {
+    #     'X_rolling_anomalies': 1, 'X_rolling_gradient': 1, 'X_deflection': 1, 'X_mean': 1, 
+    #     'Y_rolling_anomalies': 1, 'Y_rolling_gradient': 1, 'Y_deflection': 1, 'Y_mean': 1, 
+    #     'Z_rolling_anomalies': 1, 'Z_rolling_gradient': 1, 'Z_deflection': 1, 'Z_mean': 1
+    # }
     table = {
-        'X_rolling_anomalies': 1, 'X_rolling_gradient': 1, 'X_deflection': 1, 'X_mean': 1, 
-        'Y_rolling_anomalies': 1, 'Y_rolling_gradient': 1, 'Y_deflection': 1, 'Y_mean': 1, 
-        'Z_rolling_anomalies': 1, 'Z_rolling_gradient': 1, 'Z_deflection': 1, 'Z_mean': 1
+        'X_rolling_anomalies': 0, 'X_rolling_gradient': 0, 'X_deflection': 0, 'X_mean': 1, 
+        'Y_rolling_anomalies': 0, 'Y_rolling_gradient': 0, 'Y_deflection': 0, 'Y_mean': 0, 
+        'Z_rolling_anomalies': 0, 'Z_rolling_gradient': 0, 'Z_deflection': 0, 'Z_mean': 0
     }
 
     sum = 0
@@ -81,73 +87,71 @@ def initialize_lines_df():
 
     return (lines_df, mean_lon)
 
-clf = load_0m_classifier()
-result = {}
-lines_df, line_lon = initialize_lines_df()
 
-for key in config.STATIONS:
-    logging.info(f'Fetching {key}...')
-    station = config.STATIONS[key]
+def process_station(val):
+  key, clf = val
+  logging.info(f'Fetching {key}...')
+  station = config.STATIONS[key]
 
-    logging.info(f'Retrieving month archive for {key}...')
-    archive_df = pd.read_csv(f'data/month/{key}_data.csv')
-    archive_df['date'] = pd.to_datetime(archive_df['date'])
-    archive_df.set_index('date', inplace=True)
-    archive_df = archive_df[archive_df.index >= archive_df.index.max() - pd.DateOffset(months=1)]
+  logging.info(f'Retrieving month archive for {key}...')
+  archive_df = pd.read_csv(f'data/month/{key}_data.csv')
+  archive_df['date'] = pd.to_datetime(archive_df['date'])
+  archive_df.set_index('date', inplace=True)
+  archive_df = archive_df[archive_df.index >= archive_df.index.max() - pd.DateOffset(months=1)]
 
-    logging.info(f'Fetching real-time values for {key}...')
-    df = fetch_mag(station['slug'], station['source'])
-    if df.empty:
-        continue
+  logging.info(f'Fetching real-time values for {key}...')
+  df = fetch_mag(station['slug'], station['source'])
+  if df.empty:
+      return {}
 
-    logging.info(f'Computing baseline for {key}...')
-    full_df = pd.concat([ archive_df, df ])
-    if full_df.isna().any().any():
-        full_df = full_df.interpolate()
-    full_df.sort_index(inplace=True)
-    
-    baseline = compute_long_term_baseline(key, full_df.index.min(), full_df.index.max(), full_df)
-    baseline.index.names = ['date']
-    result_df = full_df - baseline
-    result_df.dropna(inplace=True)
-    result_df = result_df[result_df.index >= result_df.index.max() - pd.Timedelta(minutes=45)]
+  logging.info(f'Computing baseline for {key}...')
+  full_df = pd.concat([ archive_df, df ])
+  if full_df.isna().any().any():
+      full_df = full_df.interpolate()
+  full_df.sort_index(inplace=True)
+  
+  baseline = compute_long_term_baseline(key, full_df.index.min(), full_df.index.max(), full_df)
+  baseline.index.names = ['date']
+  result_df = full_df - baseline
+  result_df.dropna(inplace=True)
+  result_df = result_df[result_df.index >= result_df.index.max() - pd.Timedelta(minutes=45)]
 
-    # fig = go.Figure(data=[
-    #     go.Scatter(x=result_df.index, y=result_df.X, mode='lines', name='Magnetogram X')
-    # ])
-    # fig.update_layout(
-    #     title='Magnetogram extracted features',
-    #     xaxis=dict(title='Time'),
-    #     yaxis=dict(title='X (nT)')
-    # )
-    # fig.show()
+  # fig = go.Figure(data=[
+  #     go.Scatter(x=result_df.index, y=result_df.X, mode='lines', name='Magnetogram X')
+  # ])
+  # fig.update_layout(
+  #     title='Magnetogram extracted features',
+  #     xaxis=dict(title='Time'),
+  #     yaxis=dict(title='X (nT)')
+  # )
+  # fig.show()
 
 
-    logging.info(f'Computing scores for {key}...')
-    scores = compute_scores(result_df.copy(), key)
-    print(scores)
-    mean = mean_score(scores)
+  logging.info(f'Computing scores for {key}...')
+  scores = compute_scores(result_df.copy(), key)
+  print(scores)
+  mean = mean_score(scores)
 
-    logging.info(f'Getting model prediction for {key}')
-    model_df = get_rolling_window(result_df)
-    model_df['time'] = model_df.index.to_series().apply(percentage_of_day) # Add time as a feature in the dataset
-    model_df.dropna(inplace=True)
-    
-    z = result_df['Z'].tail(1).item() 
-    def set_z_val(line_df):
-        line_df.loc[config.STATIONS[key]['lat'], 'Z'] = z
+  logging.info(f'Getting model prediction for {key}')
+  model_df = get_rolling_window(result_df)
+  model_df['time'] = model_df.index.to_series().apply(percentage_of_day) # Add time as a feature in the dataset
+  model_df.dropna(inplace=True)
+  
+  z = result_df['Z'].tail(1).item() 
+  # def set_z_val(line_df):
+  #     line_df.loc[config.STATIONS[key]['lat'], 'Z'] = z
 
-    if key in lines[0]:
-        set_z_val(lines_df[0])
-    if key in lines[1]:
-        set_z_val(lines_df[1])
+  # if key in lines[0]:
+  #     set_z_val(lines_df[0])
+  # if key in lines[1]:
+  #     set_z_val(lines_df[1])
 
-    try:
-      result[key] = (mean, clf.predict(model_df)[0])
-      print(clf.predict(model_df)[0])
-    except Exception as e:
-      logging.error(f'Error occurred for {key}: {str(e)}')
-      continue
+  try:
+    print(clf.predict(model_df)[0])
+    return key, (mean, clf.predict(model_df)[0]), result_df['Z'].tail(1).item()
+  except Exception as e:
+    logging.error(f'Error occurred for {key}: {str(e)}')
+
 
 def interpolate_df(df):
     """
@@ -186,7 +190,6 @@ def crop_oval(result):
     
     return matrix
 
-matrix = crop_oval(result)
 
 from flask import Flask, jsonify
 from flask_cors import CORS
@@ -202,4 +205,23 @@ def get_map():
 	return matrix
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8080, debug=True)
+  clf = load_0m_classifier()
+  lines_df, line_lon = initialize_lines_df()
+
+  result = {}
+  with Pool(processes=cpu_count()) as pool:
+    results = pool.map(process_station, [(key, clf) for key in config.STATIONS])
+    for item in results:
+      key, data, z = item
+      result.update({ key: data })
+      def set_z_val(line_df):
+          line_df.loc[config.STATIONS[key]['lat'], 'Z'] = z
+
+      if key in lines[0]:
+          set_z_val(lines_df[0])
+      if key in lines[1]:
+          set_z_val(lines_df[1])
+
+  matrix = crop_oval(result)
+
+  app.run(host='0.0.0.0', port=8080, debug=True)
