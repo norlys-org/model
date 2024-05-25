@@ -28,7 +28,7 @@ def deflection(df, component):
   return df[component].rolling('45min').apply(lambda x: x.max() - x.min())
 
 def mean(df, component):
-  return df[component].mean()
+  return df[component]
 
 # the order matters due to dependencies
 features = {
