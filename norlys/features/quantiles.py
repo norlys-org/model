@@ -25,8 +25,6 @@ def compute_scores(df, station):
         for slug in get_features_column_list(component):
             values[slug] = df[slug].iloc[-1]
 
-    print(df)
-
     result = {}
     with open(config.QUANTILES_PATH, 'r') as file:
         quantiles_data = json.load(file)

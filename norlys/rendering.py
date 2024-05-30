@@ -43,7 +43,7 @@ def create_matrix(scores):
 
     for key in scores:
         station = config.STATIONS[key]
-        update_points_within_radius(matrix, station['lat'], station['lon'], 400, scores[key][0])
+        update_points_within_radius(matrix, station['lat'], station['lon'], 200, scores[key][0])
 
     for row in matrix:
         if row['n'] == 0:
