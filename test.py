@@ -34,16 +34,16 @@ def mean_score(scores):
     float: The calculated weighted mean score.
     """
 
-    # table = {
-    #     'X_rolling_anomalies': 1, 'X_rolling_gradient': 1, 'X_deflection': 1, 'X_mean': 1, 
-    #     'Y_rolling_anomalies': 1, 'Y_rolling_gradient': 1, 'Y_deflection': 1, 'Y_mean': 1, 
-    #     'Z_rolling_anomalies': 1, 'Z_rolling_gradient': 1, 'Z_deflection': 1, 'Z_mean': 1
-    # }
     table = {
-        'X_rolling_anomalies': 0, 'X_rolling_gradient': 0, 'X_deflection': 0, 'X_mean': 1, 
-        'Y_rolling_anomalies': 0, 'Y_rolling_gradient': 0, 'Y_deflection': 0, 'Y_mean': 0, 
-        'Z_rolling_anomalies': 0, 'Z_rolling_gradient': 0, 'Z_deflection': 0, 'Z_mean': 0
+        'X_rolling_anomalies': 1, 'X_rolling_gradient': 1, 'X_deflection': 10, 'X_mean': 20, 
+        'Y_rolling_anomalies': 1, 'Y_rolling_gradient': 1, 'Y_deflection': 10, 'Y_mean': 20, 
+        'Z_rolling_anomalies': 1, 'Z_rolling_gradient': 1, 'Z_deflection': 10, 'Z_mean': 20
     }
+    # table = {
+    #     'X_rolling_anomalies': 0, 'X_rolling_gradient': 0, 'X_deflection': 0, 'X_mean': 1, 
+    #     'Y_rolling_anomalies': 0, 'Y_rolling_gradient': 0, 'Y_deflection': 0, 'Y_mean': 0, 
+    #     'Z_rolling_anomalies': 0, 'Z_rolling_gradient': 0, 'Z_deflection': 0, 'Z_mean': 0
+    # }
 
     sum = 0
     weights_sum = 0
@@ -182,11 +182,11 @@ def crop_oval(result):
     lat1_min, lat1_max = interpolate_df(lines_df[0])
     lat2_min, lat2_max = interpolate_df(lines_df[1])
 
-    # for point in matrix:
-    #     # Streamlined conditional logic
-    #     if (point['lon'] > line_lon and (point['lat'] < lat2_min or point['lat'] > lat2_max)) or \
-    #        (point['lon'] <= line_lon and (point['lat'] < lat1_min or point['lat'] > lat1_max)):
-    #         point['score'] = 0
+    for point in matrix:
+        # Streamlined conditional logic
+        if (point['lon'] > line_lon and (point['lat'] < lat2_min or point['lat'] > lat2_max)) or \
+           (point['lon'] <= line_lon and (point['lat'] < lat1_min or point['lat'] > lat1_max)):
+            point['score'] = 0
     
     return matrix
 
