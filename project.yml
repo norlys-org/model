@@ -1,5 +1,5 @@
 packages:
-  - name: norlys
+  - name: model
     actions:
       - name: matrix
         runtime: 'python:default'
