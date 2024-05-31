@@ -45,3 +45,8 @@ STATIONS = {
     'KAR': { 'X': 3, 'Y': 3, 'lat': 59.21, 'lon': 5.24, 'slug': 'kar1a', 'source': 'tgo' },
     'TAR': { 'X': 3, 'Y': 3, 'lat': 58.26, 'lon': 26.46, 'slug': 'tar', 'source': 'fmi' },
 }
+
+LINES = [
+    ['NAL', 'LYR', 'BJN', 'SOR', 'MAS', 'MUO', 'PEL', 'RAN', 'OUJ', 'HAN', 'NUR', 'TAR'],
+    ['NAL', 'LYR', 'BJN', 'SOR', 'JCK', 'DON', 'RVK', 'DOB', 'SOL', 'KAR']
+]

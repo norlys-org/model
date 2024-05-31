@@ -1,4 +1,3 @@
-pre-commit
 pandas
 tqdm
 scikit-learn
@@ -7,3 +6,5 @@ suncalc
 plotly
 flask
 flask_cors
+fastapi
+pydantic
