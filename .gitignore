@@ -5,7 +5,6 @@ data/month
 data/magnetograms
 data/allsky-state.csv
 to-label-*.csv
-*.joblib
 data/solarwind
 norlys/__pycache__
 __pycache__
