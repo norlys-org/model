@@ -5,37 +5,39 @@ import os
 from requests_toolbelt.multipart.encoder import MultipartEncoder
 from datetime import datetime
 from config import config
+import time
 
-if __name__ == '__main__':
-  matrix = get_matrix()
-
-  url = f"https://api.cloudflare.com/client/v4/accounts/{config['accountID']}/storage/kv/namespaces/{config['namespaceID']}/values/{config['matrixKey']}"
-
-  # Get the current date in ISO format
-  current_date_iso = datetime.utcnow().isoformat()
-
-  # Define the metadata with the current date
-  metadata = {
-      'date': current_date_iso
-  }
+def write_to_kv(key, value):
+  url = f"https://api.cloudflare.com/client/v4/accounts/{config['accountID']}/storage/kv/namespaces/{config['namespaceID']}/values/{key}"
 
   # Create the multipart encoder
   m = MultipartEncoder(
       fields={
-          'metadata': json.dumps(metadata),
-          'value': json.dumps(matrix)
+          'metadata': json.dumps({
+            'date': datetime.utcnow().isoformat()
+          }),
+          'value': json.dumps(value)
       }
   )
 
-  # Retrieve the Cloudflare API token from environment variables
   token = os.environ.get('CF_API_TOKEN')
   headers = {
       'Content-Type': m.content_type,
       'Authorization': f'Bearer {token}'
   }
 
-  # Make the request
   response = requests.put(url, data=m, headers=headers)
+  return response['success']
 
-  # Print the response
-  print(response.text)
+def task():
+  matrix = get_matrix()
+  write_to_kv('matrix', matrix)
+
+def run_periodically(interval):
+    while True:
+        task()
+        time.sleep(interval)
+
+if __name__ == "__main__":
+    interval = 5 * 60 # 5 minutes in seconds
+    run_periodically(interval)
