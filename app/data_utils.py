@@ -1,6 +1,6 @@
 import pandas as pd
 from datetime import timedelta
-import config
+from config import config
 from sklearn.model_selection import train_test_split
 
 def get_training_data(y_column, rw_components=[], solar_wind=False):
@@ -33,9 +33,9 @@ def read_training_dataset(solar_wind=False):
 	if `solar_wind` is set to true, the solar wind dataset from DSCOVR will be merged.
 	"""
 
-	df = pd.read_csv(config.TRAIN_PATH)
+	df = pd.read_csv(config['pathes']['trainPath'])
 	if solar_wind:
-		sw_df = pd.read_csv(config.SOLAR_WIND_PATH)
+		sw_df = pd.read_csv(config['pathes']['solarWindPath'])
 		df = pd.merge(df, sw_df, on='timestamp')
 	df['timestamp'] = pd.to_datetime(df['timestamp'])
 	return df
@@ -48,7 +48,7 @@ def filter_events(df):
 
 	event_df = df.copy()
 	# Replace all label classes except 'clear' by 'event' to create one structure for events
-	event_df['label'] = event_df['label'].replace(config.CLASSES, 'event')
+	event_df['label'] = event_df['label'].replace(config['classes'], 'event')
 
 	# Group events and compute start_time, end_time and duration on these events
 	event_identifier = (event_df['label'] != event_df['label'].shift()).cumsum()
@@ -59,8 +59,8 @@ def filter_events(df):
 	)
 	
 	# Add the window offset to include a bit of 'clear' time before and after
-	event_info['start_time'] -= timedelta(hours=config.EVENT_WINDOW_OFFSET)
-	event_info['end_time'] += timedelta(hours=config.EVENT_WINDOW_OFFSET)
+	event_info['start_time'] -= timedelta(hours=config['eventWindowOffset'])
+	event_info['end_time'] += timedelta(hours=config['eventWindowOffset'])
 
 	df.set_index('timestamp', inplace=True)
 	result = []
@@ -78,12 +78,12 @@ def get_rolling_window(df, components=[]):
 	# for component in components + ['label']:
 	for component in components:
 		columns = []
-		for i in range(config.ROLLING_WINDOW_SIZE):
+		for i in range(config['rollingWindowSize']):
 			columns.append(f'{component}{i}')
 
-		pbar = enumerate(df[component].rolling(window=config.ROLLING_WINDOW_SIZE))
+		pbar = enumerate(df[component].rolling(window=config['rollingWindowSize']))
 		for _, window in pbar:
-			if len(window) != config.ROLLING_WINDOW_SIZE: 
+			if len(window) != config['rollingWindowSize']: 
 				continue
 
 			df.loc[window.index.max(), columns] = window.to_list()
