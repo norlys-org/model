@@ -10,7 +10,10 @@ from app.rendering import create_matrix
 import plotly.graph_objects as go
 import numpy as np
 from multiprocessing import Pool, cpu_count
+from app.rendering import create_matrix
+import config
 import warnings
+
 warnings.simplefilter(action='ignore', category=FutureWarning) # TODO
 
 logging.basicConfig(
@@ -39,6 +42,11 @@ def mean_score(scores):
         'Y_rolling_anomalies': 1, 'Y_rolling_gradient': 1, 'Y_deflection': 10, 'Y_mean': 20, 
         'Z_rolling_anomalies': 1, 'Z_rolling_gradient': 1, 'Z_deflection': 10, 'Z_mean': 20
     }
+    # table = {
+    #     'X_rolling_anomalies': 0, 'X_rolling_gradient': 0, 'X_deflection': 0, 'X_mean': 1, 
+    #     'Y_rolling_anomalies': 0, 'Y_rolling_gradient': 0, 'Y_deflection': 0, 'Y_mean': 0, 
+    #     'Z_rolling_anomalies': 0, 'Z_rolling_gradient': 0, 'Z_deflection': 0, 'Z_mean': 0
+    # }
 
     sum = 0
     weights_sum = 0
@@ -49,9 +57,9 @@ def mean_score(scores):
 
     return sum / weights_sum
 
-def mean_longitude(stations):
+def get_lon(stations):
     """
-    Get average longitude from a list of stations
+    Average all longitudes from given longitudes
     """
 
     sum = 0
@@ -59,15 +67,15 @@ def mean_longitude(stations):
         sum += config.STATIONS[station]['lon']
     return sum / len(stations)
 
-
+lines = [
+    ['NAL', 'LYR', 'BJN', 'SOR', 'MAS', 'MUO', 'PEL', 'RAN', 'OUJ', 'HAN', 'NUR', 'TAR'],
+    ['NAL', 'LYR', 'BJN', 'SOR', 'JCK', 'DON', 'RVK', 'DOB', 'SOL', 'KAR']
+]
 def initialize_lines_df():
-    """
-    Initialize dataframes for each lines with no data and interpolate between the highest and lowest latitude.
-    """
     lines_df = []
     mean_lon = 0
 
-    for line in config.LINES:
+    for line in lines:
         line_df = pd.DataFrame(index=np.arange(
             config.STATIONS[line[-1]]['lat'], 
             config.STATIONS[line[0]]['lat'], 
@@ -76,15 +84,16 @@ def initialize_lines_df():
         line_df['Z'] = np.nan
         lines_df.append(line_df)
 
-        mean_lon += mean_longitude(line)
+        mean_lon += get_lon(line)
 
-    mean_lon /= len(config.LINES)
+    mean_lon /= len(lines)
 
     return (lines_df, mean_lon)
 
 
-def process_station(args):
-  key, clf = args
+def process_station(val):
+  key, clf = val
+  logging.info(f'Fetching {key}...')
   station = config.STATIONS[key]
 
   logging.info(f'Retrieving month archive for {key}...')
@@ -110,6 +119,17 @@ def process_station(args):
   result_df.dropna(inplace=True)
   result_df = result_df[result_df.index >= result_df.index.max() - pd.Timedelta(minutes=45)]
 
+  # fig = go.Figure(data=[
+  #     go.Scatter(x=result_df.index, y=result_df.X, mode='lines', name='Magnetogram X')
+  # ])
+  # fig.update_layout(
+  #     title='Magnetogram extracted features',
+  #     xaxis=dict(title='Time'),
+  #     yaxis=dict(title='X (nT)')
+  # )
+  # fig.show()
+
+
   logging.info(f'Computing scores for {key}...')
   scores = compute_scores(result_df.copy(), key)
   mean = mean_score(scores)
@@ -119,10 +139,17 @@ def process_station(args):
   model_df['time'] = model_df.index.to_series().apply(percentage_of_day) # Add time as a feature in the dataset
   model_df.dropna(inplace=True)
   
-  z_value = result_df['Z'].tail(1).item() 
+  z = result_df['Z'].tail(1).item() 
+  # def set_z_val(line_df):
+  #     line_df.loc[config.STATIONS[key]['lat'], 'Z'] = z
+
+  # if key in lines[0]:
+  #     set_z_val(lines_df[0])
+  # if key in lines[1]:
+  #     set_z_val(lines_df[1])
 
   try:
-    return key, (mean, clf.predict(model_df)[0]), z_value
+    return key, (mean, clf.predict(model_df)[0]), result_df['Z'].tail(1).item()
   except Exception as e:
     logging.error(f'Error occurred for {key}: {str(e)}')
 
@@ -165,7 +192,7 @@ def crop_oval(result, lines_df, line_lon):
     return matrix
 
 
-def main():
+def get_matrix():
   clf = load_0m_classifier()
   lines_df, line_lon = initialize_lines_df()
 
@@ -178,8 +205,9 @@ def main():
       def set_z_val(line_df):
           line_df.loc[config.STATIONS[key]['lat'], 'Z'] = z
 
-      for i, line in enumerate(config.LINES):
-        if key in line[i]:
-            set_z_val(lines_df[i])
+      if key in lines[0]:
+          set_z_val(lines_df[0])
+      if key in lines[1]:
+          set_z_val(lines_df[1])
 
   return crop_oval(result, lines_df, line_lon)
