@@ -6,3 +6,4 @@ suncalc
 requests
 requests_toolbelt
 flask
+waitress
