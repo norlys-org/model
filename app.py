@@ -6,6 +6,7 @@ from requests_toolbelt.multipart.encoder import MultipartEncoder
 from datetime import datetime
 from config import config
 from flask import Flask
+from waitress import serve
 import threading
 import time
 
@@ -30,8 +31,7 @@ def write_to_kv(key, value):
       'Authorization': f'Bearer {token}'
   }
 
-  response = requests.put(url, data=m, headers=headers)
-  return response['success']
+  return requests.put(url, data=m, headers=headers)
 
 def periodic_task():
   while True:
@@ -44,8 +44,8 @@ def ping():
     return "Pong"
 
 if __name__ == "__main__":
-    # task_thread = threading.Thread(target=periodic_task)
-    # task_thread.daemon = True
-    # task_thread.start()
-    
-    app.run(host='0.0.0.0', port=8080, debug=True)
+  task_thread = threading.Thread(target=periodic_task)
+  task_thread.daemon = True
+  task_thread.start()
+  
+  serve(app, host='0.0.0.0', port=8080)
