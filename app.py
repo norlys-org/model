@@ -44,8 +44,8 @@ def ping():
     return "Pong"
 
 if __name__ == "__main__":
-  task_thread = threading.Thread(target=periodic_task)
-  task_thread.daemon = True
-  task_thread.start()
+  # task_thread = threading.Thread(target=periodic_task)
+  # task_thread.daemon = True
+  # task_thread.start()
   
   serve(app, host='0.0.0.0', port=8080)
