@@ -165,7 +165,7 @@ def crop_oval(result, lines_df, line_lon):
     return matrix
 
 
-def get_matrix():
+def main():
   clf = load_0m_classifier()
   lines_df, line_lon = initialize_lines_df()
 
