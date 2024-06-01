@@ -3,8 +3,5 @@ tqdm
 scikit-learn
 joblib
 suncalc
-plotly
-flask
-flask_cors
-fastapi
-pydantic
+requests
+requests_toolbelt
