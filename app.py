@@ -6,6 +6,8 @@ from requests_toolbelt.multipart.encoder import MultipartEncoder
 from datetime import datetime
 from config import config
 from flask import Flask
+import threading
+import time
 
 app = Flask(__name__)
 
@@ -31,10 +33,19 @@ def write_to_kv(key, value):
   response = requests.put(url, data=m, headers=headers)
   return response['success']
 
-@app.route('/map', methods=['GET'])
-def map():
-  matrix = get_matrix()
-  write_to_kv('matrix', matrix)
+def periodic_task():
+  while True:
+    matrix = get_matrix()
+    write_to_kv('matrix', matrix)
+    time.sleep(5 * 60)
 
-if __name__ == '__main__':
+@app.route('/ping', methods=['GET'])
+def ping():
+    return "Pong"
+
+if __name__ == "__main__":
+    task_thread = threading.Thread(target=periodic_task)
+    task_thread.daemon = True
+    task_thread.start()
+    
     app.run(host='0.0.0.0', port=8080, debug=True)
