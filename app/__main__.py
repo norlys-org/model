@@ -1,12 +1,12 @@
 import logging
-from norlys.baseline import compute_long_term_baseline, get_substracted_data
-from norlys.data_utils import get_clipped_data, get_rolling_window, get_training_data, percentage_of_day
-from norlys.features.quantiles import compute_scores
-from norlys.fetch import fetch_mag
-from norlys.model import load_0m_classifier
+from app.baseline import compute_long_term_baseline, get_substracted_data
+from app.data_utils import get_clipped_data, get_rolling_window, get_training_data, percentage_of_day
+from app.features.quantiles import compute_scores
+from app.fetch import fetch_mag
+from app.model import load_0m_classifier
 import pandas as pd
 import config
-from norlys.rendering import create_matrix
+from app.rendering import create_matrix
 import plotly.graph_objects as go
 import numpy as np
 from multiprocessing import Pool, cpu_count
