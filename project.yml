@@ -1,7 +1,0 @@
-environment:
-  TGO_PASSWORD: ${TGO_PASSWORD}
-packages:
-  - name: model
-    actions:
-      - name: matrix
-        runtime: 'python:default'

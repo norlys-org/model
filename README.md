@@ -10,8 +10,17 @@ A third algorithm is used every day to fetch the baseline data.
 
 The model outputs a matrix of points over northern europe with the strength of each point.
 
+## Model training
+```bash
+python3 train.py
+```
+
 ## Deployment
 The model is deployed on digital ocean's app platform and runs every minute to compute the matrix and store it in cloudfare kv
+
+### Environment variables
+- `TGO_PASSWORD` Password the [TGO's magnetogram data](https://flux.phys.uit.no/ascii/).
+- `CF_API_TOKEN` Cloudfare KV token
 
 ## Links 
 
