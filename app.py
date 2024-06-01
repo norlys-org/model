@@ -4,14 +4,12 @@ import json
 import os
 from requests_toolbelt.multipart.encoder import MultipartEncoder
 from datetime import datetime
+from config import config
 
 if __name__ == '__main__':
   matrix = get_matrix()
 
-  account_id = "027c2b0378c6ce9b76e5b5eab615ba04"
-  namespace_id = "ed64384b958c48eeb86b922b3c1aebb0"
-  matrix_key = "matrix"
-  url = f"https://api.cloudflare.com/client/v4/accounts/{account_id}/storage/kv/namespaces/{namespace_id}/values/{matrix_key}"
+  url = f"https://api.cloudflare.com/client/v4/accounts/{config['accountID']}/storage/kv/namespaces/{config['namespaceID']}/values/{config['matrixKey']}"
 
   # Get the current date in ISO format
   current_date_iso = datetime.utcnow().isoformat()
