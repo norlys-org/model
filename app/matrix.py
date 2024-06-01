@@ -5,12 +5,11 @@ from app.features.quantiles import compute_scores
 from app.fetch import fetch_mag
 from app.model import load_0m_classifier
 import pandas as pd
-import config
 from app.rendering import create_matrix
 import numpy as np
 from multiprocessing import Pool, cpu_count
 from app.rendering import create_matrix
-import config
+from config import config
 import warnings
 
 warnings.simplefilter(action='ignore', category=FutureWarning) # TODO
@@ -58,7 +57,7 @@ def get_lon(stations):
 
     sum = 0
     for station in stations:
-        sum += config.STATIONS[station]['lon']
+        sum += config['magnetometres'][station]['lon']
     return sum / len(stations)
 
 lines = [
@@ -71,8 +70,8 @@ def initialize_lines_df():
 
     for line in lines:
         line_df = pd.DataFrame(index=np.arange(
-            config.STATIONS[line[-1]]['lat'], 
-            config.STATIONS[line[0]]['lat'], 
+            config['magnetometres'][line[-1]]['lat'], 
+            config['magnetometres'][line[0]]['lat'], 
             0.01
         ))
         line_df['Z'] = np.nan
@@ -88,7 +87,7 @@ def initialize_lines_df():
 def process_station(val):
   key, clf = val
   logging.info(f'Fetching {key}...')
-  station = config.STATIONS[key]
+  station = config['magnetometres'][key]
 
   logging.info(f'Retrieving month archive for {key}...')
   archive_df = pd.read_csv(f'data/month/{key}_data.csv')
@@ -123,16 +122,9 @@ def process_station(val):
   model_df.dropna(inplace=True)
   
   z = result_df['Z'].tail(1).item() 
-  # def set_z_val(line_df):
-  #     line_df.loc[config.STATIONS[key]['lat'], 'Z'] = z
-
-  # if key in lines[0]:
-  #     set_z_val(lines_df[0])
-  # if key in lines[1]:
-  #     set_z_val(lines_df[1])
 
   try:
-    return key, (mean, clf.predict(model_df)[0]), result_df['Z'].tail(1).item()
+    return key, (mean, clf.predict(model_df)[0]), z
   except Exception as e:
     logging.error(f'Error occurred for {key}: {str(e)}')
 
@@ -181,12 +173,12 @@ def get_matrix():
 
   result = {}
   with Pool(processes=cpu_count()) as pool:
-    results = pool.map(process_station, [(key, clf) for key in config.STATIONS])
+    results = pool.map(process_station, [(key, clf) for key in config['magnetometres']])
     for item in results:
       key, data, z = item
       result.update({ key: data })
       def set_z_val(line_df):
-          line_df.loc[config.STATIONS[key]['lat'], 'Z'] = z
+          line_df.loc[config['magnetometres'][key]['lat'], 'Z'] = z
 
       if key in lines[0]:
           set_z_val(lines_df[0])

@@ -4,8 +4,8 @@ is added to the month archive. This month archive is used to compute the baselin
 """
 
 import logging
-import config
-from norlys.fetch import fetch_mag
+from config import config
+from app.fetch import fetch_mag
 import os
 import pandas as pd
 from datetime import datetime, timedelta
@@ -16,9 +16,9 @@ logging.basicConfig(
 )
 
 last_month_date = datetime.now().replace(hour=23, minute=59, second=59) - timedelta(days=30)
-for key in config.STATIONS:
+for key in config['magnetometres']:
     logging.info(f'Fetching {key}')
-    station = config.STATIONS[key]
+    station = config['magnetometres'][key]
     df = fetch_mag(station['slug'], station['source'])
 
     file_path = f'data/month/{key}_data.csv'

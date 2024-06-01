@@ -1,5 +1,5 @@
 import math
-import config
+from config import config
 
 def haversine(lat1, lon1, lat2, lon2):
     # Radius of the Earth in kilometers
@@ -42,7 +42,7 @@ def create_matrix(scores):
     } for lon in lons for lat in lats]
 
     for key in scores:
-        station = config.STATIONS[key]
+        station = config['magnetometres'][key]
         score, status = scores[key]
         update_points_within_radius(matrix, station['lat'], station['lon'], 200, score, status)
 
