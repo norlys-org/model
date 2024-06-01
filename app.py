@@ -1,6 +1,6 @@
 from flask import Flask, jsonify
 from flask_cors import CORS
-from norlys.rendering import create_matrix
+from app.rendering import create_matrix
 import random
 import config
 

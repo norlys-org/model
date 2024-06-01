@@ -1,7 +1,5 @@
 import math
 import config
-import json
-import numpy as np
 
 def haversine(lat1, lon1, lat2, lon2):
     # Radius of the Earth in kilometers
