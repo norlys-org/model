@@ -7,7 +7,6 @@ from app.model import load_0m_classifier
 import pandas as pd
 import config
 from app.rendering import create_matrix
-import plotly.graph_objects as go
 import numpy as np
 from multiprocessing import Pool, cpu_count
 from app.rendering import create_matrix
@@ -42,11 +41,6 @@ def mean_score(scores):
         'Y_rolling_anomalies': 1, 'Y_rolling_gradient': 1, 'Y_deflection': 10, 'Y_mean': 20, 
         'Z_rolling_anomalies': 1, 'Z_rolling_gradient': 1, 'Z_deflection': 10, 'Z_mean': 20
     }
-    # table = {
-    #     'X_rolling_anomalies': 0, 'X_rolling_gradient': 0, 'X_deflection': 0, 'X_mean': 1, 
-    #     'Y_rolling_anomalies': 0, 'Y_rolling_gradient': 0, 'Y_deflection': 0, 'Y_mean': 0, 
-    #     'Z_rolling_anomalies': 0, 'Z_rolling_gradient': 0, 'Z_deflection': 0, 'Z_mean': 0
-    # }
 
     sum = 0
     weights_sum = 0
@@ -118,17 +112,6 @@ def process_station(val):
   result_df = full_df - baseline
   result_df.dropna(inplace=True)
   result_df = result_df[result_df.index >= result_df.index.max() - pd.Timedelta(minutes=45)]
-
-  # fig = go.Figure(data=[
-  #     go.Scatter(x=result_df.index, y=result_df.X, mode='lines', name='Magnetogram X')
-  # ])
-  # fig.update_layout(
-  #     title='Magnetogram extracted features',
-  #     xaxis=dict(title='Time'),
-  #     yaxis=dict(title='X (nT)')
-  # )
-  # fig.show()
-
 
   logging.info(f'Computing scores for {key}...')
   scores = compute_scores(result_df.copy(), key)
