@@ -5,7 +5,9 @@ import os
 from requests_toolbelt.multipart.encoder import MultipartEncoder
 from datetime import datetime
 from config import config
-import time
+from flask import Flask
+
+app = Flask(__name__)
 
 def write_to_kv(key, value):
   url = f"https://api.cloudflare.com/client/v4/accounts/{config['accountID']}/storage/kv/namespaces/{config['namespaceID']}/values/{key}"
@@ -29,15 +31,10 @@ def write_to_kv(key, value):
   response = requests.put(url, data=m, headers=headers)
   return response['success']
 
-def task():
+@app.route('/map', methods=['GET'])
+def map():
   matrix = get_matrix()
   write_to_kv('matrix', matrix)
 
-def run_periodically(interval):
-    while True:
-        task()
-        time.sleep(interval)
-
-if __name__ == "__main__":
-    interval = 5 * 60 # 5 minutes in seconds
-    run_periodically(interval)
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=8080, debug=True)
