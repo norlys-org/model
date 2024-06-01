@@ -5,5 +5,8 @@ def json_to_python(file_path):
         data = json.load(json_file)
     return data
 
-file_path = 'config/build/model.json'
-config = json_to_python(file_path)
+model_path = 'config/build/model.json'
+kv_path = 'config/build/kv.json'
+
+config = json_to_python(model_path)
+config.update(json_to_python(kv_path))
