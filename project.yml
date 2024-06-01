@@ -1,3 +1,5 @@
+environment:
+  TGO_PASSWORD: ${TGO_PASSWORD}
 packages:
   - name: model
     actions:
