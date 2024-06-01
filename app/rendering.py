@@ -23,11 +23,12 @@ def haversine(lat1, lon1, lat2, lon2):
     distance = R * c
     return distance
 
-def update_points_within_radius(points, center_lat, center_lon, radius, new_value):
+def update_points_within_radius(points, center_lat, center_lon, radius, score, status):
     for point in points:
         if haversine(center_lat, center_lon, point['lat'], point['lon']) <= radius:
             point['n'] = point['n'] + 1
-            point['score'] = point['score'] + new_value
+            point['score'] = point['score'] + score
+            point['status'] = status
 
 def create_matrix(scores):
     lats = [lat / 10 for lat in reversed(range(560, 810, 5))]
@@ -36,16 +37,21 @@ def create_matrix(scores):
         'lat': lat,
         'lon': lon,
         'n': 0,
-        'score': 0
+        'score': 0,
+        'status': 'clear'
     } for lon in lons for lat in lats]
 
     for key in scores:
         station = config.STATIONS[key]
-        update_points_within_radius(matrix, station['lat'], station['lon'], 200, scores[key][0])
+        score, status = scores[key]
+        update_points_within_radius(matrix, station['lat'], station['lon'], 200, score, status)
 
     for row in matrix:
         if row['n'] == 0:
             continue
         row['score'] = row['score'] / row['n']
+
+    for row in matrix:
+        del row['n']
 
     return matrix
