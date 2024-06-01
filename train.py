@@ -1,9 +1,9 @@
-from norlys import model
+from app import model
 import logging
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning) # TODO
 
-from norlys.features.quantiles import save_quantiles
+from app.features.quantiles import save_quantiles
 
 logging.basicConfig(
     level=logging.INFO,
