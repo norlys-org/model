@@ -1,4 +1,4 @@
-from norlys.data_utils import get_training_data
+from app.data_utils import get_training_data
 from sklearn.ensemble import ExtraTreesClassifier
 from sklearn.metrics import accuracy_score
 import logging

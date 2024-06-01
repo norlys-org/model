@@ -1,5 +1,5 @@
-from norlys.baseline import get_substracted_data
-from norlys.features.features import apply_features, get_features_column_list
+from app.baseline import get_substracted_data
+from app.features.features import apply_features, get_features_column_list
 import config
 import json
 import logging

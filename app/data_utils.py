@@ -1,6 +1,5 @@
 import pandas as pd
 from datetime import timedelta
-from tqdm import tqdm
 import config
 from sklearn.model_selection import train_test_split
 
