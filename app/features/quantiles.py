@@ -1,6 +1,6 @@
 from app.baseline import get_substracted_data
 from app.features.features import apply_features, get_features_column_list
-import config
+from config import config
 import json
 import logging
 from multiprocessing import Pool, cpu_count
@@ -26,7 +26,7 @@ def compute_scores(df, station):
             values[slug] = df[slug].iloc[-1]
 
     result = {}
-    with open(config.QUANTILES_PATH, 'r') as file:
+    with open(config['pathes']['quantilesPath'], 'r') as file:
         quantiles_data = json.load(file)
         for key in quantiles_data[station]:
             quantiles = quantiles_data[station][key]
@@ -41,7 +41,7 @@ def compute_quantiles(df):
     result = {}
     for component in ['X', 'Y', 'Z']:
       for slug in get_features_column_list(component):
-          result[slug] = df[slug].quantile(config.QUANTILES).tolist()
+          result[slug] = df[slug].quantile(config['quantiles']).tolist()
 
     return result
 
@@ -57,9 +57,9 @@ def save_quantiles():
     result = {}
 
     with Pool(processes=cpu_count()) as pool:
-      results = pool.map(process_station, config.STATIONS)
+      results = pool.map(process_station, config['magnetometres'])
       for item in results:
         result.update(item)
 
-    with open(config.QUANTILES_PATH, 'w') as fp:
+    with open(config['pathes']['quantilesPath'], 'w') as fp:
         json.dump(result, fp)

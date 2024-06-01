@@ -4,7 +4,7 @@ from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error
 from suncalc import get_position
 import math
-import config
+from config import config
 
 def read_and_format(station):
     """
@@ -141,7 +141,7 @@ def compute_quietest_and_disturbed_days(station, start, end, df):
         #     index=[day]
         # )])
 
-        if np.median(std_devs['X'].to_numpy()) > config.STATIONS[station]['X']:
+        if np.median(std_devs['X'].to_numpy()) > config['magnetometres'][station]['X']:
             disturbed_days.append(day.date())
  
     quietest_day = ''

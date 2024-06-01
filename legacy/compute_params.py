@@ -1,8 +1,8 @@
 import pandas as pd
 import plotly.graph_objects as go
 from sklearn.ensemble import IsolationForest
-import config
-from norlys.baseline import get_substracted_data
+from config import config
+from app.baseline import get_substracted_data
 from tqdm import tqdm
 
 df = pd.read_csv('data/train.csv')
