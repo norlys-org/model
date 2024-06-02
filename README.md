@@ -24,7 +24,7 @@ The model is deployed on digital ocean's app platform and runs every minute to c
 
 ### Data fetching
 In order to compute the baseline the model needs a month of historical data. 
-Once a day at 10am UTC a GitHub action will run the [`retrieve_archive.py`](https://github.com/norlys-org/model/blob/master/retrieve_archive.py) script and push to this same repository, triggering a rebuild by Digital ocean
+Once a day at 2330Z a GitHub action will run the [`retrieve_archive.py`](https://github.com/norlys-org/model/blob/master/retrieve_archive.py) script and push to this same repository, triggering a rebuild by Digital ocean
 
 ## Links 
 
