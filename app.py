@@ -6,11 +6,17 @@ from requests_toolbelt.multipart.encoder import MultipartEncoder
 from datetime import datetime
 from config import config
 from flask import Flask
+from flask_apscheduler import APScheduler
 from waitress import serve
 import threading
 import time
 
 app = Flask(__name__)
+
+scheduler = APScheduler()
+scheduler.api_enabled = True
+scheduler.init_app(app)
+scheduler.start()
 
 def write_to_kv(key, value):
   url = f"https://api.cloudflare.com/client/v4/accounts/{config['accountID']}/storage/kv/namespaces/{config['namespaceID']}/values/{key}"
@@ -33,37 +39,10 @@ def write_to_kv(key, value):
 
   return requests.put(url, data=m, headers=headers)
 
-def periodic_task():
-  while True:
-    matrix = get_matrix()
-    write_to_kv('matrix', matrix)
-    time.sleep(5 * 60)
-
-@app.route('/ping', methods=['GET'])
-def ping():
-    return "Pong"
-
-thread_event = threading.Event()
-
-@app.route('/start', methods=['GET'])
-def start():
-  try:
-    thread_event.set()
-    
-    thread = threading.Thread(target=periodic_task)
-    thread.start()
-
-    return "Background task started!"
-  except Exception as error:
-    return str(error)
-  
-@app.route('/stop', methods=['GET'])
-def stop():
-  try:
-    thread_event.clear()
-    return "Background task stopped!"
-  except Exception as error:
-    return str(error)
+@scheduler.task('interval', id='get_matrix', seconds=60 * 5, misfire_grace_time=900)
+def matrix():
+  matrix = get_matrix()
+  write_to_kv('matrix', matrix)
   
 if __name__ == "__main__":
   serve(app, host='0.0.0.0', port=8080)
