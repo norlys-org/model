@@ -15,8 +15,6 @@ app = Flask(__name__)
 
 scheduler = APScheduler()
 scheduler.api_enabled = True
-scheduler.init_app(app)
-scheduler.start()
 
 def write_to_kv(key, value):
   url = f"https://api.cloudflare.com/client/v4/accounts/{config['accountID']}/storage/kv/namespaces/{config['namespaceID']}/values/{key}"
@@ -39,15 +37,18 @@ def write_to_kv(key, value):
 
   return requests.put(url, data=m, headers=headers)
 
-@scheduler.task('interval', id='get_matrix', seconds=60 * 5, misfire_grace_time=900)
+@scheduler.task('interval', id='get_matrix', max_instances=1, seconds=120)
 def matrix():
   matrix = get_matrix()
-  write_to_kv('matrix', matrix)
-  write_to_kv('last_updated', datetime.utcnow().isoformat())
+  print(write_to_kv('matrix', matrix))
+  print(write_to_kv('last_updated', datetime.utcnow().isoformat()))
 
 @app.route('/ping')
 def ping():
   return 'pong'
   
 if __name__ == "__main__":
+  scheduler.init_app(app)
+  scheduler.start()
+  
   serve(app, host='0.0.0.0', port=8080)
