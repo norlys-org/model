@@ -1,4 +1,4 @@
-# model
+# model [![Archive data fetching](https://github.com/norlys-org/model/actions/workflows/archive-data.yml/badge.svg)](https://github.com/norlys-org/model/actions/workflows/archive-data.yml)
 norlys (new oval representation of nordlys - northern lights) machine learning model.
 
 ## Features
