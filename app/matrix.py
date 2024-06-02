@@ -19,6 +19,8 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s',
 )
 
+clf = load_0m_classifier()
+
 def mean_score(scores):
     """
     Calculate a weighted average score from a set of given scores.
@@ -168,7 +170,6 @@ def crop_oval(result, lines_df, line_lon):
 
 
 def get_matrix():
-  clf = load_0m_classifier()
   lines_df, line_lon = initialize_lines_df()
 
   result = {}
