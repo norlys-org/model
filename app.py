@@ -44,6 +44,10 @@ def matrix():
   matrix = get_matrix()
   write_to_kv('matrix', matrix)
   write_to_kv('last_updated', datetime.utcnow().isoformat())
+
+@app.route('/ping')
+def ping():
+  return 'pong'
   
 if __name__ == "__main__":
   serve(app, host='0.0.0.0', port=8080)
