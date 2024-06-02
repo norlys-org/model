@@ -3,9 +3,6 @@ name: Archive data fetching
 on:
   schedule:
     - cron: '30 23 * * *'
-  push:
-    branches:
-      - master
 
 permissions:
   contents: write
