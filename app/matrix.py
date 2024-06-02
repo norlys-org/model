@@ -173,17 +173,17 @@ def get_matrix():
   lines_df, line_lon = initialize_lines_df()
 
   result = {}
-  with Pool(processes=cpu_count()) as pool:
-    results = pool.map(process_station, [(key, clf) for key in config['magnetometres']])
-    for item in results:
-      key, data, z = item
-      result.update({ key: data })
-      def set_z_val(line_df):
-          line_df.loc[config['magnetometres'][key]['lat'], 'Z'] = z
+  # with Pool(processes=cpu_count()) as pool:
+  #   results = pool.map(process_station, [(key, clf) for key in config['magnetometres']])
+  for key in config['magnetometres']:
+    key, data, z = process_station((key, clf))
+    result.update({ key: data })
+    def set_z_val(line_df):
+        line_df.loc[config['magnetometres'][key]['lat'], 'Z'] = z
 
-      if key in lines[0]:
-          set_z_val(lines_df[0])
-      if key in lines[1]:
-          set_z_val(lines_df[1])
+    if key in lines[0]:
+        set_z_val(lines_df[0])
+    if key in lines[1]:
+        set_z_val(lines_df[1])
 
   return crop_oval(result, lines_df, line_lon)
