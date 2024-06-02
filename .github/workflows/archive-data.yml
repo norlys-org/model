@@ -21,6 +21,7 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v3
       with:
+        token: ${{ secrets.REPO_READ_TOKEN }}
         submodules: true  # Ensure submodules are checked out
         fetch-depth: 0
 
