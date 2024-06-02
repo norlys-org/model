@@ -1,7 +1,6 @@
 data/imagery
 data/tromsoe_csv
 data/iaga
-data/month
 data/magnetograms
 data/allsky-state.csv
 to-label-*.csv
