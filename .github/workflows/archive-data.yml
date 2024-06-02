@@ -21,7 +21,6 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v3
       with:
-        token: ${{ secrets.REPO_READ_TOKEN }}
         submodules: true  # Ensure submodules are checked out
         fetch-depth: 0
 
@@ -50,4 +49,4 @@ jobs:
         git commit -m "Daily data retrieval"
         git push
       env:
-        GITHUB_TOKEN: ${{ secrets.REPO_READ_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
