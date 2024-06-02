@@ -37,7 +37,7 @@ def write_to_kv(key, value):
 
   return requests.put(url, data=m, headers=headers)
 
-@scheduler.task('interval', id='get_matrix', max_instances=1, seconds=120)
+@scheduler.task('interval', id='get_matrix', max_instances=1, seconds=60 * 5)
 def matrix():
   matrix = get_matrix()
   print(write_to_kv('matrix', matrix))
