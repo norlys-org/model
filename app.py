@@ -8,8 +8,6 @@ from config import config
 from flask import Flask
 from flask_apscheduler import APScheduler
 from waitress import serve
-import threading
-import time
 
 app = Flask(__name__)
 
