@@ -43,9 +43,27 @@ def periodic_task():
 def ping():
     return "Pong"
 
-if __name__ == "__main__":
-  # task_thread = threading.Thread(target=periodic_task)
-  # task_thread.daemon = True
-  # task_thread.start()
+thread_event = threading.Event()
+
+@app.route('/start', methods=['GET'])
+def start():
+  try:
+    thread_event.set()
+    
+    thread = threading.Thread(target=periodic_task)
+    thread.start()
+
+    return "Background task started!"
+  except Exception as error:
+    return str(error)
   
+@app.route('/stop', methods=['GET'])
+def stop():
+  try:
+    thread_event.clear()
+    return "Background task stopped!"
+  except Exception as error:
+    return str(error)
+  
+if __name__ == "__main__":
   serve(app, host='0.0.0.0', port=8080)
