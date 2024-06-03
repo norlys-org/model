@@ -44,6 +44,12 @@ def matrix():
 @app.route('/ping')
 def ping():
   return 'pong'
+
+@app.route('/archive_status')
+def status_archive():
+  with open('data/archive_update_date.txt', 'r') as file:
+      data = file.read()
+  return data
   
 if __name__ == "__main__":
   scheduler.init_app(app)
