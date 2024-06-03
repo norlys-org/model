@@ -23,7 +23,7 @@ def write_to_kv(key, value):
           'metadata': json.dumps({
             'date': datetime.utcnow().isoformat()
           }),
-          'value': json.dumps(value)
+          'value': value
       }
   )
 
@@ -38,7 +38,7 @@ def write_to_kv(key, value):
 @scheduler.task('interval', id='get_matrix', max_instances=1, seconds=60 * 5)
 def matrix():
   matrix = get_matrix()
-  print(write_to_kv('matrix', matrix))
+  print(write_to_kv('matrix', json.dumps(matrix)))
   print(write_to_kv('last_updated', datetime.utcnow().isoformat()))
 
 @app.route('/ping')
