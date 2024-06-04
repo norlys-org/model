@@ -47,11 +47,12 @@ def ping():
 
 @app.route('/archive_status')
 def status_archive():
-  with open('data/archive_update_date.txt', 'r') as file:
-      data = file.read()
-  return data
+  return archive_update_date
   
 if __name__ == "__main__":
+  with open('data/archive_update_date.txt', 'r') as file:
+      archive_update_date = file.read()
+
   scheduler.init_app(app)
   scheduler.start()
   
