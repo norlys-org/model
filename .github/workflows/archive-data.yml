@@ -42,7 +42,7 @@ jobs:
 
     - name: Commit and push changes
       run: |
-        git add data/month
+        git add data
         git commit -m "Daily data retrieval"
         git push
       env:
