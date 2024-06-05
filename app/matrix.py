@@ -164,7 +164,12 @@ def crop_oval(result, lines_df, line_lon):
         # Streamlined conditional logic
         if (point['lon'] > line_lon and (point['lat'] < lat2_min or point['lat'] > lat2_max)) or \
            (point['lon'] <= line_lon and (point['lat'] < lat1_min or point['lat'] > lat1_max)):
-            point['score'] = 0
+            # Ponderate score from distance to border
+            distance = min(
+                abs(point['lat'] - lat1_min), abs(point['lat'] - lat1_max),
+                abs(point['lat'] - lat2_min), abs(point['lat'] - lat2_max)
+            ) 
+            point['score'] = point['score'] * ((500 - distance) / 500)
     
     return matrix
 
