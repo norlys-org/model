@@ -169,7 +169,7 @@ def crop_oval(result, lines_df, line_lon):
                 abs(point['lat'] - lat1_min), abs(point['lat'] - lat1_max),
                 abs(point['lat'] - lat2_min), abs(point['lat'] - lat2_max)
             ) 
-            point['score'] = point['score'] * ((500 - distance) / 500)
+            point['score'] = point['score'] * ((5 - distance) / 5)
     
     return matrix
 
