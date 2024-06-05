@@ -37,7 +37,7 @@ for key in config['magnetometres']:
     filtered_df.to_csv(file_path, index=True)
 
 current_date = datetime.now()
-date_string = current_date.strftime('%Y-%m-%d')
+date_string = current_date.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
 
 # Write it to a text file
 with open('data/archive_update_date.txt', 'w') as file:
