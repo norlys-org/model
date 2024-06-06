@@ -38,9 +38,9 @@ def mean_score(scores):
     """
 
     table = {
-        'X_rolling_anomalies': 1, 'X_rolling_gradient': 1, 'X_deflection': 10, 'X_mean': 20, 
-        'Y_rolling_anomalies': 1, 'Y_rolling_gradient': 1, 'Y_deflection': 10, 'Y_mean': 20, 
-        'Z_rolling_anomalies': 1, 'Z_rolling_gradient': 1, 'Z_deflection': 10, 'Z_mean': 20
+        'X_rolling_anomalies': 0, 'X_rolling_gradient': 0, 'X_deflection': 0, 'X_deviation': 1, 
+        'Y_rolling_anomalies': 0, 'Y_rolling_gradient': 0, 'Y_deflection': 0, 'Y_deviation': 0, 
+        'Z_rolling_anomalies': 0, 'Z_rolling_gradient': 0, 'Z_deflection': 0, 'Z_deviation': 0
     }
 
     sum = 0
@@ -160,17 +160,18 @@ def crop_oval(result, lines_df, line_lon):
     lat1_min, lat1_max = interpolate_df(lines_df[0])
     lat2_min, lat2_max = interpolate_df(lines_df[1])
 
-    for point in matrix:
-        # Streamlined conditional logic
-        if (point['lon'] > line_lon and (point['lat'] < lat2_min or point['lat'] > lat2_max)) or \
-           (point['lon'] <= line_lon and (point['lat'] < lat1_min or point['lat'] > lat1_max)):
-            # Ponderate score from distance to border
-            # distance = min(
-            #     abs(point['lat'] - lat1_min), abs(point['lat'] - lat1_max),
-            #     abs(point['lat'] - lat2_min), abs(point['lat'] - lat2_max)
-            # ) 
-            # point['score'] = point['score'] * ((5 - distance) / 5)
-            point['score'] = 0
+    # for point in matrix:
+      # point['score'] = 10 - point['score']
+        # # Streamlined conditional logic
+        # if (point['lon'] > line_lon and (point['lat'] < lat2_min or point['lat'] > lat2_max)) or \
+        #    (point['lon'] <= line_lon and (point['lat'] < lat1_min or point['lat'] > lat1_max)):
+        #     # Ponderate score from distance to border
+        #     # distance = min(
+        #     #     abs(point['lat'] - lat1_min), abs(point['lat'] - lat1_max),
+        #     #     abs(point['lat'] - lat2_min), abs(point['lat'] - lat2_max)
+        #     # ) 
+        #     # point['score'] = point['score'] * ((5 - distance) / 5)
+        #     point['score'] = 0
     
     return matrix
 
@@ -179,17 +180,21 @@ def get_matrix():
   lines_df, line_lon = initialize_lines_df()
 
   result = {}
-  # with Pool(processes=cpu_count()) as pool:
-  #   results = pool.map(process_station, [(key, clf) for key in config['magnetometres']])
-  for key in config['magnetometres']:
-    key, data, z = process_station((key, clf))
-    result.update({ key: data })
-    def set_z_val(line_df):
-        line_df.loc[config['magnetometres'][key]['lat'], 'Z'] = z
+  with Pool(processes=cpu_count()) as pool:
+    results = pool.map(process_station, [(key, clf) for key in config['magnetometres']])
+    for item in results:
+      key, data, z = item
+      result.update({ key: data })
+  # for key in config['magnetometres']:
+    # key, data, z = process_station((key, clf))
+    # result.update({ key: data })
+    # result.update({ key: data })
+      def set_z_val(line_df):
+          line_df.loc[config['magnetometres'][key]['lat'], 'Z'] = z
 
-    if key in lines[0]:
-        set_z_val(lines_df[0])
-    if key in lines[1]:
-        set_z_val(lines_df[1])
+      if key in lines[0]:
+          set_z_val(lines_df[0])
+      if key in lines[1]:
+          set_z_val(lines_df[1])
 
   return crop_oval(result, lines_df, line_lon)
