@@ -44,7 +44,7 @@ def create_matrix(scores):
     for key in scores:
         station = config['magnetometres'][key]
         score, status = scores[key]
-        update_points_within_radius(matrix, station['lat'], station['lon'], 300, score, status)
+        update_points_within_radius(matrix, station['lat'], station['lon'], 400, score, status)
 
     for row in matrix:
         if row['n'] == 0:
