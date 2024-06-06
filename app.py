@@ -46,6 +46,9 @@ def ping():
   return 'pong'
 
 if __name__ == "__main__":
+  matrix = get_matrix()
+  print(write_to_kv('matrix', json.dumps(matrix)))
+  print(write_to_kv('last_updated', datetime.utcnow().isoformat()))
   scheduler.init_app(app)
   scheduler.start()
   
