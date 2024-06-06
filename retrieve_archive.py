@@ -4,6 +4,7 @@ is added to the month archive. This month archive is used to compute the baselin
 """
 
 import logging
+from app import write_to_kv
 from config import config
 from app.fetch import fetch_mag
 import os
@@ -39,6 +40,4 @@ for key in config['magnetometres']:
 current_date = datetime.now()
 date_string = current_date.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
 
-# Write it to a text file
-with open('data/archive_update_date.txt', 'w') as file:
-    file.write(date_string)
+write_to_kv('archive_update_date', date_string.strip())
