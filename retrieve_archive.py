@@ -4,7 +4,7 @@ is added to the month archive. This month archive is used to compute the baselin
 """
 
 import logging
-from app import write_to_kv
+from app.data_utils import write_to_kv
 from config import config
 from app.fetch import fetch_mag
 import os
