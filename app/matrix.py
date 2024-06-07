@@ -11,6 +11,7 @@ from multiprocessing import Pool, cpu_count
 from app.rendering import create_matrix
 from config import config
 import warnings
+import plotly.express as px
 
 warnings.simplefilter(action='ignore', category=FutureWarning) # TODO
 
@@ -110,8 +111,12 @@ def process_station(val):
   
   baseline = compute_long_term_baseline(key, full_df.index.min(), full_df.index.max(), full_df)
   baseline.index.names = ['date']
+  fig = px.line(baseline, x=baseline.index, y='X', title=f'Result for {key}')
+  fig.show()
   result_df = full_df - baseline
   result_df.dropna(inplace=True)
+  # fig = px.line(result_df, x=result_df.index, y='X', title=f'Result for {key}')
+  # fig.show()
   result_df = result_df[result_df.index >= result_df.index.max() - pd.Timedelta(minutes=45)]
 
   logging.info(f'Computing scores for {key}...')

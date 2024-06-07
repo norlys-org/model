@@ -1,7 +1,12 @@
+import json
+import os
 import pandas as pd
-from datetime import timedelta
+from datetime import datetime, timedelta
+
+import requests
 from config import config
 from sklearn.model_selection import train_test_split
+from requests_toolbelt.multipart.encoder import MultipartEncoder
 
 def get_training_data(y_column, rw_components=[], solar_wind=False):
 	return get_data(y_column, rw_components=rw_components, solar_wind=solar_wind)
@@ -109,3 +114,25 @@ def training_format(df, y_column):
 	y = df.pop(y_column).to_numpy()
 	X = df
 	return train_test_split(X, y, test_size=.3, random_state=42, stratify=y)
+
+
+def write_to_kv(key, value):
+  url = f"https://api.cloudflare.com/client/v4/accounts/{config['accountID']}/storage/kv/namespaces/{config['namespaceID']}/values/{key}"
+
+  # Create the multipart encoder
+  m = MultipartEncoder(
+      fields={
+          'metadata': json.dumps({
+            'date': datetime.utcnow().isoformat()
+          }),
+          'value': value
+      }
+  )
+
+  token = os.environ.get('CF_API_TOKEN')
+  headers = {
+      'Content-Type': m.content_type,
+      'Authorization': f'Bearer {token}'
+  }
+
+  return requests.put(url, data=m, headers=headers)
