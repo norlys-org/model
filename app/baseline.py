@@ -44,25 +44,25 @@ def compute_long_term_baseline(station, start, end, df):
     df_daily_median = df_daily_median.drop(disturbed_days)
     df_daily_median = pd.DataFrame(index=pd.date_range(start, end, freq='min')).join(df_daily_median, how='left').interpolate(method='time')
 
-    print(quiet_days)
-
+    templates = {}
     for quiet_day in quiet_days:
       df_quiet_day = df.loc[str(quiet_day)] - df_daily_median.loc[str(quiet_day)]
-      tp = template(df_quiet_day) - df_daily_median.loc[str(quiet_day)]
+      templates[quiet_day] = template(df_quiet_day)
 
-      # print(tp)
+    baseline = df_daily_median + interpolate_diurnal_baseline(templates, quiet_days)
 
-      # trace_df = go.Scatter(x=df_quiet_day.index, y=df_quiet_day['X'], mode='lines', name='Original Data')
-      # trace_baseline = go.Scatter(x=tp.index, y=tp['X'], mode='lines', name='Baseline')
+    # trace_df = go.Scatter(x=df.index, y=df['X'], mode='lines', name='Original Data')
+    # trace_median = go.Scatter(x=df_daily_median.index, y=df_daily_median['X'], mode='lines', name=' Data')
+    # trace_baseline = go.Scatter(x=baseline.index, y=baseline['X'], mode='lines', name='Baseline')
 
-      # # Create the layout for the plot
-      # layout = go.Layout(
-      #     title='Data, Baseline, and Difference',
-      #     xaxis=dict(title='Time'),
-      #     yaxis=dict(title='Value')
-      # )
-      # fig = go.Figure(data=[trace_df, trace_baseline], layout=layout)
-      # pio.show(fig)
+    # # Create the layout for the plot
+    # layout = go.Layout(
+    #     title='Data, Baseline, and Difference',
+    #     xaxis=dict(title='Time'),
+    #     yaxis=dict(title='Value')
+    # )
+    # fig = go.Figure(data=[trace_df,  trace_median, trace_baseline], layout=layout)
+    # pio.show(fig)
 
     return df_daily_median
 
@@ -79,21 +79,55 @@ def template(df, num_frequency_components=7):
         y = df[component].values
         y_fft = np.fft.fft(y)[:num_frequency_components]
         retained_fft_values = y_fft[:num_frequency_components]
-        # frequencies = np.fft.fftfreq(len(y), d=60)[:7]
 
-        # Compute the template T(t_d) using the retained frequency components
         n = len(y)
-        t_d = np.arange(n) * (86400 / n)  # time of day in seconds
+        t_d = np.arange(n)
         
         template = np.zeros(n)
         for h in range(num_frequency_components):
             X_h = retained_fft_values[h]
-            template += np.abs(X_h) * np.cos(2 * np.pi * h * t_d / 86400 + np.angle(X_h))
+            template += np.abs(X_h) * np.cos(2 * np.pi * h * t_d / 1440 + np.angle(X_h))
         
-        result[component] = template
+        result[component] = template / n
 
     result_df = pd.DataFrame(result, index=df.index)
     return result_df
+
+def interpolate_diurnal_baseline(templates, quiet_days):
+    """
+    Interpolate between templates to create a diurnal baseline.
+    
+    Parameters:
+    templates: dict
+        A dictionary where keys are quiet days and values are templates (DataFrames) for those days.
+    quiet_days: list
+        A list of quiet days.
+    
+    Returns:
+    pd.DataFrame
+        A DataFrame representing the diurnal baseline.
+    """
+
+    dfs = []
+
+    for i in range(len(quiet_days) - 1):
+      t1 = pd.Timestamp(quiet_days[i]) + pd.Timedelta(hours=12)
+      t2 = pd.Timestamp(quiet_days[i + 1]) + pd.Timedelta(hours=12)
+      baseline = pd.DataFrame(index=pd.date_range(t1, t2, freq='min'), columns=['X', 'Y', 'Z'])
+
+      T1 = templates[quiet_days[i]]
+      T2 = templates[quiet_days[i + 1]]
+
+      for component in ['X', 'Y', 'Z']:
+        def interpolate(row):
+          t = int(row.name.timestamp())
+          t_d = int(t / 60 % 1440)
+          return T1[component].iloc[t_d] + T2[component].iloc[t_d] - T1[component].iloc[t_d] * ((t - t1.timestamp()) / (t2.timestamp() - t1.timestamp()))
+        baseline[component] = baseline.apply(interpolate, axis=1)
+
+      dfs.append(baseline)
+      
+    return pd.concat(dfs)
 
 def compute_quietest_and_disturbed_days(station, start, end, df):
     """
@@ -157,7 +191,8 @@ def compute_quietest_and_disturbed_days(station, start, end, df):
     h_max['month'] = h_max.index.to_period('M')
     for _, group in h_max.groupby('month'):
         quiet_day = group['h_max'].idxmin()
-        quiet_days.append(quiet_day.date())
+        if len(df.loc[quiet_day:quiet_day + pd.Timedelta(hours=23, minutes=59)]) == 1440:
+          quiet_days.append(quiet_day.date())
 
     return disturbed_days, quiet_days
 
@@ -177,17 +212,3 @@ def get_substracted_data(station):
     baseline = compute_long_term_baseline(station, start, end, df)    
 
     return df[start:end] - baseline[start:end]
-
-# df = get_substracted_data('TRO')
-# df_class = read_allsky_state()
-# df = df.merge(df_class[['UT', 'class']], left_on='UT', right_on='UT', how='left')
-# df['class'].fillna(0, inplace=True)
-
-# df.set_index('UT', inplace=True)
-# df = df.dropna(subset=['X', 'Y', 'Z'])
-
-# df['timestamp'] = df.index.strftime('%Y-%m-%dT%H:%M:%S.000Z')
-# df = df.melt(id_vars='timestamp', var_name='series', value_name='value')
-# df['label'] = None
-# # df.set_index('timestamp', inplace=True)
-# df[['series', 'timestamp', 'value', 'label']].to_csv('to-label.csv', index=False)
