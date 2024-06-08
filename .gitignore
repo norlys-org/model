@@ -8,3 +8,4 @@ data/solarwind
 norlys/__pycache__
 __pycache__
 *.DS_Store
+legacy/temp
