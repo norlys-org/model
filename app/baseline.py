@@ -34,16 +34,20 @@ def compute_long_term_baseline(station, start, end, df):
     generate the long term baseline
     """
 
-    df_daily_median = df.resample('D').median()
+    df_daily_median = df.between_time('12:00', '12:00').resample('D').median()
     disturbed_days, quietest_day = compute_quietest_and_disturbed_days(station, start, end, df)
 
-    baseline = df_daily_median.drop(disturbed_days).resample('min').mean().interpolate(method='linear')
-    if quietest_day == '':
-        return baseline
-
+    # Filter data for the quietest day
+    quiet_day_data = df.loc[quietest_day.strftime('%Y-%m-%d')]
+    median_value = quiet_day_data.median().median()
+    
+    # Create a DataFrame with the median value for each minute in the date range
+    date_range = pd.date_range(start=start, end=end, freq='T')
+    baseline_df = pd.DataFrame(median_value, index=date_range, columns=['baseline'])
+    
     # tp = template(df, baseline, quietest_day)
 
-    return baseline
+    return baseline_df
 
 def template(df, baseline, quietest_day):
     """
@@ -111,6 +115,7 @@ def compute_quietest_and_disturbed_days(station, start, end, df):
 
     h_max = pd.DataFrame(columns=['h_max'])
     disturbed_days = []
+    quiet_days = []
 
     for day in pd.date_range(start, end, freq='D'):
         df_day = df.loc[str(day.date())]
@@ -136,21 +141,20 @@ def compute_quietest_and_disturbed_days(station, start, end, df):
         
         std_devs.dropna(inplace=True)
 
-        # h_max = pd.concat([h_max, pd.DataFrame(
-        #     { 'h_max': max(std_devs['X'] + std_devs['Z']) },
-        #     index=[day]
-        # )])
+        h_max = pd.concat([h_max, pd.DataFrame(
+            { 'h_max': max(std_devs['X'] + std_devs['Z']) },
+            index=[day]
+        )])
 
         if np.median(std_devs['X'].to_numpy()) > config['magnetometres'][station]['X']:
             disturbed_days.append(day.date())
- 
-    quietest_day = ''
-    # if len(h_max['h_max']) == 0:
-    #     quietest_day = ''
-    # else:
-    #     quietest_day = h_max['h_max'].idxmin()
 
-    return disturbed_days, quietest_day
+    h_max['month'] = h_max.index.to_period('M')
+    for _, group in h_max.groupby('month'):
+        quiet_day = group['h_max'].idxmin()
+        quiet_days.append(quiet_day.date())
+
+    return disturbed_days, quiet_days
 
 def is_daytime(latitude, longitude, timestamp):
     """
