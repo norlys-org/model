@@ -1,3 +1,4 @@
+from datetime import datetime
 import pandas as pd
 import numpy as np
 from sklearn.linear_model import LinearRegression
@@ -51,17 +52,17 @@ def compute_long_term_baseline(station, start, end, df):
 
     baseline = df_daily_median + interpolate_diurnal_baseline(start, end, templates, quiet_days)
 
-    # trace_df = go.Scatter(x=df.index, y=df['X'], mode='lines', name='Original Data')
-    # trace_baseline = go.Scatter(x=baseline.index, y=baseline['X'], mode='lines', name='Baseline')
+    trace_df = go.Scatter(x=df.index, y=df['X'], mode='lines', name='Original Data')
+    trace_baseline = go.Scatter(x=baseline.index, y=baseline['X'], mode='lines', name='Baseline')
 
-    # # Create the layout for the plot
-    # layout = go.Layout(
-    #     title='Data, Baseline, and Difference',
-    #     xaxis=dict(title='Time'),
-    #     yaxis=dict(title='Value')
-    # )
-    # fig = go.Figure(data=[trace_df, trace_baseline], layout=layout)
-    # pio.show(fig)
+    # Create the layout for the plot
+    layout = go.Layout(
+        title='Data, Baseline, and Difference',
+        xaxis=dict(title='Time'),
+        yaxis=dict(title='Value')
+    )
+    fig = go.Figure(data=[trace_df, trace_baseline], layout=layout)
+    pio.show(fig)
 
     return df_daily_median
 
@@ -106,10 +107,13 @@ def interpolate_diurnal_baseline(start, end, templates, quiet_days):
         A DataFrame representing the diurnal baseline.
     """
 
-    quiet_days.insert(0, start)
-    quiet_days.append(end)
-    templates.insert(0, templates[0])
-    templates.append(templates[-1])
+    if start.date() not in quiet_days:
+      quiet_days.insert(0, start)
+      templates.insert(0, templates[0])
+    if end.date() not in quiet_days:
+      quiet_days.append(end)
+      templates.append(templates[-1])
+
     dfs = []
 
     for i in range(len(quiet_days) - 1):
