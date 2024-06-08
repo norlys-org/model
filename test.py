@@ -2,11 +2,10 @@
 from app.baseline import compute_long_term_baseline, read_and_format
 import plotly.graph_objs as go
 import plotly.io as pio
+from config import config
 
 df = read_and_format('TRO')
 baseline = compute_long_term_baseline('TRO', df.index.min(), df.index.max(), df)
-
-print(df - baseline)
 
 # trace_df = go.Scatter(x=df.index, y=df['X'], mode='lines', name='Original Data')
 # trace_baseline = go.Scatter(x=baseline.index, y=baseline['X'], mode='lines', name='Baseline')
