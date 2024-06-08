@@ -39,6 +39,7 @@ def compute_long_term_baseline(station, start, end, df):
     generate the long term baseline
     """
 
+    df = df.resample('min').interpolate('linear')
     df_daily_median = df.between_time('12:00', '12:00').resample('D').median()
     disturbed_days, quiet_days = compute_quietest_and_disturbed_days(station, start, end, df)
 
