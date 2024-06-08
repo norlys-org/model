@@ -5,6 +5,8 @@ from sklearn.metrics import mean_squared_error
 from suncalc import get_position
 import math
 from config import config
+import plotly.graph_objs as go
+import plotly.io as pio
 
 def read_and_format(station):
     """
@@ -22,6 +24,8 @@ def read_and_format(station):
     df.set_index('UT', inplace=True)
     df = df.sort_index()
 
+    df = df.head(100000)
+
     df.replace([np.inf, -np.inf], np.nan, inplace=True)
     df.dropna(inplace=True)
     df = df.drop('StationId', axis=1)
@@ -35,60 +39,61 @@ def compute_long_term_baseline(station, start, end, df):
     """
 
     df_daily_median = df.between_time('12:00', '12:00').resample('D').median()
-    disturbed_days, quietest_day = compute_quietest_and_disturbed_days(station, start, end, df)
+    disturbed_days, quiet_days = compute_quietest_and_disturbed_days(station, start, end, df)
 
-    # Filter data for the quietest day
-    quiet_day_data = df.loc[quietest_day.strftime('%Y-%m-%d')]
-    median_value = quiet_day_data.median().median()
-    
-    # Create a DataFrame with the median value for each minute in the date range
-    date_range = pd.date_range(start=start, end=end, freq='T')
-    baseline_df = pd.DataFrame(median_value, index=date_range, columns=['baseline'])
-    
-    # tp = template(df, baseline, quietest_day)
+    df_daily_median = df_daily_median.drop(disturbed_days)
+    df_daily_median = pd.DataFrame(index=pd.date_range(start, end, freq='min')).join(df_daily_median, how='left').interpolate(method='time')
 
-    return baseline_df
+    print(quiet_days)
 
-def template(df, baseline, quietest_day):
+    for quiet_day in quiet_days:
+      df_quiet_day = df.loc[str(quiet_day)] - df_daily_median.loc[str(quiet_day)]
+      tp = template(df_quiet_day) - df_daily_median.loc[str(quiet_day)]
+
+      # print(tp)
+
+      # trace_df = go.Scatter(x=df_quiet_day.index, y=df_quiet_day['X'], mode='lines', name='Original Data')
+      # trace_baseline = go.Scatter(x=tp.index, y=tp['X'], mode='lines', name='Baseline')
+
+      # # Create the layout for the plot
+      # layout = go.Layout(
+      #     title='Data, Baseline, and Difference',
+      #     xaxis=dict(title='Time'),
+      #     yaxis=dict(title='Value')
+      # )
+      # fig = go.Figure(data=[trace_df, trace_baseline], layout=layout)
+      # pio.show(fig)
+
+    return df_daily_median
+
+def template(df, num_frequency_components=7):
     """
     Generate a template curve based on the quietest day's magnetic data following the paper's instructions.
     """
 
-    # Align the dataframe to the baseline
-    df_aligned = df.reindex(baseline.index).fillna(method='ffill')
-    # Calculate residual
-    residual = df_aligned - baseline
-
-    # Create a time series for the quietest day at minute resolution
-    time_series = pd.date_range(start=quietest_day, periods=1440, freq='T')
-    template_data = {'UT': time_series, 'X': [], 'Y': [], 'Z': []}
+    result = {'X': [], 'Y': [], 'Z': []}
 
     # Calculate the FFT for each component and reconstruct the signal
     for component in ['X', 'Y', 'Z']:
         # Calculate FFT and take the first 7 harmonics as per paper's suggestion
-        frequencies = np.fft.fft(residual[component])[:7]
+        y = df[component].values
+        y_fft = np.fft.fft(y)[:num_frequency_components]
+        retained_fft_values = y_fft[:num_frequency_components]
+        # frequencies = np.fft.fftfreq(len(y), d=60)[:7]
 
-        # Reconstruct the template curve for each minute
-        for time in time_series:
-            # Calculate the time in seconds since midnight
-            seconds_since_midnight = (time - quietest_day).total_seconds()
-            sum_v = 0
-            for h in range(7):  # Using 7 harmonics including the 0th
-                amplitude = np.abs(frequencies[h])
-                phase = np.angle(frequencies[h])
-                sum_v += amplitude * np.cos(2 * np.pi * h * seconds_since_midnight / 86400 + phase)
-            template_data[component].append(sum_v)
+        # Compute the template T(t_d) using the retained frequency components
+        n = len(y)
+        t_d = np.arange(n) * (86400 / n)  # time of day in seconds
+        
+        template = np.zeros(n)
+        for h in range(num_frequency_components):
+            X_h = retained_fft_values[h]
+            template += np.abs(X_h) * np.cos(2 * np.pi * h * t_d / 86400 + np.angle(X_h))
+        
+        result[component] = template
 
-    # Create a DataFrame from the template data
-    tp = pd.DataFrame(template_data)
-    tp.set_index('UT', inplace=True)
-
-    # Repeat the template for the desired number of days
-    num_days = 365
-    repeated_template = pd.concat([tp] * num_days)
-    repeated_template.index = pd.date_range(start=quietest_day, periods=len(repeated_template), freq='T')
-
-    return repeated_template
+    result_df = pd.DataFrame(result, index=df.index)
+    return result_df
 
 def compute_quietest_and_disturbed_days(station, start, end, df):
     """

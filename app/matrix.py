@@ -111,8 +111,8 @@ def process_station(val):
   
   baseline = compute_long_term_baseline(key, full_df.index.min(), full_df.index.max(), full_df)
   baseline.index.names = ['date']
-  fig = px.line(baseline, x=baseline.index, y='X', title=f'Result for {key}')
-  fig.show()
+  # fig = px.line(baseline, x=baseline.index, y='X', title=f'Result for {key}')
+  # fig.show()
   result_df = full_df - baseline
   result_df.dropna(inplace=True)
   # fig = px.line(result_df, x=result_df.index, y='X', title=f'Result for {key}')
