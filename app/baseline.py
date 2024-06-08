@@ -44,15 +44,14 @@ def compute_long_term_baseline(station, start, end, df):
     df_daily_median = df_daily_median.drop(disturbed_days)
     df_daily_median = pd.DataFrame(index=pd.date_range(start, end, freq='min')).join(df_daily_median, how='left').interpolate(method='time')
 
-    templates = {}
+    templates = []
     for quiet_day in quiet_days:
       df_quiet_day = df.loc[str(quiet_day)] - df_daily_median.loc[str(quiet_day)]
-      templates[quiet_day] = template(df_quiet_day)
+      templates.append(template(df_quiet_day))
 
-    baseline = df_daily_median + interpolate_diurnal_baseline(templates, quiet_days)
+    baseline = df_daily_median + interpolate_diurnal_baseline(start, end, templates, quiet_days)
 
     # trace_df = go.Scatter(x=df.index, y=df['X'], mode='lines', name='Original Data')
-    # trace_median = go.Scatter(x=df_daily_median.index, y=df_daily_median['X'], mode='lines', name=' Data')
     # trace_baseline = go.Scatter(x=baseline.index, y=baseline['X'], mode='lines', name='Baseline')
 
     # # Create the layout for the plot
@@ -61,7 +60,7 @@ def compute_long_term_baseline(station, start, end, df):
     #     xaxis=dict(title='Time'),
     #     yaxis=dict(title='Value')
     # )
-    # fig = go.Figure(data=[trace_df,  trace_median, trace_baseline], layout=layout)
+    # fig = go.Figure(data=[trace_df, trace_baseline], layout=layout)
     # pio.show(fig)
 
     return df_daily_median
@@ -93,13 +92,12 @@ def template(df, num_frequency_components=7):
     result_df = pd.DataFrame(result, index=df.index)
     return result_df
 
-def interpolate_diurnal_baseline(templates, quiet_days):
+def interpolate_diurnal_baseline(start, end, templates, quiet_days):
     """
     Interpolate between templates to create a diurnal baseline.
     
     Parameters:
-    templates: dict
-        A dictionary where keys are quiet days and values are templates (DataFrames) for those days.
+    templates: list
     quiet_days: list
         A list of quiet days.
     
@@ -108,6 +106,10 @@ def interpolate_diurnal_baseline(templates, quiet_days):
         A DataFrame representing the diurnal baseline.
     """
 
+    quiet_days.insert(0, start)
+    quiet_days.append(end)
+    templates.insert(0, templates[0])
+    templates.append(templates[-1])
     dfs = []
 
     for i in range(len(quiet_days) - 1):
@@ -115,8 +117,8 @@ def interpolate_diurnal_baseline(templates, quiet_days):
       t2 = pd.Timestamp(quiet_days[i + 1]) + pd.Timedelta(hours=12)
       baseline = pd.DataFrame(index=pd.date_range(t1, t2, freq='min'), columns=['X', 'Y', 'Z'])
 
-      T1 = templates[quiet_days[i]]
-      T2 = templates[quiet_days[i + 1]]
+      T1 = templates[i]
+      T2 = templates[i+1]
 
       for component in ['X', 'Y', 'Z']:
         def interpolate(row):
