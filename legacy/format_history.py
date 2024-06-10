@@ -11,9 +11,10 @@ import plotly.express as px
 def download_iata():
     months = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12']
     base_url = 'https://space.fmi.fi/image/www/data_download_month.php?random=0.6728002336789753&source=image_web_page&starttime='
-    params = '&sample_rate=60&compress=undefined&stations=NAL_LYR_HOR_HOP_BJN_NOR_SOR_KEV_TRO_MAS_AND_KIL_IVA_ABK_MUO_KIR_RST_SOD_PEL_JCK_DON_RAN_RVK_LYC_OUJ_MEK_HAN_DOB_SOL_NUR_HAR_UPS_KAR_PPNTAR_'
+    params = '&sample_rate=60&compress=undefined&stations=TAR_'
+    # params = '&sample_rate=60&compress=undefined&stations=NAL_LYR_HOR_HOP_BJN_NOR_SOR_KEV_TRO_MAS_AND_KIL_IVA_ABK_MUO_KIR_RST_SOD_PEL_JCK_DON_RAN_RVK_LYC_OUJ_MEK_HAN_DOB_SOL_NUR_HAR_UPS_KAR_PPNTAR_'
 
-    for year in tqdm(range(2021, 2023), desc="Downloading data for each year"):
+    for year in tqdm(range(2019, 2023), desc="Downloading data for each year"):
       for month in tqdm(months, desc="Downloading data for each month"):
           response = requests.get(f'{base_url}{year}{month}{params}').json()
           url = response['iaga_tar']['url']

@@ -14,22 +14,14 @@ def read_and_format(station):
     Read station magnetometre's data and perform preliminary formatting on the data.
     """
 
-    df = pd.read_csv(f'data/magnetograms/{station}_data.csv')
-    df = df[(df['X'] != 999999) & (df['Y'] != 999999) & (df['Z'] != 999999)]
-
-    df['X'] = df['X'] / 10
-    df['Y'] = df['Y'] / 10
-    df['Z'] = df['Z'] / 10
+    df = pd.read_csv(f'data/magnetograms/{station}.csv')
 
     df['UT'] = pd.to_datetime(df['UT'])
     df.set_index('UT', inplace=True)
     df = df.sort_index()
 
-    df = df.head(100000)
-
     df.replace([np.inf, -np.inf], np.nan, inplace=True)
     df.dropna(inplace=True)
-    df = df.drop('StationId', axis=1)
 
     return df
 
@@ -53,19 +45,19 @@ def compute_long_term_baseline(station, start, end, df):
 
     baseline = df_daily_median + interpolate_diurnal_baseline(start, end, templates, quiet_days)
 
-    trace_df = go.Scatter(x=df.index, y=df['X'], mode='lines', name='Original Data')
-    trace_baseline = go.Scatter(x=baseline.index, y=baseline['X'], mode='lines', name='Baseline')
+    # trace_df = go.Scatter(x=df.index, y=df['X'], mode='lines', name='Original Data')
+    # trace_baseline = go.Scatter(x=baseline.index, y=baseline['X'], mode='lines', name='Baseline')
 
-    # Create the layout for the plot
-    layout = go.Layout(
-        title='Data, Baseline, and Difference',
-        xaxis=dict(title='Time'),
-        yaxis=dict(title='Value')
-    )
-    fig = go.Figure(data=[trace_df, trace_baseline], layout=layout)
-    pio.show(fig)
+    # # Create the layout for the plot
+    # layout = go.Layout(
+    #     title=f'{station}',
+    #     xaxis=dict(title='Time'),
+    #     yaxis=dict(title='Value')
+    # )
+    # fig = go.Figure(data=[trace_df, trace_baseline], layout=layout)
+    # pio.show(fig)
 
-    return df_daily_median
+    return baseline
 
 def template(df, num_frequency_components=7):
     """
