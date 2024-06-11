@@ -4,6 +4,8 @@ from config import config
 import json
 import logging
 from multiprocessing import Pool, cpu_count
+import plotly.graph_objs as go
+import plotly.io as pio
 
 
 def find_quantile_range(quantiles, value):
@@ -28,6 +30,28 @@ def compute_scores(df, station):
     result = {}
     with open(config['pathes']['quantilesPath'], 'r') as file:
         quantiles_data = json.load(file)
+
+        # a = go.Scatter(x=df.index, y=df['X'], mode='lines', name='X')
+        # # b= go.Scatter(x=model_df.index, y=model_df['X'], mode='lines', name='Interpolated Data')
+        # constant_lines = []
+        # for i, value in enumerate(quantiles_data[station]['X_deviation']):
+        #     constant_line = go.Scatter(
+        #         x=df.index,
+        #         y=[value] * len(df),
+        #         mode='lines',
+        #         name=f'X deviation {i}',
+        #         line=dict(dash='dash')  # Optional: make the line dashed
+        #     )
+        #     constant_lines.append(constant_line)
+
+        # # Create the layout for the plot
+        # layout = go.Layout(
+        #     title=f'{station}',
+        #     xaxis=dict(title='Time'),
+        #     yaxis=dict(title='Value')
+        # )
+        # fig = go.Figure(data=[a] + constant_lines, layout=layout)
+        # pio.show(fig)
         for key in quantiles_data[station]:
             quantiles = quantiles_data[station][key]
             value = values[key]

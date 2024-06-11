@@ -12,6 +12,8 @@ from app.rendering import create_matrix
 from config import config
 import warnings
 import plotly.express as px
+import plotly.graph_objs as go
+import plotly.io as pio
 
 warnings.simplefilter(action='ignore', category=FutureWarning) # TODO
 
@@ -105,10 +107,10 @@ def process_station(val):
 
   logging.info(f'Computing baseline for {key}...')
   full_df = pd.concat([ archive_df, df ])
-  if full_df.isna().any().any():
-      full_df = full_df.interpolate()
-  full_df.sort_index(inplace=True)
   full_df = full_df[~full_df.index.duplicated(keep='first')]
+  full_df = full_df.resample('min').interpolate()
+  full_df.dropna(inplace=True)
+  full_df.sort_index(inplace=True)
   
   baseline = compute_long_term_baseline(key, full_df.index.min(), full_df.index.max(), full_df)
   baseline.index.names = ['date']
@@ -119,12 +121,13 @@ def process_station(val):
   logging.info(f'Computing scores for {key}...')
   scores = compute_scores(result_df.copy(), key)
   mean = mean_score(scores)
+  print(key, mean)
 
   logging.info(f'Getting model prediction for {key}')
   model_df = get_rolling_window(result_df)
   model_df['time'] = model_df.index.to_series().apply(percentage_of_day) # Add time as a feature in the dataset
   model_df.dropna(inplace=True)
-  
+
   z = result_df['Z'].tail(1).item() 
 
   try:
@@ -184,6 +187,7 @@ def get_matrix():
   result = {}
   with Pool(processes=cpu_count()) as pool:
     results = pool.map(process_station, [(key, clf) for key in config['magnetometres']])
+  # for item in [process_station((key, clf)) for key in config['magnetometres']]:
     for item in results:
       key, data, z = item
       result.update({ key: data })
