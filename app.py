@@ -9,6 +9,8 @@ from config import config
 from flask import Flask
 from flask_apscheduler import APScheduler
 from waitress import serve
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning) # TODO
 
 app = Flask(__name__)
 
