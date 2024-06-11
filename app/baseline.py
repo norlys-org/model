@@ -45,18 +45,6 @@ def compute_long_term_baseline(station, start, end, df):
 
     baseline = df_daily_median + interpolate_diurnal_baseline(start, end, templates, quiet_days)
 
-    # trace_df = go.Scatter(x=df.index, y=df['X'], mode='lines', name='Original Data')
-    # trace_baseline = go.Scatter(x=baseline.index, y=baseline['X'], mode='lines', name='Baseline')
-
-    # # Create the layout for the plot
-    # layout = go.Layout(
-    #     title=f'{station}',
-    #     xaxis=dict(title='Time'),
-    #     yaxis=dict(title='Value')
-    # )
-    # fig = go.Figure(data=[trace_df, trace_baseline], layout=layout)
-    # pio.show(fig)
-
     return baseline
 
 def template(df, num_frequency_components=7):
@@ -171,6 +159,7 @@ def compute_quietest_and_disturbed_days(station, start, end, df):
 
                 X = np.arange(len(df_hour)).reshape(-1, 1)
                 Y = df_hour[component]
+                # print(Y)
                 model = LinearRegression().fit(X, Y)
                 std_dev = np.sqrt(mean_squared_error(Y, model.predict(X)))
                 new_data[component] = std_dev
@@ -189,9 +178,11 @@ def compute_quietest_and_disturbed_days(station, start, end, df):
 
     h_max['month'] = h_max.index.to_period('M')
     for _, group in h_max.groupby('month'):
-        quiet_day = group['h_max'].idxmin()
-        if len(df.loc[quiet_day:quiet_day + pd.Timedelta(hours=23, minutes=59)]) == 1440:
-          quiet_days.append(quiet_day.date())
+        sorted_group = group.sort_values(by='h_max')
+        for date in sorted_group.index:
+          if len(df.loc[str(date.date())]) == 1440:
+            quiet_days.append(date.date())
+            break  # Stop once we find the valid quiet day for this month
 
     return disturbed_days, quiet_days
 
