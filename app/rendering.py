@@ -30,6 +30,31 @@ def update_points_within_radius(points, center_lat, center_lon, radius, score, s
             point['score'] = point['score'] + score
             point['status'] = status
 
+def compute_radius(station):
+    """
+    Compute the radius of influence of a station based on the density of stations in the vicinity.
+    The default radius is 500km and depending on the amount of stations in that radius the radius is increased or decreased
+    """
+
+    n = 0
+    for key in config['magnetometres']:
+      if n >= 5:
+        break
+      other_station = config['magnetometres'][key]
+      if key == station:
+        continue
+
+      distance = haversine(
+        config['magnetometres'][station]['lat'],
+        config['magnetometres'][station]['lon'],
+        other_station['lat'],
+        other_station['lon']
+      )
+      if distance < 500:
+        n = n + 1
+
+    return 700 - n * 75
+
 def create_matrix(scores):
     lats = [lat / 10 for lat in reversed(range(560, 810, 5))]
     lons = range(1, 40)
@@ -44,7 +69,8 @@ def create_matrix(scores):
     for key in scores:
         station = config['magnetometres'][key]
         score, status = scores[key]
-        update_points_within_radius(matrix, station['lat'], station['lon'], 350, score, status)
+        radius = compute_radius(key)
+        update_points_within_radius(matrix, station['lat'], station['lon'], radius, score, status)
 
     for row in matrix:
         if row['n'] == 0:

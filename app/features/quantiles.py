@@ -20,43 +20,10 @@ def find_quantile_range(quantiles, value):
     return 9
 
 def compute_scores(df, station):
-    # TODO refactor
     df = apply_features(df)
-    values = {}
-    for component in ['X', 'Y', 'Z']:
-        for slug in get_features_column_list(component):
-            values[slug] = df[slug].iloc[-1]
-
     result = {}
-    with open(config['pathes']['quantilesPath'], 'r') as file:
-        quantiles_data = json.load(file)
+    result['X_deviation'] = find_quantile_range(config['deviationThresholds'], df['X_deviation'].iloc[-1])
 
-        # a = go.Scatter(x=df.index, y=df['X'], mode='lines', name='X')
-        # # b= go.Scatter(x=model_df.index, y=model_df['X'], mode='lines', name='Interpolated Data')
-        # constant_lines = []
-        # for i, value in enumerate(quantiles_data[station]['X_deviation']):
-        #     constant_line = go.Scatter(
-        #         x=df.index,
-        #         y=[value] * len(df),
-        #         mode='lines',
-        #         name=f'X deviation {i}',
-        #         line=dict(dash='dash')  # Optional: make the line dashed
-        #     )
-        #     constant_lines.append(constant_line)
-
-        # # Create the layout for the plot
-        # layout = go.Layout(
-        #     title=f'{station}',
-        #     xaxis=dict(title='Time'),
-        #     yaxis=dict(title='Value')
-        # )
-        # fig = go.Figure(data=[a] + constant_lines, layout=layout)
-        # pio.show(fig)
-        for key in quantiles_data[station]:
-            quantiles = quantiles_data[station][key]
-            value = values[key]
-            result[key] = find_quantile_range(quantiles, value)
-    
     return result
 
 def compute_quantiles(df):
@@ -73,6 +40,29 @@ def process_station(station):
   logging.info(f'Computing and substracting baseline for {station}') 
   df = get_substracted_data(station)
   df.dropna(inplace=True)
+  df = df[~df.index.duplicated(keep='first')]
+
+  a = go.Scatter(x=df.index, y=df['X'], mode='lines', name='X')
+  # # b= go.Scatter(x=model_df.index, y=model_df['X'], mode='lines', name='Interpolated Data')
+  # constant_lines = []
+  # for i, value in enumerate(q):
+  #     constant_line = go.Scatter(
+  #         x=[df.index.max()],
+  #         y=[value],
+  #         mode='lines',
+  #         name=f'X deviation {i}',
+  #         line=dict(dash='dash')  # Optional: make the line dashed
+  #     )
+  #     constant_lines.append(constant_line)
+
+  # Create the layout for the plot
+  layout = go.Layout(
+      title=f'{station}',
+      xaxis=dict(title='Time'),
+      yaxis=dict(title='Value')
+  )
+  fig = go.Figure(data=[a], layout=layout)
+  pio.show(fig)
 
   logging.info(f'Computing quantiles for {station}') 
   return {station: compute_quantiles(df)}
@@ -85,5 +75,5 @@ def save_quantiles():
       for item in results:
         result.update(item)
 
-    with open(config['pathes']['quantilesPath'], 'w') as fp:
-        json.dump(result, fp)
+    # with open(config['pathes']['quantilesPath'], 'w') as fp:
+    #     json.dump(result, fp)
