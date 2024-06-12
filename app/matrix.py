@@ -111,12 +111,15 @@ def process_station(val):
   full_df = full_df.resample('min').interpolate()
   full_df.dropna(inplace=True)
   full_df.sort_index(inplace=True)
-  
+
   baseline = compute_long_term_baseline(key, full_df.index.min(), full_df.index.max(), full_df)
   baseline.index.names = ['date']
   result_df = full_df - baseline
   result_df.dropna(inplace=True)
   result_df = result_df[result_df.index >= result_df.index.max() - pd.Timedelta(minutes=45)]
+  
+  if result_df.empty:
+    return {}
 
   logging.info(f'Computing scores for {key}...')
   scores = compute_scores(result_df.copy(), key)
@@ -144,19 +147,7 @@ def interpolate_df(df):
     df = df.sort_index()
     interpolated_df = df.interpolate(method='spline', order=3, s=0.)
 
-    a = go.Scatter(x=interpolated_df.index, y=interpolated_df['Z'], mode='lines', name='Z')
-
-    # Create the layout for the plot
-    layout = go.Layout(
-        title=f'lines',
-        xaxis=dict(title='Time'),
-        yaxis=dict(title='Value')
-    )
-    fig = go.Figure(data=[a], layout=layout)
-    pio.show(fig)
-
     sorted_indices = sorted([interpolated_df['Z'].idxmin(), interpolated_df['Z'].idxmax()])
-
     return sorted_indices[0], sorted_indices[1]
 
 def crop_oval(result, lines_df, line_lon):
@@ -180,17 +171,17 @@ def crop_oval(result, lines_df, line_lon):
     lat1_min, lat1_max = interpolate_df(lines_df[0])
     lat2_min, lat2_max = interpolate_df(lines_df[1])
 
-    # for point in matrix:
-    #   # Streamlined conditional logic
-    #   if (point['lon'] > line_lon and (point['lat'] < lat2_min or point['lat'] > lat2_max)) or \
-    #     (point['lon'] <= line_lon and (point['lat'] < lat1_min or point['lat'] > lat1_max)):
-    #         # Ponderate score from distance to border
-    #         # distance = min(
-    #         #     abs(point['lat'] - lat1_min), abs(point['lat'] - lat1_max),
-    #         #     abs(point['lat'] - lat2_min), abs(point['lat'] - lat2_max)
-    #         # ) 
-    #         # point['score'] = point['score'] * ((5 - distance) / 5)
-    #         point['score'] = 0
+    for point in matrix:
+      # Streamlined conditional logic
+      if (point['lon'] > line_lon and (point['lat'] < lat2_min or point['lat'] > lat2_max)) or \
+        (point['lon'] <= line_lon and (point['lat'] < lat1_min or point['lat'] > lat1_max)):
+            # Ponderate score from distance to border
+            # distance = min(
+            #     abs(point['lat'] - lat1_min), abs(point['lat'] - lat1_max),
+            #     abs(point['lat'] - lat2_min), abs(point['lat'] - lat2_max)
+            # ) 
+            # point['score'] = point['score'] * ((5 - distance) / 5)
+            point['score'] = 0
     
     return matrix
 
@@ -199,15 +190,22 @@ def get_matrix():
   lines_df, line_lon = initialize_lines_df()
 
   result = {}
+  stations = []
   with Pool(processes=cpu_count()) as pool:
     results = pool.map(process_station, [(key, clf) for key in config['magnetometres']])
 
     for item in results:
+      if item == {}:
+        continue
+
       key, data, z = item
+      stations.append(key)
       result.update({ key: data })
 
       for i, line in enumerate(config['magnetometreLines']):
         if key in line:
           lines_df[i].loc[config['magnetometres'][key]['lat'], 'Z'] = z
+
+  print(stations)
 
   return crop_oval(result, lines_df, line_lon)
