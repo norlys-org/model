@@ -37,7 +37,10 @@ def compute_long_term_baseline(station, start, end, df):
     disturbed_days, quiet_days = compute_quietest_and_disturbed_days(station, start, end, df)
 
     df_daily_median = df_daily_median.drop(disturbed_days)
-    df_daily_median = pd.DataFrame(index=pd.date_range(start, end, freq='min')).join(df_daily_median, how='left').interpolate(method='time')
+    df_daily_median = pd.DataFrame(index=pd.date_range(start, end, freq='min')).join(df_daily_median, how='left').ffill().interpolate(method='time').bfill()
+
+    if len(quiet_days) == 0:
+      return df_daily_median
 
     templates = []
     for quiet_day in quiet_days:
@@ -88,6 +91,9 @@ def interpolate_diurnal_baseline(start, end, templates, quiet_days):
     pd.DataFrame
         A DataFrame representing the diurnal baseline.
     """
+
+    if len(quiet_days) == 0:
+      return pd.DataFrame()
 
     if start.date() not in quiet_days:
       quiet_days.insert(0, start)
