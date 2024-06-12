@@ -57,8 +57,8 @@ def compute_radius(station):
     return 700 - n * 75
 
 def create_matrix(scores):
-    lats = [lat / 10 for lat in reversed(range(530, 810, 5))]
-    lons = chain(range(300, 360), range(1, 40))
+    lats = [lat / 10 for lat in reversed(range(500, 850, 5))]
+    lons = chain(range(300, 361), range(0, 40))
     matrix = [{ 
         'lat': lat,
         'lon': lon,
