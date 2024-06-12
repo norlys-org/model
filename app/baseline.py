@@ -14,7 +14,8 @@ def read_and_format(station):
     Read station magnetometre's data and perform preliminary formatting on the data.
     """
 
-    df = pd.read_csv(f'data/magnetograms/{station}.csv')
+    df = pd.read_csv(f'legacy/temp/{station}.csv')
+    # df = pd.read_csv(f'data/magnetograms/{station}.csv')
 
     df['UT'] = pd.to_datetime(df['UT'])
     df.set_index('UT', inplace=True)
@@ -197,8 +198,10 @@ def is_daytime(latitude, longitude, timestamp):
 def get_substracted_data(station):
     df = read_and_format(station)
 
-    start = df.index.min()
-    end = df.index.max()
+    # start = df.index.min()
+    # end = df.index.max()
+    start = '2024-05-8'
+    end = '2024-05-13'
     baseline = compute_long_term_baseline(station, start, end, df)    
 
     return df[start:end] - baseline[start:end]

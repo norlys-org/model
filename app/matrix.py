@@ -40,10 +40,14 @@ def mean_score(scores):
     float: The calculated weighted mean score.
     """
 
+    # z deviation good ponderation
+    # table = {
+    #     'X_rolling_anomalies': 0, 'X_rolling_gradient': 0, 'X_deflection': 0, 'X_deviation': 1, 
+    #     'Y_rolling_anomalies': 0, 'Y_rolling_gradient': 0, 'Y_deflection': 0, 'Y_deviation': 0, 
+    #     'Z_rolling_anomalies': 0, 'Z_rolling_gradient': 0, 'Z_deflection': 0, 'Z_deviation': 0
+    # }
     table = {
-        'X_rolling_anomalies': 0, 'X_rolling_gradient': 0, 'X_deflection': 0, 'X_deviation': 1, 
-        'Y_rolling_anomalies': 0, 'Y_rolling_gradient': 0, 'Y_deflection': 0, 'Y_deviation': 0, 
-        'Z_rolling_anomalies': 0, 'Z_rolling_gradient': 0, 'Z_deflection': 0, 'Z_deviation': 0
+      'X_deviation': 1, 
     }
 
     sum = 0
@@ -65,15 +69,11 @@ def get_lon(stations):
         sum += config['magnetometres'][station]['lon']
     return sum / len(stations)
 
-lines = [
-    ['NAL', 'LYR', 'BJN', 'SOR', 'MAS', 'MUO', 'PEL', 'RAN', 'OUJ', 'HAN', 'NUR', 'TAR'],
-    ['NAL', 'LYR', 'BJN', 'SOR', 'JCK', 'DON', 'RVK', 'DOB', 'SOL', 'KAR']
-]
 def initialize_lines_df():
     lines_df = []
     mean_lon = 0
 
-    for line in lines:
+    for line in config['magnetometreLines']:
         line_df = pd.DataFrame(index=np.arange(
             config['magnetometres'][line[-1]]['lat'], 
             config['magnetometres'][line[0]]['lat'], 
@@ -84,7 +84,7 @@ def initialize_lines_df():
 
         mean_lon += get_lon(line)
 
-    mean_lon /= len(lines)
+    mean_lon /= len(config['magnetometreLines'])
 
     return (lines_df, mean_lon)
 
@@ -121,17 +121,17 @@ def process_station(val):
   logging.info(f'Computing scores for {key}...')
   scores = compute_scores(result_df.copy(), key)
   mean = mean_score(scores)
-  print(key, mean)
 
-  logging.info(f'Getting model prediction for {key}')
-  model_df = get_rolling_window(result_df)
-  model_df['time'] = model_df.index.to_series().apply(percentage_of_day) # Add time as a feature in the dataset
-  model_df.dropna(inplace=True)
+  # logging.info(f'Getting model prediction for {key}')
+  # model_df = get_rolling_window(result_df)
+  # model_df['time'] = model_df.index.to_series().apply(percentage_of_day) # Add time as a feature in the dataset
+  # model_df.dropna(inplace=True)
 
   z = result_df['Z'].tail(1).item() 
 
   try:
-    return key, (mean, clf.predict(model_df)[0]), z
+    return key, (mean, 'clear'), z
+    # return key, (mean, clf.predict(model_df)[0]), z
   except Exception as e:
     logging.error(f'Error occurred for {key}: {str(e)}')
 
@@ -141,8 +141,23 @@ def interpolate_df(df):
     Interpolates a dataframe and finds the minimum and maximum 'Z' index.
     """
 
-    interpolated_df = df.interpolate(method='cubic')
-    return interpolated_df['Z'].idxmin(), interpolated_df['Z'].idxmax()
+    df = df.sort_index()
+    interpolated_df = df.interpolate(method='spline', order=3, s=0.)
+
+    a = go.Scatter(x=interpolated_df.index, y=interpolated_df['Z'], mode='lines', name='Z')
+
+    # Create the layout for the plot
+    layout = go.Layout(
+        title=f'lines',
+        xaxis=dict(title='Time'),
+        yaxis=dict(title='Value')
+    )
+    fig = go.Figure(data=[a], layout=layout)
+    pio.show(fig)
+
+    sorted_indices = sorted([interpolated_df['Z'].idxmin(), interpolated_df['Z'].idxmax()])
+
+    return sorted_indices[0], sorted_indices[1]
 
 def crop_oval(result, lines_df, line_lon):
     """
@@ -166,17 +181,16 @@ def crop_oval(result, lines_df, line_lon):
     lat2_min, lat2_max = interpolate_df(lines_df[1])
 
     # for point in matrix:
-      # point['score'] = 10 - point['score']
-        # # Streamlined conditional logic
-        # if (point['lon'] > line_lon and (point['lat'] < lat2_min or point['lat'] > lat2_max)) or \
-        #    (point['lon'] <= line_lon and (point['lat'] < lat1_min or point['lat'] > lat1_max)):
-        #     # Ponderate score from distance to border
-        #     # distance = min(
-        #     #     abs(point['lat'] - lat1_min), abs(point['lat'] - lat1_max),
-        #     #     abs(point['lat'] - lat2_min), abs(point['lat'] - lat2_max)
-        #     # ) 
-        #     # point['score'] = point['score'] * ((5 - distance) / 5)
-        #     point['score'] = 0
+    #   # Streamlined conditional logic
+    #   if (point['lon'] > line_lon and (point['lat'] < lat2_min or point['lat'] > lat2_max)) or \
+    #     (point['lon'] <= line_lon and (point['lat'] < lat1_min or point['lat'] > lat1_max)):
+    #         # Ponderate score from distance to border
+    #         # distance = min(
+    #         #     abs(point['lat'] - lat1_min), abs(point['lat'] - lat1_max),
+    #         #     abs(point['lat'] - lat2_min), abs(point['lat'] - lat2_max)
+    #         # ) 
+    #         # point['score'] = point['score'] * ((5 - distance) / 5)
+    #         point['score'] = 0
     
     return matrix
 
@@ -187,20 +201,13 @@ def get_matrix():
   result = {}
   with Pool(processes=cpu_count()) as pool:
     results = pool.map(process_station, [(key, clf) for key in config['magnetometres']])
-  # for item in [process_station((key, clf)) for key in config['magnetometres']]:
+
     for item in results:
       key, data, z = item
       result.update({ key: data })
-  # for key in config['magnetometres']:
-    # key, data, z = process_station((key, clf))
-    # result.update({ key: data })
-    # result.update({ key: data })
-      def set_z_val(line_df):
-          line_df.loc[config['magnetometres'][key]['lat'], 'Z'] = z
 
-      if key in lines[0]:
-          set_z_val(lines_df[0])
-      if key in lines[1]:
-          set_z_val(lines_df[1])
+      for i, line in enumerate(config['magnetometreLines']):
+        if key in line:
+          lines_df[i].loc[config['magnetometres'][key]['lat'], 'Z'] = z
 
   return crop_oval(result, lines_df, line_lon)
