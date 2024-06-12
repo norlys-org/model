@@ -1,5 +1,6 @@
 import math
 from config import config
+from itertools import chain
 
 def haversine(lat1, lon1, lat2, lon2):
     # Radius of the Earth in kilometers
@@ -57,7 +58,7 @@ def compute_radius(station):
 
 def create_matrix(scores):
     lats = [lat / 10 for lat in reversed(range(530, 810, 5))]
-    lons = range(1, 40)
+    lons = chain(range(300, 360), range(1, 40))
     matrix = [{ 
         'lat': lat,
         'lon': lon,
