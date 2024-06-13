@@ -54,11 +54,11 @@ def compute_radius(station):
       if distance < 500:
         n = n + 1
 
-    return 700 - n * 75
+    return 600 - n * 40
 
 def create_matrix(scores):
     lats = [lat / 10 for lat in reversed(range(500, 850, 5))]
-    lons = chain(range(300, 361), range(0, 40))
+    lons = [lon / 10 for lon in chain(range(2700, 3610, 10), range(0, 400, 10))]
     matrix = [{ 
         'lat': lat,
         'lon': lon,
@@ -76,7 +76,7 @@ def create_matrix(scores):
     for row in matrix:
         if row['n'] == 0:
             continue
-        row['score'] = row['score'] / row['n']
+        row['score'] = round(row['score'] / row['n'])
 
     for row in matrix:
         del row['n']

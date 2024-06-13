@@ -36,7 +36,7 @@ def compute_long_term_baseline(station, start, end, df):
     df_daily_median = df.between_time('12:00', '12:00').resample('D').median()
     disturbed_days, quiet_days = compute_quietest_and_disturbed_days(station, start, end, df)
 
-    df_daily_median = df_daily_median.drop(disturbed_days)
+    df_daily_median = df_daily_median.drop(disturbed_days, errors='ignore')
     df_daily_median = pd.DataFrame(index=pd.date_range(start, end, freq='min')).join(df_daily_median, how='left').ffill().interpolate(method='time').bfill()
 
     if len(quiet_days) == 0:
