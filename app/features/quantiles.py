@@ -16,8 +16,8 @@ def find_quantile_range(quantiles, value):
     for i in range(len(quantiles)):
         quantile = quantiles[i]
         if value <= quantile:
-            return i + 1
-    return 9
+          return i + 1
+    return 10
 
 def compute_scores(df, station):
     df = apply_features(df)

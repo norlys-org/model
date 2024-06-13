@@ -116,6 +116,18 @@ def process_station(val):
   baseline.index.names = ['date']
   result_df = full_df - baseline
   result_df.dropna(inplace=True)
+
+  # a = go.Scatter(x=result_df.index, y=result_df['X'], mode='lines', name='X')
+  # layout = go.Layout(
+  #     title=f'{station}',
+  #     xaxis=dict(title='Time'),
+  #     yaxis=dict(title='Value')
+  # )
+  # fig = go.Figure(data=[a], layout=layout)
+  # for val in config['deviationThresholds']:
+  #     fig.add_hline(y=val, line_dash="dash", line_color="red")
+  # pio.show(fig)
+
   result_df = result_df[result_df.index >= result_df.index.max() - pd.Timedelta(minutes=45)]
   
   if result_df.empty:
@@ -167,21 +179,30 @@ def crop_oval(result, lines_df, line_lon):
 
     matrix = create_matrix(result)
 
-    # Refactored repeated code
-    lat1_min, lat1_max = interpolate_df(lines_df[0])
-    lat2_min, lat2_max = interpolate_df(lines_df[1])
+    limits_df = pd.DataFrame(index=range(-90, 40), columns=['min', 'max'])
 
+    for i, line in enumerate(config['magnetometreLines']):
+      line_lon = get_lon(line)
+      if line_lon > 180:
+        line_lon = line_lon - 360
+      line_lon = round(line_lon)
+
+      lat_min, lat_max = interpolate_df(lines_df[i])
+      limits_df.loc[line_lon, 'min'] = lat_min
+      limits_df.loc[line_lon, 'max'] = lat_max
+
+    limits_df['min'] = limits_df['min'].astype(float)
+    limits_df['max'] = limits_df['max'].astype(float)
+    limits_df.interpolate(method='linear', inplace=True)
+    limits_df.ffill(inplace=True)
+    limits_df.bfill(inplace=True)
+    
     for point in matrix:
-      # Streamlined conditional logic
-      if (point['lon'] > line_lon and (point['lat'] < lat2_min or point['lat'] > lat2_max)) or \
-        (point['lon'] <= line_lon and (point['lat'] < lat1_min or point['lat'] > lat1_max)):
-            # Ponderate score from distance to border
-            # distance = min(
-            #     abs(point['lat'] - lat1_min), abs(point['lat'] - lat1_max),
-            #     abs(point['lat'] - lat2_min), abs(point['lat'] - lat2_max)
-            # ) 
-            # point['score'] = point['score'] * ((5 - distance) / 5)
-            point['score'] = 0
+      lon = point['lon']
+      if lon > 180:
+        lon = lon - 360
+      if point['lat'] < limits_df.loc[lon, 'min'] or point['lat'] > limits_df.loc[lon, 'max']:
+        point['score'] = 0
     
     return matrix
 
