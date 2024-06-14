@@ -58,7 +58,7 @@ def compute_radius(station):
 
 def create_matrix(scores):
     lats = [lat / 10 for lat in reversed(range(500, 850, 5))]
-    lons = [lon / 10 for lon in chain(range(2700, 3610, 10), range(0, 400, 10))]
+    lons = [lon / 10 for lon in chain(range(2700, 3600, 10), range(0, 400, 10))]
     matrix = [{ 
         'lat': lat,
         'lon': lon,
