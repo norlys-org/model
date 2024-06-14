@@ -126,6 +126,7 @@ def process_station(val):
   # fig = go.Figure(data=[a], layout=layout)
   # for val in config['deviationThresholds']:
   #     fig.add_hline(y=val, line_dash="dash", line_color="red")
+  #     fig.add_hline(y=-val, line_dash="dash", line_color="red")
   # pio.show(fig)
 
   result_df = result_df[result_df.index >= result_df.index.max() - pd.Timedelta(minutes=45)]
@@ -143,9 +144,10 @@ def process_station(val):
   # model_df.dropna(inplace=True)
 
   z = result_df['Z'].tail(1).item() 
+  x = result_df['X'].tail(1).item() 
 
   try:
-    return key, (mean, 'clear'), z
+    return key, (mean, 'clear'), z, x
     # return key, (mean, clf.predict(model_df)[0]), z
   except Exception as e:
     logging.error(f'Error occurred for {key}: {str(e)}')
@@ -157,10 +159,18 @@ def interpolate_df(df):
     """
 
     df = df.sort_index()
-    interpolated_df = df.interpolate(method='spline', order=3, s=0.)
+    df = df.interpolate(method='spline', order=3, s=0.)
+    df['maxima'] = (df['Z'] > df['Z'].shift(1)) & (df['Z'] > df['Z'].shift(-1))
+    df['minima'] = (df['Z'] < df['Z'].shift(1)) & (df['Z'] < df['Z'].shift(-1))
 
-    sorted_indices = sorted([interpolated_df['Z'].idxmin(), interpolated_df['Z'].idxmax()])
-    return sorted_indices[0], sorted_indices[1]
+    extrema = df[(df['maxima'] | df['minima'])].reset_index()
+    extrema['diff'] = extrema['Z'].diff().abs()
+    max_diff_idx = extrema['diff'].idxmax()
+    min_idx = extrema.loc[max_diff_idx - 1]['index']
+    max_idx = extrema.loc[max_diff_idx]['index']
+
+    sorted_indices = sorted([min_idx, max_idx])
+    return sorted_indices[0], sorted_indices[1], df['X'].max()
 
 def crop_oval(result, lines_df, line_lon):
     """
@@ -187,7 +197,8 @@ def crop_oval(result, lines_df, line_lon):
         line_lon = line_lon - 360
       line_lon = round(line_lon)
 
-      lat_min, lat_max = interpolate_df(lines_df[i])
+      lat_min, lat_max, x = interpolate_df(lines_df[i])
+      limits_df.loc[line_lon, 'x'] = x
       limits_df.loc[line_lon, 'min'] = lat_min
       limits_df.loc[line_lon, 'max'] = lat_max
 
@@ -196,13 +207,26 @@ def crop_oval(result, lines_df, line_lon):
     limits_df.interpolate(method='linear', inplace=True)
     limits_df.ffill(inplace=True)
     limits_df.bfill(inplace=True)
+
+    # a = go.Scatter(x=limits_df.index, y=limits_df['max'], mode='lines', name='max')
+    # b = go.Scatter(x=limits_df.index, y=limits_df['x'], mode='lines', name='X')
+    # c = go.Scatter(x=limits_df.index, y=limits_df['min'], mode='lines', name='min')
+    # layout = go.Layout(
+    #     title=f'Lines',
+    #     xaxis=dict(title='Latitude'),
+    #     yaxis=dict(title='Value')
+    # )
+    # fig = go.Figure(data=[a,b,c], layout=layout)
+    # pio.show(fig)
     
     for point in matrix:
       lon = point['lon']
       if lon > 180:
         lon = lon - 360
-      if point['lat'] < limits_df.loc[lon, 'min'] or point['lat'] > limits_df.loc[lon, 'max']:
+      if point['lat'] < limits_df.loc[lon, 'min']:
         point['score'] = 0
+      if point['lat'] > limits_df.loc[lon, 'max']:
+        point['score'] = point['score'] * 0.5
     
     return matrix
 
@@ -219,14 +243,34 @@ def get_matrix():
       if item == {}:
         continue
 
-      key, data, z = item
+      key, data, z, x = item
       stations.append(key)
       result.update({ key: data })
 
       for i, line in enumerate(config['magnetometreLines']):
         if key in line:
           lines_df[i].loc[config['magnetometres'][key]['lat'], 'Z'] = z
+          lines_df[i].loc[config['magnetometres'][key]['lat'], 'X'] = x
 
+  for i in range(0,3):
+    df = lines_df[i]
+    df = df.sort_index()
+    df = df.interpolate(method='spline', order=3, s=0.)
+    lines_df[i] = df
+
+  a = go.Scatter(x=lines_df[0].index, y=lines_df[0]['Z'], mode='lines', name='finnish Z')
+  b = go.Scatter(x=lines_df[0].index, y=lines_df[0]['X'], mode='lines', name='finnish X')
+  c = go.Scatter(x=lines_df[1].index, y=lines_df[1]['Z'], mode='lines', name='norwegian Z')
+  d = go.Scatter(x=lines_df[1].index, y=lines_df[1]['X'], mode='lines', name='norwegian X')
+  e = go.Scatter(x=lines_df[2].index, y=lines_df[2]['Z'], mode='lines', name='greenland Z')
+  f = go.Scatter(x=lines_df[2].index, y=lines_df[2]['X'], mode='lines', name='greenland X')
+  layout = go.Layout(
+      title=f'Lines',
+      xaxis=dict(title='Latitude'),
+      yaxis=dict(title='Value')
+  )
+  fig = go.Figure(data=[a,b,c,d,e,f], layout=layout)
+  pio.show(fig)
   print(stations)
 
   return crop_oval(result, lines_df, line_lon)
