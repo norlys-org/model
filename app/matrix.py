@@ -170,7 +170,7 @@ def interpolate_df(df):
     max_idx = extrema.loc[max_diff_idx]['index']
 
     sorted_indices = sorted([min_idx, max_idx])
-    return sorted_indices[0], sorted_indices[1], df['X'].max()
+    return sorted_indices[0], sorted_indices[1], df['X'].abs().max()
 
 def crop_oval(result, lines_df, line_lon):
     """
@@ -225,8 +225,12 @@ def crop_oval(result, lines_df, line_lon):
         lon = lon - 360
       if point['lat'] < limits_df.loc[lon, 'min']:
         point['score'] = 0
+
       if point['lat'] > limits_df.loc[lon, 'max']:
-        point['score'] = point['score'] * 0.5
+        point['score'] *= 0.5
+
+      if point['lat'] >= limits_df.loc[lon, 'min'] and point['lat'] <= limits_df.loc[lon, 'max']:
+        point['score'] *= 1.5
     
     return matrix
 
@@ -252,25 +256,43 @@ def get_matrix():
           lines_df[i].loc[config['magnetometres'][key]['lat'], 'Z'] = z
           lines_df[i].loc[config['magnetometres'][key]['lat'], 'X'] = x
 
-  for i in range(0,3):
-    df = lines_df[i]
-    df = df.sort_index()
-    df = df.interpolate(method='spline', order=3, s=0.)
-    lines_df[i] = df
+  # for i in range(0,3):
+  #   df = lines_df[i]
+  #   df = df.sort_index()
+  #   # df = df.interpolate(method='linear')
+  #   df = df.interpolate(method='spline', order=3, s=0.)
+  #   df['maximaz'] = df['Z'][(df['Z'].shift(1) > df['Z']) & (df['Z'].shift(-1) > df['Z'])]
+  #   df['minimaz'] = df['Z'][(df['Z'].shift(1) < df['Z']) & (df['Z'].shift(-1) < df['Z'])]
+  #   df['maximax'] = df['X'][(df['X'].shift(1) > df['X']) & (df['X'].shift(-1) > df['X'])]
+  #   df['minimax'] = df['X'][(df['X'].shift(1) < df['X']) & (df['X'].shift(-1) < df['X'])]
+  #   lines_df[i] = df
 
-  a = go.Scatter(x=lines_df[0].index, y=lines_df[0]['Z'], mode='lines', name='finnish Z')
-  b = go.Scatter(x=lines_df[0].index, y=lines_df[0]['X'], mode='lines', name='finnish X')
-  c = go.Scatter(x=lines_df[1].index, y=lines_df[1]['Z'], mode='lines', name='norwegian Z')
-  d = go.Scatter(x=lines_df[1].index, y=lines_df[1]['X'], mode='lines', name='norwegian X')
-  e = go.Scatter(x=lines_df[2].index, y=lines_df[2]['Z'], mode='lines', name='greenland Z')
-  f = go.Scatter(x=lines_df[2].index, y=lines_df[2]['X'], mode='lines', name='greenland X')
-  layout = go.Layout(
-      title=f'Lines',
-      xaxis=dict(title='Latitude'),
-      yaxis=dict(title='Value')
-  )
-  fig = go.Figure(data=[a,b,c,d,e,f], layout=layout)
-  pio.show(fig)
+  # print(lines_df[0])
+  # things = [
+  #   go.Scatter(x=lines_df[0].index, y=lines_df[0]['Z'], mode='lines', name='finnish Z'),
+  #   go.Scatter(x=lines_df[0].index, y=lines_df[0]['X'], mode='lines', name='finnish X'),
+  #   # go.Scatter(x=lines_df[0].index, y=lines_df[0]['maximaz'], mode='markers', name='finnish X maxima', marker=dict(color='red', size=10)),
+  #   # go.Scatter(x=lines_df[0].index, y=lines_df[0]['minimaz'], mode='markers', name='finnish X minima', marker=dict(color='red', size=10)),
+  #   # go.Scatter(x=lines_df[0].index, y=lines_df[0]['maximax'], mode='markers', name='finnish Z maxima', marker=dict(color='blue', size=10)),
+  #   # go.Scatter(x=lines_df[0].index, y=lines_df[0]['minimax'], mode='markers', name='finnish Z minima', marker=dict(color='blue', size=10)),
+
+  #   go.Scatter(x=lines_df[1].index, y=lines_df[1]['Z'], mode='lines', name='norwegian Z'),
+  #   go.Scatter(x=lines_df[1].index, y=lines_df[1]['X'], mode='lines', name='norwegian X'),
+  #   # go.Scatter(x=lines_df[1].index, y=lines_df[1]['maximaz'], mode='markers', name='norwegian X maxima', marker=dict(color='red', size=10)),
+  #   # go.Scatter(x=lines_df[1].index, y=lines_df[1]['minimaz'], mode='markers', name='norwegian X minima', marker=dict(color='red', size=10)),
+  #   # go.Scatter(x=lines_df[1].index, y=lines_df[1]['maximax'], mode='markers', name='norwegian Z maxima', marker=dict(color='blue', size=10)),
+  #   # go.Scatter(x=lines_df[1].index, y=lines_df[1]['minimax'], mode='markers', name='norwegian Z minima', marker=dict(color='blue', size=10)),
+
+  #   go.Scatter(x=lines_df[2].index, y=lines_df[2]['Z'], mode='lines', name='greenland Z'),
+  #   go.Scatter(x=lines_df[2].index, y=lines_df[2]['X'], mode='lines', name='greenland X')
+  # ]
+  # layout = go.Layout(
+  #     title=f'Lines',
+  #     xaxis=dict(title='Latitude'),
+  #     yaxis=dict(title='Value')
+  # )
+  # fig = go.Figure(data=things, layout=layout)
+  # pio.show(fig)
   print(stations)
 
   return crop_oval(result, lines_df, line_lon)
