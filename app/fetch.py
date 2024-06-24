@@ -2,6 +2,7 @@ import requests
 import os
 from datetime import datetime
 import pandas as pd
+import numpy as np
 
 def parse_date_and_time(date_str, time_str):
     return datetime.strptime(f'{date_str} {time_str}', '%d/%m/%Y %H:%M:%S')
@@ -46,6 +47,8 @@ def fetch_mag(slug, station_source):
                 parts = line.split()
                 year, month, day, hour, minute, second = map(int, parts[:6])
                 x, y, z = map(float, parts[6:9])
+                # x = np.sqrt(x ** 2 + y ** 2)
+                # y = np.degrees(np.arctan2(y, x))
 
                 if x == 99999.9:
                     continue

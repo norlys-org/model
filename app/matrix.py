@@ -1,7 +1,8 @@
+from itertools import chain
 import logging
 from app.baseline import compute_long_term_baseline, get_substracted_data
 from app.data_utils import get_clipped_data, get_rolling_window, get_training_data, percentage_of_day
-from app.features.quantiles import compute_scores
+from app.features.quantiles import compute_scores, find_quantile_range
 from app.fetch import fetch_mag
 from app.model import load_0m_classifier
 import pandas as pd
@@ -11,9 +12,14 @@ from multiprocessing import Pool, cpu_count
 from app.rendering import create_matrix
 from config import config
 import warnings
-import plotly.express as px
 import plotly.graph_objs as go
 import plotly.io as pio
+from scipy.interpolate import griddata
+import matplotlib.pyplot as plt
+from scipy import interpolate
+from scipy.interpolate import RBFInterpolator
+from mpl_toolkits.basemap import Basemap
+from pysecs import SECS
 
 warnings.simplefilter(action='ignore', category=FutureWarning) # TODO
 
@@ -40,12 +46,6 @@ def mean_score(scores):
     float: The calculated weighted mean score.
     """
 
-    # z deviation good ponderation
-    # table = {
-    #     'X_rolling_anomalies': 0, 'X_rolling_gradient': 0, 'X_deflection': 0, 'X_deviation': 1, 
-    #     'Y_rolling_anomalies': 0, 'Y_rolling_gradient': 0, 'Y_deflection': 0, 'Y_deviation': 0, 
-    #     'Z_rolling_anomalies': 0, 'Z_rolling_gradient': 0, 'Z_deflection': 0, 'Z_deviation': 0
-    # }
     table = {
       'X_deviation': 1, 
     }
@@ -68,6 +68,7 @@ def get_lon(stations):
     for station in stations:
         sum += config['magnetometres'][station]['lon']
     return sum / len(stations)
+
 
 def initialize_lines_df():
     lines_df = []
@@ -116,19 +117,6 @@ def process_station(val):
   baseline.index.names = ['date']
   result_df = full_df - baseline
   result_df.dropna(inplace=True)
-
-  # a = go.Scatter(x=result_df.index, y=result_df['X'], mode='lines', name='X')
-  # layout = go.Layout(
-  #     title=f'{station}',
-  #     xaxis=dict(title='Time'),
-  #     yaxis=dict(title='Value')
-  # )
-  # fig = go.Figure(data=[a], layout=layout)
-  # for val in config['deviationThresholds']:
-  #     fig.add_hline(y=val, line_dash="dash", line_color="red")
-  #     fig.add_hline(y=-val, line_dash="dash", line_color="red")
-  # pio.show(fig)
-
   result_df = result_df[result_df.index >= result_df.index.max() - pd.Timedelta(minutes=45)]
   
   if result_df.empty:
@@ -145,10 +133,11 @@ def process_station(val):
 
   z = result_df['Z'].tail(1).item() 
   x = result_df['X'].tail(1).item() 
+  prediction = 'clear'
+  # prediction = clf.predict(result_df)[0]
 
   try:
-    return key, (mean, 'clear'), z, x
-    # return key, (mean, clf.predict(model_df)[0]), z
+    return key, (mean, prediction), z, x
   except Exception as e:
     logging.error(f'Error occurred for {key}: {str(e)}')
 
@@ -208,29 +197,18 @@ def crop_oval(result, lines_df, line_lon):
     limits_df.ffill(inplace=True)
     limits_df.bfill(inplace=True)
 
-    # a = go.Scatter(x=limits_df.index, y=limits_df['max'], mode='lines', name='max')
-    # b = go.Scatter(x=limits_df.index, y=limits_df['x'], mode='lines', name='X')
-    # c = go.Scatter(x=limits_df.index, y=limits_df['min'], mode='lines', name='min')
-    # layout = go.Layout(
-    #     title=f'Lines',
-    #     xaxis=dict(title='Latitude'),
-    #     yaxis=dict(title='Value')
-    # )
-    # fig = go.Figure(data=[a,b,c], layout=layout)
-    # pio.show(fig)
-    
-    for point in matrix:
-      lon = point['lon']
-      if lon > 180:
-        lon = lon - 360
-      if point['lat'] < limits_df.loc[lon, 'min']:
-        point['score'] = 0
+    # for point in matrix:
+    #   lon = point['lon']
+    #   if lon > 180:
+    #     lon = lon - 360
+    #   if point['lat'] < limits_df.loc[lon, 'min']:
+    #     point['score'] = 0
 
-      if point['lat'] > limits_df.loc[lon, 'max']:
-        point['score'] *= 0.5
+    #   if point['lat'] > limits_df.loc[lon, 'max']:
+    #     point['score'] *= 0.5
 
-      if point['lat'] >= limits_df.loc[lon, 'min'] and point['lat'] <= limits_df.loc[lon, 'max']:
-        point['score'] *= 1.5
+    #   if point['lat'] >= limits_df.loc[lon, 'min'] and point['lat'] <= limits_df.loc[lon, 'max']:
+    #     point['score'] *= 1.5
     
     return matrix
 
@@ -239,6 +217,7 @@ def get_matrix():
   lines_df, line_lon = initialize_lines_df()
 
   result = {}
+  vector = []
   stations = []
   with Pool(processes=cpu_count()) as pool:
     results = pool.map(process_station, [(key, clf) for key in config['magnetometres']])
@@ -251,6 +230,17 @@ def get_matrix():
       stations.append(key)
       result.update({ key: data })
 
+      lon = config['magnetometres'][key]['lon']
+      if lon > 180:
+        lon = lon - 360
+
+      vector.append({ 
+        'lat': config['magnetometres'][key]['lat'],
+        'lon': lon,
+        'x': x,
+        'z': z
+      })
+
       for i, line in enumerate(config['magnetometreLines']):
         if key in line:
           lines_df[i].loc[config['magnetometres'][key]['lat'], 'Z'] = z
@@ -261,30 +251,35 @@ def get_matrix():
   #   df = df.sort_index()
   #   # df = df.interpolate(method='linear')
   #   df = df.interpolate(method='spline', order=3, s=0.)
-  #   df['maximaz'] = df['Z'][(df['Z'].shift(1) > df['Z']) & (df['Z'].shift(-1) > df['Z'])]
-  #   df['minimaz'] = df['Z'][(df['Z'].shift(1) < df['Z']) & (df['Z'].shift(-1) < df['Z'])]
-  #   df['maximax'] = df['X'][(df['X'].shift(1) > df['X']) & (df['X'].shift(-1) > df['X'])]
-  #   df['minimax'] = df['X'][(df['X'].shift(1) < df['X']) & (df['X'].shift(-1) < df['X'])]
+  #   df['ZCS'] = df['Z'].cumsum()
+  #   df['XCS'] = df['X'].cumsum()
+  #   # df['maximaz'] = df['Z'][(df['Z'].shift(1) > df['Z']) & (df['Z'].shift(-1) > df['Z'])]
+  #   # df['minimaz'] = df['Z'][(df['Z'].shift(1) < df['Z']) & (df['Z'].shift(-1) < df['Z'])]
+  #   # df['maximax'] = df['X'][(df['X'].shift(1) > df['X']) & (df['X'].shift(-1) > df['X'])]
+  #   # df['minimax'] = df['X'][(df['X'].shift(1) < df['X']) & (df['X'].shift(-1) < df['X'])]
   #   lines_df[i] = df
 
-  # print(lines_df[0])
   # things = [
   #   go.Scatter(x=lines_df[0].index, y=lines_df[0]['Z'], mode='lines', name='finnish Z'),
+  #   # go.Scatter(x=lines_df[0].index, y=lines_df[0]['ZCS'], mode='lines', name='finnish ZCS'),
   #   go.Scatter(x=lines_df[0].index, y=lines_df[0]['X'], mode='lines', name='finnish X'),
+  #   # go.Scatter(x=lines_df[0].index, y=lines_df[0]['XCS'], mode='lines', name='finnish XCS'),
   #   # go.Scatter(x=lines_df[0].index, y=lines_df[0]['maximaz'], mode='markers', name='finnish X maxima', marker=dict(color='red', size=10)),
   #   # go.Scatter(x=lines_df[0].index, y=lines_df[0]['minimaz'], mode='markers', name='finnish X minima', marker=dict(color='red', size=10)),
   #   # go.Scatter(x=lines_df[0].index, y=lines_df[0]['maximax'], mode='markers', name='finnish Z maxima', marker=dict(color='blue', size=10)),
   #   # go.Scatter(x=lines_df[0].index, y=lines_df[0]['minimax'], mode='markers', name='finnish Z minima', marker=dict(color='blue', size=10)),
 
   #   go.Scatter(x=lines_df[1].index, y=lines_df[1]['Z'], mode='lines', name='norwegian Z'),
+  #   # go.Scatter(x=lines_df[1].index, y=lines_df[1]['ZCS'], mode='lines', name='norwegian ZCS'),
   #   go.Scatter(x=lines_df[1].index, y=lines_df[1]['X'], mode='lines', name='norwegian X'),
+  #   # go.Scatter(x=lines_df[1].index, y=lines_df[1]['XCS'], mode='lines', name='norwegian XCS'),
   #   # go.Scatter(x=lines_df[1].index, y=lines_df[1]['maximaz'], mode='markers', name='norwegian X maxima', marker=dict(color='red', size=10)),
   #   # go.Scatter(x=lines_df[1].index, y=lines_df[1]['minimaz'], mode='markers', name='norwegian X minima', marker=dict(color='red', size=10)),
   #   # go.Scatter(x=lines_df[1].index, y=lines_df[1]['maximax'], mode='markers', name='norwegian Z maxima', marker=dict(color='blue', size=10)),
   #   # go.Scatter(x=lines_df[1].index, y=lines_df[1]['minimax'], mode='markers', name='norwegian Z minima', marker=dict(color='blue', size=10)),
 
-  #   go.Scatter(x=lines_df[2].index, y=lines_df[2]['Z'], mode='lines', name='greenland Z'),
-  #   go.Scatter(x=lines_df[2].index, y=lines_df[2]['X'], mode='lines', name='greenland X')
+  #   # go.Scatter(x=lines_df[2].index, y=lines_df[2]['Z'], mode='lines', name='greenland Z'),
+  #   # go.Scatter(x=lines_df[2].index, y=lines_df[2]['X'], mode='lines', name='greenland X')
   # ]
   # layout = go.Layout(
   #     title=f'Lines',
@@ -293,6 +288,87 @@ def get_matrix():
   # )
   # fig = go.Figure(data=things, layout=layout)
   # pio.show(fig)
-  print(stations)
 
-  return crop_oval(result, lines_df, line_lon)
+  vector_df = pd.DataFrame(vector)
+
+  x = vector_df['lon'].values
+  y = vector_df['lat'].values
+  u = vector_df['x'].values  # Eastward component
+  v = vector_df['z'].values  # Other component
+
+  # plt.figure(1)
+  # plt.quiver(x, y, u, v)
+  # plt.title("Original Data")
+
+  R_earth = 6371e3
+  # SECS grid setup within the range of input data
+  lat, lon, r = np.meshgrid(np.linspace(50, 90),
+                            np.linspace(-80, 40),
+                            R_earth + 110000, indexing='ij')
+  secs_lat_lon_r = np.hstack((lat.reshape(-1, 1),
+                              lon.reshape(-1, 1),
+                              r.reshape(-1, 1)))
+
+  secs = SECS(sec_df_loc=secs_lat_lon_r)
+
+  # Observation grid matching input data points
+  obs_lat_lon_r = np.hstack((y.reshape(-1, 1),
+                            x.reshape(-1, 1),
+                            np.full((len(x), 1), R_earth)))
+
+  B_obs = np.zeros((1, len(obs_lat_lon_r), 3))
+  B_obs[0, :, 0] = u
+  B_obs[0, :, 1] = v
+
+  secs.fit(obs_loc=obs_lat_lon_r, obs_B=B_obs, epsilon=0.1)
+  lat_pred, lon_pred, r_pred = np.meshgrid(np.linspace(50, 85, 100),
+                                          np.linspace(-80, 40, 200),
+                                          R_earth, indexing='ij')
+  pred_lat_lon_r = np.hstack((lat_pred.reshape(-1, 1),
+                              lon_pred.reshape(-1, 1),
+                              r_pred.reshape(-1, 1)))
+  B_pred = secs.predict(pred_lat_lon_r)
+
+  # Ensure B_pred has the correct shape
+  if B_pred.ndim == 2:
+      B_pred = B_pred[np.newaxis, ...]
+
+  # Prepare for plotting
+  u_pred = B_pred[0, :, 0].reshape(lat_pred.shape)
+  v_pred = B_pred[0, :, 1].reshape(lat_pred.shape)
+
+  # Normalize the vectors
+  magnitude = np.sqrt(u_pred**2 + v_pred**2)
+  u_norm = u_pred / (magnitude + 1e-10)  # Avoid division by zero
+  v_norm = v_pred / (magnitude + 1e-10)
+
+  # Plotting the normalized and interpolated vector field on a world map
+  plt.figure(figsize=(12, 8))
+  m = Basemap(projection='aeqd', lon_0=-10, lat_0=70, width=4000000, height=4000000)
+  m.drawcoastlines()
+  m.drawcountries()
+  m.drawparallels(np.arange(50., 91., 10.), labels=[True, False, False, False])
+  m.drawmeridians(np.arange(-80., 41., 10.), labels=[False, False, False, True])
+
+  # Convert lat/lon to map projection coordinates
+  xx_map, yy_map = m(lon_pred, lat_pred)
+
+  # Flatten the arrays to pass to plt.quiver
+  xx_map_flat = xx_map.flatten()
+  yy_map_flat = yy_map.flatten()
+  u_norm_flat = u_norm.flatten()
+  v_norm_flat = v_norm.flatten()
+
+  # Plot the interpolated quiver plot on the map
+  plt.quiver(xx_map_flat, yy_map_flat, u_norm_flat, v_norm_flat, u_pred.flatten(), scale=50, cmap=plt.cm.seismic, clim=(-500, 500))
+  plt.title("Normalized and Interpolated Data on World Map")
+  
+  # Adding a colorbar that represents the eastward component intensity
+  plt.colorbar(label='Eastward Component Intensity')
+  plt.show()
+
+  score = [find_quantile_range(config['deviationThresholds'], x) for x in u_pred.flatten()]
+
+  result = [{'lon': lon_pred.flatten()[i], 'lat': lat_pred.flatten()[i], 'score': score[i], 'status': 'clear'} for i in range(len(score))]
+ 
+  return result
