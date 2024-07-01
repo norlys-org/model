@@ -246,49 +246,6 @@ def get_matrix():
           lines_df[i].loc[config['magnetometres'][key]['lat'], 'Z'] = z
           lines_df[i].loc[config['magnetometres'][key]['lat'], 'X'] = x
 
-  # for i in range(0,3):
-  #   df = lines_df[i]
-  #   df = df.sort_index()
-  #   # df = df.interpolate(method='linear')
-  #   df = df.interpolate(method='spline', order=3, s=0.)
-  #   df['ZCS'] = df['Z'].cumsum()
-  #   df['XCS'] = df['X'].cumsum()
-  #   # df['maximaz'] = df['Z'][(df['Z'].shift(1) > df['Z']) & (df['Z'].shift(-1) > df['Z'])]
-  #   # df['minimaz'] = df['Z'][(df['Z'].shift(1) < df['Z']) & (df['Z'].shift(-1) < df['Z'])]
-  #   # df['maximax'] = df['X'][(df['X'].shift(1) > df['X']) & (df['X'].shift(-1) > df['X'])]
-  #   # df['minimax'] = df['X'][(df['X'].shift(1) < df['X']) & (df['X'].shift(-1) < df['X'])]
-  #   lines_df[i] = df
-
-  # things = [
-  #   go.Scatter(x=lines_df[0].index, y=lines_df[0]['Z'], mode='lines', name='finnish Z'),
-  #   # go.Scatter(x=lines_df[0].index, y=lines_df[0]['ZCS'], mode='lines', name='finnish ZCS'),
-  #   go.Scatter(x=lines_df[0].index, y=lines_df[0]['X'], mode='lines', name='finnish X'),
-  #   # go.Scatter(x=lines_df[0].index, y=lines_df[0]['XCS'], mode='lines', name='finnish XCS'),
-  #   # go.Scatter(x=lines_df[0].index, y=lines_df[0]['maximaz'], mode='markers', name='finnish X maxima', marker=dict(color='red', size=10)),
-  #   # go.Scatter(x=lines_df[0].index, y=lines_df[0]['minimaz'], mode='markers', name='finnish X minima', marker=dict(color='red', size=10)),
-  #   # go.Scatter(x=lines_df[0].index, y=lines_df[0]['maximax'], mode='markers', name='finnish Z maxima', marker=dict(color='blue', size=10)),
-  #   # go.Scatter(x=lines_df[0].index, y=lines_df[0]['minimax'], mode='markers', name='finnish Z minima', marker=dict(color='blue', size=10)),
-
-  #   go.Scatter(x=lines_df[1].index, y=lines_df[1]['Z'], mode='lines', name='norwegian Z'),
-  #   # go.Scatter(x=lines_df[1].index, y=lines_df[1]['ZCS'], mode='lines', name='norwegian ZCS'),
-  #   go.Scatter(x=lines_df[1].index, y=lines_df[1]['X'], mode='lines', name='norwegian X'),
-  #   # go.Scatter(x=lines_df[1].index, y=lines_df[1]['XCS'], mode='lines', name='norwegian XCS'),
-  #   # go.Scatter(x=lines_df[1].index, y=lines_df[1]['maximaz'], mode='markers', name='norwegian X maxima', marker=dict(color='red', size=10)),
-  #   # go.Scatter(x=lines_df[1].index, y=lines_df[1]['minimaz'], mode='markers', name='norwegian X minima', marker=dict(color='red', size=10)),
-  #   # go.Scatter(x=lines_df[1].index, y=lines_df[1]['maximax'], mode='markers', name='norwegian Z maxima', marker=dict(color='blue', size=10)),
-  #   # go.Scatter(x=lines_df[1].index, y=lines_df[1]['minimax'], mode='markers', name='norwegian Z minima', marker=dict(color='blue', size=10)),
-
-  #   # go.Scatter(x=lines_df[2].index, y=lines_df[2]['Z'], mode='lines', name='greenland Z'),
-  #   # go.Scatter(x=lines_df[2].index, y=lines_df[2]['X'], mode='lines', name='greenland X')
-  # ]
-  # layout = go.Layout(
-  #     title=f'Lines',
-  #     xaxis=dict(title='Latitude'),
-  #     yaxis=dict(title='Value')
-  # )
-  # fig = go.Figure(data=things, layout=layout)
-  # pio.show(fig)
-
   vector_df = pd.DataFrame(vector)
 
   x = vector_df['lon'].values
@@ -367,7 +324,7 @@ def get_matrix():
   plt.colorbar(label='Eastward Component Intensity')
   plt.show()
 
-  score = [find_quantile_range(config['deviationThresholds'], x) for x in u_pred.flatten()]
+  score = [find_quantile_range(config['deviationThresholds'], abs(x)) for x in u_pred.flatten()]
 
   result = [{'lon': lon_pred.flatten()[i], 'lat': lat_pred.flatten()[i], 'score': score[i], 'status': 'clear'} for i in range(len(score))]
  
