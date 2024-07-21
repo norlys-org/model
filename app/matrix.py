@@ -1,7 +1,8 @@
 from itertools import chain
+import json
 import logging
 from app.baseline import compute_long_term_baseline, get_substracted_data
-from app.data_utils import get_clipped_data, get_rolling_window, get_training_data, percentage_of_day
+from app.data_utils import get_clipped_data, get_rolling_window, get_training_data, percentage_of_day, write_to_kv
 from app.features.quantiles import compute_scores, find_quantile_range
 from app.fetch import fetch_mag
 from app.model import load_0m_classifier
@@ -278,8 +279,11 @@ def get_matrix():
   B_obs[0, :, 1] = v
 
   secs.fit(obs_loc=obs_lat_lon_r, obs_B=B_obs, epsilon=0.1)
-  lat_pred, lon_pred, r_pred = np.meshgrid(np.linspace(50, 85, 100),
-                                          np.linspace(-80, 40, 200),
+  # lat_pred, lon_pred, r_pred = np.meshgrid(np.linspace(50, 85, 100),
+  #                                         np.linspace(-80, 40, 200),
+  #                                         R_earth, indexing='ij')
+  lat_pred, lon_pred, r_pred = np.meshgrid(np.linspace(50, 85, 25),
+                                          np.linspace(-80, 40, 50),
                                           R_earth, indexing='ij')
   pred_lat_lon_r = np.hstack((lat_pred.reshape(-1, 1),
                               lon_pred.reshape(-1, 1),
@@ -326,6 +330,9 @@ def get_matrix():
 
   score = [find_quantile_range(config['deviationThresholds'], abs(x)) for x in u_pred.flatten()]
 
-  result = [{'lon': lon_pred.flatten()[i], 'lat': lat_pred.flatten()[i], 'score': score[i], 'status': 'clear'} for i in range(len(score))]
+  result_v = [{'lon': lon_pred.flatten()[i], 'lat': lat_pred.flatten()[i], 'x': u_pred.flatten()[i], 'z': v_pred.flatten()[i]} for i in range(len(score))]
+  result = [{'lon': lon_pred.flatten()[i], 'lat': lat_pred.flatten()[i], 'score': score[i]*10, 'status': 'clear'} for i in range(len(score))]
+
+  print(write_to_kv('vectors', json.dumps(result_v)))
  
-  return result
+  return result, max(score)*10
