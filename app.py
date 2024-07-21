@@ -1,4 +1,4 @@
-from app.data_utils import write_to_kv
+from app.data_utils import write_to_d1, write_to_kv
 from app.matrix import get_matrix
 import requests
 import json
@@ -20,7 +20,7 @@ scheduler.api_enabled = True
 
 @scheduler.task('interval', id='get_matrix', max_instances=1, seconds=60 * 5)
 def matrix():
-  matrix = get_matrix()
+  matrix, maximum = get_matrix()
   print(write_to_kv('matrix', json.dumps(matrix)))
   print(write_to_kv('last_updated', datetime.utcnow().isoformat()))
 
@@ -29,9 +29,10 @@ def ping():
   return 'pong'
 
 if __name__ == "__main__":
-  matrix = get_matrix()
-  print(write_to_kv('matrix', json.dumps(matrix)))
-  print(write_to_kv('last_updated', datetime.utcnow().isoformat()))
+  print(write_to_d1(5))
+  # matrix, maximum = get_matrix()
+  # print(write_to_kv('matrix', json.dumps(matrix)))
+  # print(write_to_kv('last_updated', datetime.utcnow().isoformat()))
   scheduler.init_app(app)
   scheduler.start()
   
