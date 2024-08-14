@@ -132,13 +132,14 @@ def process_station(val):
   # model_df['time'] = model_df.index.to_series().apply(percentage_of_day) # Add time as a feature in the dataset
   # model_df.dropna(inplace=True)
 
+  y = result_df['Z'].tail(1).item() 
   z = result_df['Z'].tail(1).item() 
   x = result_df['X'].tail(1).item() 
   prediction = 'clear'
   # prediction = clf.predict(result_df)[0]
 
   try:
-    return key, (mean, prediction), z, x
+    return key, (mean, prediction), y, x
   except Exception as e:
     logging.error(f'Error occurred for {key}: {str(e)}')
 
@@ -254,9 +255,9 @@ def get_matrix():
   u = vector_df['x'].values  # Eastward component
   v = vector_df['z'].values  # Other component
 
-  # plt.figure(1)
-  # plt.quiver(x, y, u, v)
-  # plt.title("Original Data")
+  plt.figure(1)
+  plt.quiver(x, y, u, v)
+  plt.title("Original Data")
 
   R_earth = 6371e3
   # SECS grid setup within the range of input data
@@ -331,8 +332,8 @@ def get_matrix():
   score = [find_quantile_range(config['deviationThresholds'], abs(x)) for x in u_pred.flatten()]
 
   result_v = [{'lon': lon_pred.flatten()[i], 'lat': lat_pred.flatten()[i], 'x': u_pred.flatten()[i], 'z': v_pred.flatten()[i]} for i in range(len(score))]
-  result = [{'lon': lon_pred.flatten()[i], 'lat': lat_pred.flatten()[i], 'score': score[i]*10, 'status': 'clear'} for i in range(len(score))]
+  result = [{'lon': lon_pred.flatten()[i], 'lat': lat_pred.flatten()[i], 'score': score[i], 'status': 'clear'} for i in range(len(score))]
 
   print(write_to_kv('vectors', json.dumps(result_v)))
  
-  return result, max(score)*10
+  return result, max(score)
