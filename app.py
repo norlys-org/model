@@ -21,6 +21,7 @@ scheduler.api_enabled = True
 @scheduler.task('interval', id='get_matrix', max_instances=1, seconds=60 * 5)
 def matrix():
   matrix, maximum = get_matrix()
+  print(write_to_d1(maximum))
   print(write_to_kv('matrix', json.dumps(matrix)))
   print(write_to_kv('last_updated', datetime.utcnow().isoformat()))
 
@@ -29,10 +30,10 @@ def ping():
   return 'pong'
 
 if __name__ == "__main__":
-  print(write_to_d1(5))
-  # matrix, maximum = get_matrix()
-  # print(write_to_kv('matrix', json.dumps(matrix)))
-  # print(write_to_kv('last_updated', datetime.utcnow().isoformat()))
+  matrix, maximum = get_matrix()
+  print(write_to_d1(maximum))
+  print(write_to_kv('matrix', json.dumps(matrix)))
+  print(write_to_kv('last_updated', datetime.utcnow().isoformat()))
   scheduler.init_app(app)
   scheduler.start()
   
