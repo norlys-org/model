@@ -1,7 +1,7 @@
 import pandas as pd
 import plotly.graph_objects as go
 from sklearn.ensemble import IsolationForest
-from config import config
+from legacy.config import config
 from app.baseline import get_substracted_data
 from tqdm import tqdm
 

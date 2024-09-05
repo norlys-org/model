@@ -1,5 +1,5 @@
 import pandas as pd
-from config import config
+from legacy.config import config
 
 for station in ['TAR']:
   df = pd.read_csv(f'legacy/temp/{station}.csv')

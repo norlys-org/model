@@ -1,40 +1,17 @@
-from app.data_utils import write_to_d1, write_to_kv
-from app.features.quantiles import find_quantile_range
-from app.matrix import get_matrix, process_station
-import requests
-import json
-import os
-from requests_toolbelt.multipart.encoder import MultipartEncoder
-from datetime import datetime
-from config import config
 from flask import Flask
-from flask_apscheduler import APScheduler
-from waitress import serve
 from flask import request
+from waitress import serve
 import numpy as np
 from pysecs import SECS
-import warnings
-warnings.simplefilter(action='ignore', category=FutureWarning) # TODO
 
 app = Flask(__name__)
 
-# scheduler = APScheduler()
-# scheduler.api_enabled = True
-
-
-# @scheduler.task('interval', id='get_matrix', max_instances=1, seconds=60 * 5)
-# def matrix():
-#   matrix, maximum = get_matrix()
-#   print(write_to_d1(maximum))
-#   print(write_to_kv('matrix', json.dumps(matrix)))
-#   print(write_to_kv('last_updated', datetime.utcnow().isoformat()))
-
 @app.route('/predict')
 def predict():
-  x = request.args.getlist('x')
-  y = request.args.getlist('y')
-  i = request.args.getlist('i')
-  j = request.args.getlist('j')
+  x = np.array(request.args.getlist('x'))
+  y = np.array(request.args.getlist('y'))
+  i = np.array(request.args.getlist('i'))
+  j = np.array(request.args.getlist('j'))
 
   R_earth = 6371e3
   # SECS grid setup within the range of input data
@@ -89,11 +66,4 @@ def predict():
     } for i in range(len(i_pred.flatten()))]
 
 if __name__ == "__main__":
-  # matrix, maximum = get_matrix()
-  # # print(write_to_d1(maximum))
-  # # print(write_to_kv('matrix', json.dumps(matrix)))
-  # # print(write_to_kv('last_updated', datetime.utcnow().isoformat()))
-  # # scheduler.init_app(app)
-  # # scheduler.start()
-  
   serve(app, host='0.0.0.0', port=8080)
