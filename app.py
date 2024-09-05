@@ -6,12 +6,13 @@ from pysecs import SECS
 
 app = Flask(__name__)
 
-@app.route('/predict')
+@app.route('/predict', methods=['POST'])
 def predict():
-  x = np.array(request.args.getlist('x'))
-  y = np.array(request.args.getlist('y'))
-  i = np.array(request.args.getlist('i'))
-  j = np.array(request.args.getlist('j'))
+  body = request.json
+  x = np.array(body['x'])
+  y = np.array(body['y'])
+  i = np.array(body['i'])
+  j = np.array(body['j'])
 
   R_earth = 6371e3
   # SECS grid setup within the range of input data
