@@ -62,8 +62,8 @@ def predict():
   return [{
     'lon': flat_lon[i], 
     'lat': flat_lat[i], 
-    'i': flat_i[i], 
-    'j': flat_j[i]
+    'i': round(flat_i[i]), 
+    'j': round(flat_j[i])
     } for i in range(len(i_pred.flatten()))]
 
 if __name__ == "__main__":
