@@ -116,6 +116,17 @@ def process_station(val):
 
   baseline = compute_long_term_baseline(key, full_df.index.min(), full_df.index.max(), full_df)
   baseline.index.names = ['date']
+
+  # a = go.Scatter(x=full_df.index, y=full_df['X'], mode='lines', name='OG')
+  # b = go.Scatter(x=baseline.index, y=baseline['X'], mode='lines', name='Baseline')
+  # layout = go.Layout(
+  #     title=f'{station}',
+  #     xaxis=dict(title='Time'),
+  #     yaxis=dict(title='nT')
+  # )
+  # fig = go.Figure(data=[a,b], layout=layout)
+  # pio.show(fig)
+
   result_df = full_df - baseline
   result_df.dropna(inplace=True)
   result_df = result_df[result_df.index >= result_df.index.max() - pd.Timedelta(minutes=45)]
@@ -267,6 +278,7 @@ def get_matrix():
   secs_lat_lon_r = np.hstack((lat.reshape(-1, 1),
                               lon.reshape(-1, 1),
                               r.reshape(-1, 1)))
+  print(secs_lat_lon_r)
 
   secs = SECS(sec_df_loc=secs_lat_lon_r)
 
