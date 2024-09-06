@@ -63,22 +63,28 @@ def predict():
   j = np.array(body['j'])
 
   (flat_lon, flat_lat, flat_i, flat_j) = interpolate(x, y, i, j)
-  (flat_lon_h, flat_lat_h, flat_i_h, flat_j_h) = interpolate(x, y, i, j, 100, 200)
+  # (flat_lon_h, flat_lat_h, flat_i_h, flat_j_h) = interpolate(x, y, i, j, 100, 200)
+  return [{
+    'lon': round(flat_lon[i], 2), 
+    'lat': round(flat_lat[i], 2), 
+    'i': round(flat_i[i]), 
+    'j': round(flat_j[i])
+  } for i in range(len(flat_i))],
 
-  return {
-    "lo-res": [{
-      'lon': round(flat_lon[i], 2), 
-      'lat': round(flat_lat[i], 2), 
-      'i': round(flat_i[i]), 
-      'j': round(flat_j[i])
-    } for i in range(len(flat_i))],
-    "hi-res": [{
-      'lon': round(flat_lon_h[i], 2), 
-      'lat': round(flat_lat_h[i], 2), 
-      'i': round(flat_i_h[i]), 
-      'j': round(flat_j_h[i])
-    } for i in range(len(flat_i))]
-  }
+  # return {
+  #   "lo-res": [{
+  #     'lon': round(flat_lon[i], 2), 
+  #     'lat': round(flat_lat[i], 2), 
+  #     'i': round(flat_i[i]), 
+  #     'j': round(flat_j[i])
+  #   } for i in range(len(flat_i))],
+  #   "hi-res": [{
+  #     'lon': round(flat_lon_h[i], 2), 
+  #     'lat': round(flat_lat_h[i], 2), 
+  #     'i': round(flat_i_h[i]), 
+  #     'j': round(flat_j_h[i])
+  #   } for i in range(len(flat_i))]
+  # }
 
 if __name__ == "__main__":
   serve(app, host='0.0.0.0', port=8080)
