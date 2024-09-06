@@ -69,7 +69,7 @@ def predict():
     'lat': round(flat_lat[i], 2), 
     'i': round(flat_i[i]), 
     'j': round(flat_j[i])
-  } for i in range(len(flat_i))],
+  } for i in range(len(flat_i))]
 
   # return {
   #   "lo-res": [{
