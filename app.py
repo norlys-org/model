@@ -9,7 +9,7 @@ app = Flask(__name__)
 def interpolate(x, y, i, j, res_lat = 25, res_lon = 50):
   R_earth = 6371e3
   # SECS grid setup within the range of input data
-  lat, lon, r = np.meshgrid(np.linspace(50, 90),
+  lat, lon, r = np.meshgrid(np.linspace(50, 85),
                             np.linspace(-80, 40),
                             R_earth + 110000, indexing='ij')
   secs_lat_lon_r = np.hstack((lat.reshape(-1, 1),
@@ -59,7 +59,7 @@ def predict():
   i = np.array(body['i'])
   j = np.array(body['j'])
 
-  (flat_lon, flat_lat, flat_i, flat_j) = interpolate(x, y, i, j, 50, 100)
+  (flat_lon, flat_lat, flat_i, flat_j) = interpolate(x, y, i, j, 37, 75)
 
   return [{
     'lon': round(flat_lon[i], 2), 
