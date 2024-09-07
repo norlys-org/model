@@ -59,7 +59,7 @@ def predict():
   i = np.array(body['i'])
   j = np.array(body['j'])
 
-  (flat_lon, flat_lat, flat_i, flat_j) = interpolate(x, y, i, j, 37, 75)
+  (flat_lon, flat_lat, flat_i, flat_j) = interpolate(x, y, i, j, 25, 50)
 
   return [{
     'lon': round(flat_lon[i], 2), 
