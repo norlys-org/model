@@ -1,72 +1,62 @@
-from flask import Flask
-from flask import request
+from flask import Flask, request
 from waitress import serve
 import numpy as np
 from pysecs import SECS
 
 app = Flask(__name__)
 
-def interpolate(x, y, i, j, res_lat = 25, res_lon = 50):
-  R_earth = 6371e3
-  # SECS grid setup within the range of input data
-  lat, lon, r = np.meshgrid(np.linspace(50, 85),
-                            np.linspace(-80, 40),
-                            R_earth + 110000, indexing='ij')
-  secs_lat_lon_r = np.hstack((lat.reshape(-1, 1),
-                              lon.reshape(-1, 1),
-                              r.reshape(-1, 1)))
+R_EARTH = 6371e3
 
-  secs = SECS(sec_df_loc=secs_lat_lon_r)
+def interpolate(x, y, i, j, res_lat=25, res_lon=50):
+    # SECS grid setup within the range of input data
+    lat = np.linspace(50, 85, res_lat, dtype=np.float32)
+    lon = np.linspace(-80, 40, res_lon, dtype=np.float32)
+    r = R_EARTH + 110000  # Fixed radius value
+    secs_lat_lon_r = np.array(np.meshgrid(lat, lon, [r], indexing='ij')).T.reshape(-1, 3).astype(np.float32)
 
-  # Observation grid matching input data points
-  obs_lat_lon_r = np.hstack((y.reshape(-1, 1),
-                            x.reshape(-1, 1),
-                            np.full((len(x), 1), R_earth)))
+    # Create SECS object once
+    secs = SECS(sec_df_loc=secs_lat_lon_r)
 
-  B_obs = np.zeros((1, len(obs_lat_lon_r), 3))
-  B_obs[0, :, 0] = i
-  B_obs[0, :, 1] = j
+    # Observation grid matching input data points
+    obs_lat_lon_r = np.vstack((y, x, np.full(len(x), R_EARTH))).T.astype(np.float32)
 
-  secs.fit(obs_loc=obs_lat_lon_r, obs_B=B_obs, epsilon=0.1)
-  lat_pred, lon_pred, r_pred = np.meshgrid(np.linspace(50, 85, res_lat),
-                                          np.linspace(-80, 40, res_lon),
-                                          R_earth, indexing='ij')
-  pred_lat_lon_r = np.hstack((lat_pred.reshape(-1, 1),
-                              lon_pred.reshape(-1, 1),
-                              r_pred.reshape(-1, 1)))
-  B_pred = secs.predict(pred_lat_lon_r)
+    B_obs = np.zeros((1, len(obs_lat_lon_r), 3), dtype=np.float32)
+    B_obs[0, :, 0] = i
+    B_obs[0, :, 1] = j
 
-  # Ensure B_pred has the correct shape
-  if B_pred.ndim == 2:
-      B_pred = B_pred[np.newaxis, ...]
+    # Fit SECS with observations
+    secs.fit(obs_loc=obs_lat_lon_r, obs_B=B_obs, epsilon=0.1)
 
-  # Prepare for plotting
-  i_pred = B_pred[0, :, 0].reshape(lat_pred.shape)
-  j_pred = B_pred[0, :, 1].reshape(lat_pred.shape)
+    # Predict grid
+    lat_pred, lon_pred = np.meshgrid(lat, lon, indexing='ij')
+    pred_lat_lon_r = np.vstack((lat_pred.ravel(), lon_pred.ravel(), np.full(lat_pred.size, R_EARTH))).T.astype(np.float32)
+    B_pred = secs.predict(pred_lat_lon_r)
 
-  flat_lon = lon_pred.flatten()
-  flat_lat = lat_pred.flatten()
-  flat_i = i_pred.flatten()
-  flat_j = j_pred.flatten()
-  
-  return (flat_lon, flat_lat, flat_i, flat_j)
+    # Ensure B_pred has the correct shape
+    if B_pred.ndim == 2:
+        B_pred = B_pred[np.newaxis, ...]
+
+    # Prepare output
+    return {
+        'lon': lon_pred.flatten().round(2).tolist(),
+        'lat': lat_pred.flatten().round(2).tolist(),
+        'i': B_pred[0, :, 0].reshape(lat_pred.shape).flatten().round().tolist(),
+        'j': B_pred[0, :, 1].reshape(lat_pred.shape).flatten().round().tolist()
+    }
 
 @app.route('/predict', methods=['POST'])
 def predict():
-  body = request.json
-  x = np.array(body['x'])
-  y = np.array(body['y'])
-  i = np.array(body['i'])
-  j = np.array(body['j'])
+    body = request.json
+    x = np.array(body['x'], dtype=np.float32)
+    y = np.array(body['y'], dtype=np.float32)
+    i = np.array(body['i'], dtype=np.float32)
+    j = np.array(body['j'], dtype=np.float32)
 
-  (flat_lon, flat_lat, flat_i, flat_j) = interpolate(x, y, i, j, 25, 50)
+    result = interpolate(x, y, i, j)
 
-  return [{
-    'lon': round(flat_lon[i], 2), 
-    'lat': round(flat_lat[i], 2), 
-    'i': round(flat_i[i]), 
-    'j': round(flat_j[i])
-  } for i in range(len(flat_i))]
+    # Respond with the optimized data
+    return [{'lon': result['lon'][k], 'lat': result['lat'][k], 'i': result['i'][k], 'j': result['j'][k]}
+            for k in range(len(result['i']))]
 
 if __name__ == "__main__":
-  serve(app, host='0.0.0.0', port=8080)
+    serve(app, host='0.0.0.0', port=8080)
