@@ -40,8 +40,8 @@ def interpolate(x, y, i, j, res_lat=25, res_lon=50):
     return {
         'lon': lon_pred.flatten().round(2).tolist(),
         'lat': lat_pred.flatten().round(2).tolist(),
-        'i': B_pred[0, :, 0].reshape(lat_pred.shape).flatten().round().tolist(),
-        'j': B_pred[0, :, 1].reshape(lat_pred.shape).flatten().round().tolist()
+        'i': np.nan_to_num(B_pred[0, :, 0].reshape(lat_pred.shape).flatten(), nan=0.0).round().tolist(),
+        'j': np.nan_to_num(B_pred[0, :, 1].reshape(lat_pred.shape).flatten(), nan=0.0).round().tolist()
     }
 
 @app.route('/predict', methods=['POST'])
