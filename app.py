@@ -7,8 +7,8 @@ from pysecs import SECS
 app = Flask(__name__)
 R_earth = 6371e3
 
-def interpolate(x, y, i, j, res_lat = 25, res_lon = 50):
-  # Use linspace to create the latitude and longitude vectors
+def get_secs():
+   # Use linspace to create the latitude and longitude vectors
   lat = np.linspace(50, 85)
   lon = np.linspace(-80, 40)
   r = R_earth + 110000  # Constant value for radius
@@ -17,7 +17,10 @@ def interpolate(x, y, i, j, res_lat = 25, res_lon = 50):
   lat_lon_r = np.array([[lt, ln, r] for lt in lat for ln in lon])
 
   # Initialize SECS with the grid data
-  secs = SECS(sec_df_loc=lat_lon_r)
+  return SECS(sec_df_loc=lat_lon_r)
+
+def interpolate(x, y, i, j, res_lat = 25, res_lon = 50):
+  secs = get_secs()
 
   # Observation grid matching input data points
   obs_lat_lon_r = np.column_stack((y, x, np.full_like(x, R_earth)))
@@ -47,28 +50,24 @@ def interpolate(x, y, i, j, res_lat = 25, res_lon = 50):
 @app.route('/predict', methods=['POST'])
 def predict():
   body = request.json
-  
+
   # Interpolate the data
-  (flat_lon, flat_lat, flat_i, flat_j) = interpolate(
-     np.array(body['x']), 
-     np.array(body['y']), 
-     np.array(body['i']), 
-     np.array(body['j']), 
-     25, 
-     50
+  flat_lon, flat_lat, flat_i, flat_j = interpolate(
+      np.array(body['x'], dtype=np.float32), 
+      np.array(body['y'], dtype=np.float32), 
+      np.array(body['i'], dtype=np.float32), 
+      np.array(body['j'], dtype=np.float32), 
+      25, 
+      50
   )
 
   # Round the output arrays using numpy's vectorized operations
-  flat_lon = np.round(flat_lon, 2).tolist()
-  flat_lat = np.round(flat_lat, 2).tolist()
-  flat_i = np.round(flat_i).astype(int).tolist()
-  flat_j = np.round(flat_j).astype(int).tolist()
-
-  # Create the output data using a generator expression for memory efficiency
-  return [
-    {'lon': lon, 'lat': lat, 'i': i_val, 'j': j_val}
-    for lon, lat, i_val, j_val in zip(flat_lon, flat_lat, flat_i, flat_j)
+  result = [
+      {'lon': round(lon, 2), 'lat': round(lat, 2), 'i': int(round(i_val)), 'j': int(round(j_val))}
+      for lon, lat, i_val, j_val in zip(flat_lon, flat_lat, flat_i, flat_j)
   ]
+
+  return result
 
 if __name__ == "__main__":
   serve(app, host='0.0.0.0', port=8080)
