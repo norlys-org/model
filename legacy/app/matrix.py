@@ -349,3 +349,5 @@ def get_matrix():
   print(write_to_kv('vectors', json.dumps(result_v)))
  
   return result, max(score)
+
+get_matrix()
