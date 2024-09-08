@@ -57,8 +57,8 @@ def predict():
       np.array(body['y'], dtype=np.float32), 
       np.array(body['i'], dtype=np.float32), 
       np.array(body['j'], dtype=np.float32), 
-      25, 
-      50
+      50, 
+      100
   )
 
   # Round the output arrays using numpy's vectorized operations
