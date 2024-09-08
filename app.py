@@ -3,6 +3,7 @@ from flask import request
 from waitress import serve
 import numpy as np
 from pysecs import SECS
+# from memory_profiler import profile
 
 app = Flask(__name__)
 R_earth = 6371e3
@@ -19,6 +20,7 @@ def get_secs():
   # Initialize SECS with the grid data
   return SECS(sec_df_loc=lat_lon_r)
 
+# @profile
 def interpolate(x, y, i, j, res_lat = 25, res_lon = 50):
   secs = get_secs()
 
@@ -48,6 +50,7 @@ def interpolate(x, y, i, j, res_lat = 25, res_lon = 50):
   return pred_lat_lon_r[:, 1], pred_lat_lon_r[:, 0], B_pred[0, :, 0], B_pred[0, :, 1]
 
 @app.route('/predict', methods=['POST'])
+# @profile
 def predict():
   body = request.json
 
@@ -57,8 +60,8 @@ def predict():
       np.array(body['y'], dtype=np.float32), 
       np.array(body['i'], dtype=np.float32), 
       np.array(body['j'], dtype=np.float32), 
-      25, 
-      50
+      100, 
+      200
   )
 
   # Round the output arrays using numpy's vectorized operations
