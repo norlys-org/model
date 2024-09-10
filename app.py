@@ -69,9 +69,14 @@ def predict():
 
   # Round the output arrays using numpy's vectorized operations
   result = [
-      {'lon': round(lon, 2), 'lat': round(lat, 2), 'i': int(round(i_val)), 'j': int(round(j_val))}
-      for lon, lat, i_val, j_val in zip(flat_lon, flat_lat, flat_i, flat_j)
-  ]
+    {
+        'lon': round(lon, 2),
+        'lat': round(lat, 2),
+        'i': int(round(i_val)) if not np.isnan(i_val) else 0,  # Use None or a default value
+        'j': int(round(j_val)) if not np.isnan(j_val) else 0   # Use None or a default value
+    }
+    for lon, lat, i_val, j_val in zip(flat_lon, flat_lat, flat_i, flat_j)
+]
 
   return result
 
