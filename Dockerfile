@@ -13,6 +13,6 @@ RUN pip3 install -r requirements.txt
 
 COPY app.py /code/app.py
 
-EXPOSE 8080
+EXPOSE 80
 
 CMD [ "python3", "app.py" ]
