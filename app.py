@@ -3,6 +3,12 @@ from flask import request
 from waitress import serve
 import numpy as np
 from pysecs import SECS
+import logging
+
+logging.basicConfig(
+    level=logging.DEBUG,  # Set to DEBUG for verbose logging
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 
 app = Flask(__name__)
 R_earth = 6371e3
@@ -70,4 +76,4 @@ def predict():
   return result
 
 if __name__ == "__main__":
-  serve(app, host='0.0.0.0', port=8080)
+  serve(app, host='0.0.0.0', port=8080, expose_tracebacks=True)
