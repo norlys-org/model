@@ -13,6 +13,8 @@ logging.basicConfig(
 app = Flask(__name__)
 R_earth = 6371e3
 
+previous = []
+
 def get_secs():
    # Use linspace to create the latitude and longitude vectors
   lat = np.linspace(45, 85)
@@ -67,16 +69,21 @@ def predict():
       100
   )
 
+  global previous
+  gradient = [ round(v - previous[i]['i']) if len(previous) > 0 else 0 for i, v in enumerate(flat_i) ]
+
   # Round the output arrays using numpy's vectorized operations
   result = [
     {
         'lon': round(lon, 2),
         'lat': round(lat, 2),
         'i': int(round(i_val)) if not np.isnan(i_val) else 0,  # Use None or a default value
-        'j': int(round(j_val)) if not np.isnan(j_val) else 0   # Use None or a default value
+        'j': int(round(j_val)) if not np.isnan(j_val) else 0,   # Use None or a default value
+        'g': g_val
     }
-    for lon, lat, i_val, j_val in zip(flat_lon, flat_lat, flat_i, flat_j)
-]
+    for lon, lat, i_val, j_val, g_val in zip(flat_lon, flat_lat, flat_i, flat_j, gradient)
+  ]
+  previous = result
 
   return result
 
