@@ -70,7 +70,7 @@ def predict():
   )
 
   global previous
-  gradient = [ round(v if not np.isnan(v) else 0 - previous[i]['i']) if len(previous) > 0 else 0 for i, v in enumerate(flat_i) ]
+  gradient = [ round((v if not np.isnan(v) else 0) - previous[i]['i']) if len(previous) > 0 else 0 for i, v in enumerate(flat_i) ]
 
   # Round the output arrays using numpy's vectorized operations
   result = [
