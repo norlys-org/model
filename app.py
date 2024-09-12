@@ -65,8 +65,8 @@ def predict():
       np.array(body['y'], dtype=np.float32), 
       np.array(body['i'], dtype=np.float32), 
       np.array(body['j'], dtype=np.float32), 
-      50, 
-      100
+      37, 
+      75
   )
 
   global previous
