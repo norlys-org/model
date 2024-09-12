@@ -39,7 +39,7 @@ def interpolate(x, y, i, j, res_lat = 25, res_lon = 50):
   B_obs[0, :, 1] = j
 
   # Fit the SECS model
-  secs.fit(obs_loc=obs_lat_lon_r, obs_B=B_obs, epsilon=0.15)
+  secs.fit(obs_loc=obs_lat_lon_r, obs_B=B_obs, epsilon=0.1)
 
   # Prediction grid setup
   lat_pred = np.linspace(45, 85, res_lat)  # Create latitude array
