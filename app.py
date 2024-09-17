@@ -4,6 +4,7 @@ from waitress import serve
 import numpy as np
 from pysecs import SECS
 import logging
+import os
 
 logging.basicConfig(
     level=logging.DEBUG,  # Set to DEBUG for verbose logging
@@ -56,6 +57,10 @@ def interpolate(x, y, i, j, res_lat = 25, res_lon = 50):
 @app.route('/predict', methods=['POST'])
 def predict():
   body = request.json
+
+  model_secret = os.getenv('MODEL_SECRET')
+  if body['secret'] != model_secret:
+    return 
 
   # Interpolate the data
   flat_lon, flat_lat, flat_i, flat_j = interpolate(
