@@ -30,9 +30,15 @@ def interpolate(x, y, i, j, res_lat = 25, res_lon = 50):
   secs = get_secs()
 
   # Observation grid matching input data points
+  # [ y[0], x[0], R_earth ]
+  # [ y[1], x[1], R_earth ]
+  # [ ... ]
   obs_lat_lon_r = np.column_stack((y, x, np.full_like(x, R_earth)))
 
   # Initialize observation array directly with the correct shape
+  # [
+  #   [ [i[0], j[0], 0], [i[1], j[1], 0], ..., len(x) ]
+  # ]
   B_obs = np.zeros((1, len(obs_lat_lon_r), 3))
   B_obs[0, :, 0] = i
   B_obs[0, :, 1] = j
@@ -72,6 +78,15 @@ def predict():
       75
   )
 
+  flat_lon2, flat_lat2, flat_d, flat_j2 = interpolate(
+      np.array(body['x'], dtype=np.float32), 
+      np.array(body['y'], dtype=np.float32), 
+      np.array(body['d'], dtype=np.float32), 
+      np.zeros(len(body['d']), dtype=np.float32), 
+      37, 
+      75
+  )
+
   # Round the output arrays using numpy's vectorized operations
   result = [
     {
@@ -79,8 +94,9 @@ def predict():
         'lat': round(lat, 2),
         'i': int(round(i_val)) if not np.isnan(i_val) else 0,  # Use None or a default value
         'j': int(round(j_val)) if not np.isnan(j_val) else 0,   # Use None or a default value
+        'd': int(round(d_val)) if not np.isnan(d_val) else 0,   # Use None or a default value
     }
-    for lon, lat, i_val, j_val in zip(flat_lon, flat_lat, flat_i, flat_j)
+    for lon, lat, i_val, j_val, d_val in zip(flat_lon, flat_lat, flat_i, flat_j, flat_d)
   ]
   previous = result
 
