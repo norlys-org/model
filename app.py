@@ -82,7 +82,7 @@ def predict():
       np.array(body['x'], dtype=np.float32), 
       np.array(body['y'], dtype=np.float32), 
       np.array(body['d'], dtype=np.float32), 
-      np.zeros(len(body['d']), dtype=np.float32), 
+      np.array(body['d'], dtype=np.float32), 
       37, 
       75
   )
