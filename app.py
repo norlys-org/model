@@ -94,7 +94,7 @@ def predict():
         'lat': round(lat, 2),
         'i': int(round(i_val)) if not np.isnan(i_val) else 0,  # Use None or a default value
         'j': int(round(j_val)) if not np.isnan(j_val) else 0,   # Use None or a default value
-        'd': int(round(d_val)) if not np.isnan(d_val) else 0,   # Use None or a default value
+        'd': d_val if not np.isnan(d_val) else 0,   # Use None or a default value
     }
     for lon, lat, i_val, j_val, d_val in zip(flat_lon, flat_lat, flat_i, flat_j, flat_d)
   ]
