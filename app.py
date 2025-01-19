@@ -17,9 +17,7 @@ R_earth = 6371e3
 def get_secs():
    # Use linspace to create the latitude and longitude vectors
   lat = np.linspace(45, 85)
-  lon = np.linspace(-179, 180)
-  # lat = np.linspace(45, 85)
-  # lon = np.linspace(-170, 35)
+  lon = np.linspace(-170, 35)
   r = R_earth + 110000  # Constant value for radius
 
   # Create a grid of lat, lon, and radius directly in a single array
@@ -50,7 +48,7 @@ def interpolate(x, y, i, j, res_lat = 25, res_lon = 50):
 
   # Prediction grid setup
   lat_pred = np.linspace(45, 85, res_lat)  # Create latitude array
-  lon_pred = np.linspace(-170, 50, res_lon)  # Create longitude array
+  lon_pred = np.linspace(-179, 180, res_lon)  # Create longitude array
   pred_lat_lon_r = np.array([[lt, ln, R_earth] for lt in lat_pred for ln in lon_pred])  # Combine lat, lon, and r into one array
 
   # Predict using the SECS model
