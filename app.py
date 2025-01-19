@@ -17,7 +17,9 @@ R_earth = 6371e3
 def get_secs():
    # Use linspace to create the latitude and longitude vectors
   lat = np.linspace(45, 85)
-  lon = np.linspace(-170, 35)
+  lon = np.linspace(-179, 180)
+  # lat = np.linspace(45, 85)
+  # lon = np.linspace(-170, 35)
   r = R_earth + 110000  # Constant value for radius
 
   # Create a grid of lat, lon, and radius directly in a single array
