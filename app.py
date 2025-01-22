@@ -78,7 +78,7 @@ def predict():
       np.array(body['i'], dtype=np.float32), 
       np.array(body['j'], dtype=np.float32), 
       37, 
-      150
+      110
   )
 
   flat_lon2, flat_lat2, flat_d, flat_j2 = interpolate(
@@ -87,7 +87,7 @@ def predict():
       np.array(body['d'], dtype=np.float32), 
       np.array(body['d'], dtype=np.float32), 
       37, 
-      150
+      110
   )
 
   # Round the output arrays using numpy's vectorized operations
