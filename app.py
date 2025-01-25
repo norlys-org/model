@@ -47,11 +47,8 @@ def interpolate(x, y, i, j, res_lat = 25, res_lon = 50):
   secs.fit(obs_loc=obs_lat_lon_r, obs_B=B_obs, epsilon=0.1)
 
   # Prediction grid setup
-  # lat_pred = np.linspace(45, 85, res_lat)  # Create latitude array
-  # lon_pred = np.linspace(-170, 50, res_lon)  # Create longitude array
   lat_pred = np.linspace(45, 85, res_lat)  # Create latitude array
-  # lon_pred = np.linspace(-180, 50, res_lon)  # Create longitude array
-  lon_pred = np.linspace(-180, 180, res_lon)  # Create longitude array
+  lon_pred = np.linspace(-180, 179, res_lon)  # Create longitude array
   pred_lat_lon_r = np.array([[lt, ln, R_earth] for lt in lat_pred for ln in lon_pred])  # Combine lat, lon, and r into one array
 
   # Predict using the SECS model
@@ -78,7 +75,7 @@ def predict():
       np.array(body['i'], dtype=np.float32), 
       np.array(body['j'], dtype=np.float32), 
       37, 
-      110
+      150
   )
 
   flat_lon2, flat_lat2, flat_d, flat_j2 = interpolate(
@@ -87,7 +84,7 @@ def predict():
       np.array(body['d'], dtype=np.float32), 
       np.array(body['d'], dtype=np.float32), 
       37, 
-      110
+      150
   )
 
   # Round the output arrays using numpy's vectorized operations
