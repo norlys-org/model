@@ -9,3 +9,5 @@ norlys/__pycache__
 __pycache__
 *.DS_Store
 legacy/temp
+node_modules/
+poc.js
