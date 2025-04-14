@@ -1,4 +1,6 @@
 mod grid;
+mod secs;
+mod sphere;
 
 fn main() {
     println!(

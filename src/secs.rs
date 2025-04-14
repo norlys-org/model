@@ -1,6 +1,7 @@
-mod grid;
+use crate::grid::geographical_point;
+use std::ops::Range;
 
-struct Observation {
+pub struct Observation {
     /// The longitude in degrees.
     longitude: f32,
     /// The latitude in degrees.
@@ -15,12 +16,12 @@ struct Observation {
 }
 
 pub fn secs_interpolate(
-    observations: [Observation],
+    observations: &[Observation],
     lat_range: Range<f32>,
     lat_steps: usize,
     lon_range: Range<f32>,
     lon_steps: usize,
     prediction_altitude: f32,
 ) {
-    let points = grid::geographical_point(0.0..10.0, 11, 0.0..10.0, 11, 110000f32);
+    let points = geographical_point(0.0..10.0, 11, 0.0..10.0, 11, 110000f32);
 }
