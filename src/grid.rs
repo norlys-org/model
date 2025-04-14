@@ -4,7 +4,7 @@ use std::ops::Range;
 const EARTH_RADIUS: f32 = 6371e3;
 
 #[derive(Debug, Clone, Copy)]
-struct GeographicalPoint {
+pub struct GeographicalPoint {
     /// The longitude in degrees.
     longitude: f32,
     /// The latitude in degrees.
@@ -85,4 +85,59 @@ pub fn geographical_point(
     }
 
     result
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use approx::assert_relative_eq;
+
+    #[test]
+    fn test_linspace_basic() {
+        let result = linspace(0.0, 1.0, 5);
+        assert_eq!(result.len(), 5);
+        assert_relative_eq!(result[0], 0.0);
+        assert_relative_eq!(result[1], 0.25);
+        assert_relative_eq!(result[2], 0.5);
+        assert_relative_eq!(result[3], 0.75);
+        assert_relative_eq!(result[4], 1.0);
+    }
+
+    #[test]
+    fn test_linspace_zero_elements() {
+        let result = linspace(0.0, 1.0, 0);
+        assert_eq!(result.len(), 0);
+    }
+
+    #[test]
+    fn test_linspace_negative_range() {
+        let result = linspace(-1.0, 1.0, 3);
+        assert_eq!(result.len(), 3);
+        assert_relative_eq!(result[0], -1.0);
+        assert_relative_eq!(result[1], 0.0);
+        assert_relative_eq!(result[2], 1.0);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_linspace_invalid_range() {
+        linspace(1.0, 0.0, 5);
+    }
+
+    #[test]
+    fn test_geographical_point_basic() {
+        let lat_range = 0.0..90.0;
+        let lat_steps = 3;
+        let lon_range = 0.0..180.0;
+        let lon_steps = 2;
+        let altitude = 100.0;
+        let result = geographical_point(lat_range, lat_steps, lon_range, lon_steps, altitude);
+        assert_eq!(result.len(), 6);
+        assert_relative_eq!(result[0].latitude, 0.0);
+        assert_relative_eq!(result[0].longitude, 0.0);
+        assert_relative_eq!(result[0].radius, EARTH_RADIUS + altitude);
+        assert_relative_eq!(result[5].latitude, 90.0);
+        assert_relative_eq!(result[5].longitude, 180.0);
+        assert_relative_eq!(result[5].radius, EARTH_RADIUS + altitude);
+    }
 }
