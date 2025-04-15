@@ -1,4 +1,4 @@
-use crate::grid::geographical_point;
+use crate::{grid::geographical_point, matrix::T_df};
 use std::ops::Range;
 
 pub struct Observation {
@@ -24,4 +24,5 @@ pub fn secs_interpolate(
     prediction_altitude: f32,
 ) {
     let points = geographical_point(0.0..10.0, 11, 0.0..10.0, 11, 110000f32);
+    T_df(obs_locs, secs_locs);
 }
