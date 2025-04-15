@@ -6,7 +6,7 @@
 ///
 /// # Returns
 /// A matrix (Vec<Vec<f32>>) of angular distances in radians
-fn angular_distance(coords1: &[(f32, f32)], coords2: &[(f32, f32)]) -> Vec<Vec<f32>> {
+pub fn angular_distance(coords1: &[(f32, f32)], coords2: &[(f32, f32)]) -> Vec<Vec<f32>> {
     let mut result = Vec::with_capacity(coords1.len());
 
     for &(lat1_deg, lon1_deg) in coords1 {
