@@ -118,3 +118,64 @@ pub fn t_df(obs_locs: &[Point], secs_locs: &[Point]) -> Vec<Vec<Vec<f32>>> {
 
     t
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const R_EARTH: f32 = 6371e3;
+    const R_SECS: f32 = R_EARTH + 110e3;
+
+    #[test]
+    fn test_t_df_dimensions() {
+        let obs_locs = vec![
+            Point {
+                latitude: 0.0,
+                longitude: 0.0,
+                radius: R_EARTH,
+            },
+            Point {
+                latitude: 10.0,
+                longitude: 10.0,
+                radius: R_EARTH,
+            },
+        ];
+        let secs_locs = vec![
+            Point {
+                latitude: 90.0,
+                longitude: 0.0,
+                radius: R_SECS,
+            },
+            Point {
+                latitude: 80.0,
+                longitude: 0.0,
+                radius: R_SECS,
+            },
+            Point {
+                latitude: 70.0,
+                longitude: 0.0,
+                radius: R_SECS,
+            },
+        ];
+
+        let result = t_df(&obs_locs, &secs_locs);
+
+        assert_eq!(result.len(), 2, "Number of observation points mismatch");
+        assert_eq!(
+            result[0].len(),
+            3,
+            "Number of components mismatch (should be 3: Bx, By, Bz)"
+        );
+        assert_eq!(result[0][0].len(), 3, "Number of SEC points mismatch");
+        assert_eq!(
+            result[1].len(),
+            3,
+            "Number of components mismatch for obs 2"
+        );
+        assert_eq!(
+            result[1][0].len(),
+            3,
+            "Number of SEC points mismatch for obs 2"
+        );
+    }
+}
