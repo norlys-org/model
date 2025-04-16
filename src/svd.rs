@@ -1,8 +1,11 @@
-// use crate::matrix::{transpose_matrix, multiply_matrices};
+use crate::matrix::{multiply_matrices, transpose_matrix};
 
-// fn solve_svd(a: Vec<Vec<f32>>, b: Vec<Vec<f32>>, epsilon: f32) -> Vec<f32> {
-    // let at = transpose_matrix(a);
-    // let ata = multiply_matrices(at, a);
-    //
-    // let max_diag = ata.iter().enumerate().fold(0./0., f32::max);
-// }
+fn solve_svd(a: Vec<Vec<f32>>, b: Vec<Vec<f32>>, epsilon: f32) {
+    let at = transpose_matrix(a.clone());
+    let ata = multiply_matrices(at, a);
+
+    let max_diag = ata
+        .iter()
+        .flat_map(|vec| vec.iter().copied())
+        .fold(f32::NEG_INFINITY, f32::max);
+}
