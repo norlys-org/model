@@ -193,15 +193,9 @@ mod tests {
 
     #[test]
     fn test_multiply_matrices_identity() {
-        let identity: Vec<Vec<f32>> = vec![
-            vec![1.0, 0.0],
-            vec![0.0, 1.0],
-        ];
+        let identity: Vec<Vec<f32>> = vec![vec![1.0, 0.0], vec![0.0, 1.0]];
 
-        let matrix: Vec<Vec<f32>> = vec![
-            vec![2.0, 3.0],
-            vec![4.0, 5.0],
-        ];
+        let matrix: Vec<Vec<f32>> = vec![vec![2.0, 3.0], vec![4.0, 5.0]];
 
         let result = multiply_matrices(identity, matrix.clone());
 
