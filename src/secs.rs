@@ -2,6 +2,7 @@ use crate::{
     grid::{geographical_grid, GeographicalPoint},
     matrix::t_df,
 };
+use std::mem;
 use std::ops::Range;
 
 pub const R_EARTH: f32 = 6371e3;
@@ -21,7 +22,7 @@ pub struct Observation {
 }
 
 pub fn secs_interpolate(
-    observations: &[Observation],
+    observations: Vec<Observation>,
     lat_range: Range<f32>,
     lat_steps: usize,
     lon_range: Range<f32>,
@@ -38,5 +39,23 @@ pub fn secs_interpolate(
         })
         .collect();
 
-    t_df(&obs_locs, &secs_locs);
+    let flat_t: Vec<Vec<f32>> = t_df(&obs_locs, &secs_locs)
+        .into_iter()
+        .flat_map(|mut row| {
+            vec![
+                mem::take(&mut row[0]), // Bx row
+                mem::take(&mut row[1]), // By row
+            ]
+        })
+        .collect();
+
+    let flat_b: Vec<f32> = observations
+        .into_iter()
+        .flat_map(|obs| {
+            vec![
+                obs.i, // Bx component
+                obs.j, // By component
+            ]
+        })
+        .collect();
 }
