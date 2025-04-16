@@ -6,6 +6,21 @@ use std::f32::consts::PI;
 
 /// Physical constant: permeability of free space (µ0)
 const MU0: f32 = 4.0 * PI * 1e-7;
+const EPSILON: f32 = 1e-6;
+
+pub fn multiply_matrix_vector(m: Vec<Vec<f32>>, v: Vec<f32>) -> Vec<f32> {
+    let rows = m.len();
+    let cols = m[0].len();
+    let mut result: Vec<f32> = vec![0f32; rows];
+
+    for i in 0..rows {
+        for j in 0..cols {
+            result[i] += m[i][j] * v[j];
+        }
+    }
+
+    result
+}
 
 pub fn transpose_matrix(matrix: Vec<Vec<f32>>) -> Vec<Vec<f32>> {
     if matrix.is_empty() {
@@ -53,6 +68,77 @@ pub fn multiply_matrices(a: Vec<Vec<f32>>, b: Vec<Vec<f32>>) -> Vec<Vec<f32>> {
     }
 
     result
+}
+
+/// Invert a square matrix represented as `Vec<Vec<f32>>`.
+///
+/// # Panics
+/// * If the matrix is not square.
+/// * If the matrix is singular or nearly singular (‖pivot‖ < 1 × 10⁻⁶).
+///
+/// # Examples
+/// ```rust
+/// let a = vec![vec![4.0, 7.0], vec![2.0, 6.0]];
+/// let inv = invert_matrix(a.clone());
+/// // a · a⁻¹ = I
+/// ```
+pub fn invert_matrix(mut a: Vec<Vec<f32>>) -> Vec<Vec<f32>> {
+    let n = a.len();
+    assert!(n > 0, "Matrix must be non‑empty");
+    assert!(!a.iter().any(|row| row.len() != n), "Matrix must be square");
+
+    // Build augmented matrix [A | I]
+    for (i, row) in a.iter_mut().enumerate() {
+        row.reserve_exact(n);
+        for j in 0..n {
+            row.push(if i == j { 1.0 } else { 0.0 });
+        }
+    }
+
+    let width = 2 * n;
+
+    // Gauss‑Jordan elimination with partial pivoting
+    for col in 0..n {
+        // 1. Pivot selection
+        let mut pivot_row = col;
+        let mut max_val = a[col][col].abs();
+        for r in (col + 1)..n {
+            if a[r][col].abs() > max_val {
+                max_val = a[r][col].abs();
+                pivot_row = r;
+            }
+        }
+        assert!(max_val >= EPSILON, "Matrix is singular or ill‑conditioned");
+
+        // 2. Row swap
+        if pivot_row != col {
+            a.swap(col, pivot_row);
+        }
+
+        // 3. Normalize pivot row
+        let pivot = a[col][col];
+        for c in 0..width {
+            a[col][c] /= pivot;
+        }
+
+        // 4. Eliminate other rows
+        for r in 0..n {
+            if r != col {
+                let factor = a[r][col];
+                if factor.abs() > 0.0 {
+                    for c in 0..width {
+                        a[r][c] -= factor * a[col][c];
+                    }
+                }
+            }
+        }
+    }
+
+    let mut inv = Vec::with_capacity(n);
+    for r in 0..n {
+        inv.push(a[r][n..].to_vec());
+    }
+    inv
 }
 
 /// Calculates the "Transfer Matrix" (T) for Divergence-Free Spherical Elementary Current Systems (SECS).
