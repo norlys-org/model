@@ -1,5 +1,10 @@
-use crate::grid::geographical_point;
+use crate::{
+    grid::{geographical_grid, GeographicalPoint},
+    matrix::t_df,
+};
 use std::ops::Range;
+
+pub const R_EARTH: f32 = 6371e3;
 
 pub struct Observation {
     /// The longitude in degrees.
@@ -23,5 +28,15 @@ pub fn secs_interpolate(
     lon_steps: usize,
     prediction_altitude: f32,
 ) {
-    let points = geographical_point(0.0..10.0, 11, 0.0..10.0, 11, 110000f32);
+    let secs_locs = geographical_grid(0.0..10.0, 11, 0.0..10.0, 11, 110000f32);
+    let obs_locs: Vec<GeographicalPoint> = observations
+        .iter()
+        .map(|obs| GeographicalPoint {
+            latitude: obs.latitude,
+            longitude: obs.longitude,
+            radius: R_EARTH, // Assume observations are at Earth's surface
+        })
+        .collect();
+
+    t_df(&obs_locs, &secs_locs);
 }

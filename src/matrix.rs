@@ -1,14 +1,8 @@
-use crate::sphere::{angular_distance, bearing};
+use crate::{
+    grid::GeographicalPoint,
+    sphere::{angular_distance, bearing},
+};
 use std::f32::consts::PI;
-
-pub struct Point {
-    /// The longitude in degrees.
-    longitude: f32,
-    /// The latitude in degrees.
-    latitude: f32,
-    /// Radius from center of the earth
-    radius: f32,
-}
 
 /// Physical constant: permeability of free space (µ0)
 const MU0: f32 = 4.0 * PI * 1e-7;
@@ -39,12 +33,12 @@ const MU0: f32 = 4.0 * PI * 1e-7;
 /// *caused by* the j-th elementary current (`secs_locs[j]`) *if that current had a standard strength of 1 Ampere*.
 ///
 /// # Arguments
-/// * `obs_locs` - A slice of `Point` structures representing the observation locations (e.g., ground magnetometers).
-/// * `secs_locs` - A slice of `Point` structures representing the locations (poles) of the hypothetical Spherical Elementary Currents.
+/// * `obs_locs` - A slice of `GeographicalPoint` structures representing the observation locations (e.g., ground magnetometers).
+/// * `secs_locs` - A slice of `GeographicalPoint` structures representing the locations (poles) of the hypothetical Spherical Elementary Currents.
 ///
 /// # Returns
 /// A 3D vector `Vec<Vec<Vec<f32>>>` representing the transfer matrix T, with dimensions [nobs][3][nsec].
-pub fn t_df(obs_locs: &[Point], secs_locs: &[Point]) -> Vec<Vec<Vec<f32>>> {
+pub fn t_df(obs_locs: &[GeographicalPoint], secs_locs: &[GeographicalPoint]) -> Vec<Vec<Vec<f32>>> {
     let nobs = obs_locs.len();
     let nsec = secs_locs.len();
 
@@ -121,37 +115,38 @@ pub fn t_df(obs_locs: &[Point], secs_locs: &[Point]) -> Vec<Vec<Vec<f32>>> {
 
 #[cfg(test)]
 mod tests {
+    use crate::secs::R_EARTH;
+
     use super::*;
 
-    const R_EARTH: f32 = 6371e3;
     const R_SECS: f32 = R_EARTH + 110e3;
 
     #[test]
     fn test_t_df_dimensions() {
         let obs_locs = vec![
-            Point {
+            GeographicalPoint {
                 latitude: 0.0,
                 longitude: 0.0,
                 radius: R_EARTH,
             },
-            Point {
+            GeographicalPoint {
                 latitude: 10.0,
                 longitude: 10.0,
                 radius: R_EARTH,
             },
         ];
         let secs_locs = vec![
-            Point {
+            GeographicalPoint {
                 latitude: 90.0,
                 longitude: 0.0,
                 radius: R_SECS,
             },
-            Point {
+            GeographicalPoint {
                 latitude: 80.0,
                 longitude: 0.0,
                 radius: R_SECS,
             },
-            Point {
+            GeographicalPoint {
                 latitude: 70.0,
                 longitude: 0.0,
                 radius: R_SECS,
