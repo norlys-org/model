@@ -29,6 +29,32 @@ pub fn transpose_matrix(matrix: Vec<Vec<f32>>) -> Vec<Vec<f32>> {
     result
 }
 
+pub fn multiply_matrices(a: Vec<Vec<f32>>, b: Vec<Vec<f32>>) -> Vec<Vec<f32>> {
+    let rows_a = a.len();
+    let cols_a = if a.is_empty() { 0 } else { a[0].len() };
+    let rows_b = b.len();
+    let cols_b = if b.is_empty() { 0 } else { b[0].len() };
+
+    assert!(
+        cols_a == rows_b,
+        "Number of columns in A must equal the number of rows in B"
+    );
+
+    // Create the result matrix initialized with zeros.
+    let mut result = vec![vec![0.0; cols_b]; rows_a];
+
+    // Multiply matrices
+    for i in 0..rows_a {
+        for j in 0..cols_b {
+            for k in 0..cols_a {
+                result[i][j] += a[i][k] * b[k][j];
+            }
+        }
+    }
+
+    result
+}
+
 /// Calculates the "Transfer Matrix" (T) for Divergence-Free Spherical Elementary Current Systems (SECS).
 ///
 /// **What it does:**
@@ -145,7 +171,6 @@ mod tests {
 
     #[test]
     fn test_transpose_square_matrix() {
-        // Test transpose on a square matrix.
         let m = vec![
             vec![1.0, 2.0, 3.0],
             vec![4.0, 5.0, 6.0],
@@ -161,19 +186,27 @@ mod tests {
 
     #[test]
     fn test_transpose_rectangular_matrix() {
-        // Test transpose on a rectangular (non-square) matrix.
-        let m = vec![
-            vec![1.0, 2.0],
-            vec![3.0, 4.0],
-            vec![5.0, 6.0],
-        ];
-        let expected = vec![
-            vec![1.0, 3.0, 5.0],
-            vec![2.0, 4.0, 6.0],
-        ];
+        let m = vec![vec![1.0, 2.0], vec![3.0, 4.0], vec![5.0, 6.0]];
+        let expected = vec![vec![1.0, 3.0, 5.0], vec![2.0, 4.0, 6.0]];
         assert_eq!(transpose_matrix(m), expected);
     }
 
+    #[test]
+    fn test_multiply_matrices_identity() {
+        let identity: Vec<Vec<f32>> = vec![
+            vec![1.0, 0.0],
+            vec![0.0, 1.0],
+        ];
+
+        let matrix: Vec<Vec<f32>> = vec![
+            vec![2.0, 3.0],
+            vec![4.0, 5.0],
+        ];
+
+        let result = multiply_matrices(identity, matrix.clone());
+
+        assert_eq!(result, matrix);
+    }
     #[test]
     fn test_t_df_dimensions() {
         let obs_locs = vec![
