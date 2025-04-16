@@ -7,6 +7,28 @@ use std::f32::consts::PI;
 /// Physical constant: permeability of free space (µ0)
 const MU0: f32 = 4.0 * PI * 1e-7;
 
+pub fn transpose_matrix(matrix: Vec<Vec<f32>>) -> Vec<Vec<f32>> {
+    if matrix.is_empty() {
+        return Vec::new();
+    }
+
+    let row_count = matrix.len();
+    let col_count = matrix[0].len();
+
+    let mut result: Vec<Vec<f32>> = (0..col_count)
+        .map(|_| Vec::with_capacity(row_count))
+        .collect();
+
+    for row in matrix {
+        assert_eq!(row.len(), col_count, "Matrix must be rectangular");
+        for (j, elem) in row.into_iter().enumerate() {
+            result[j].push(elem);
+        }
+    }
+
+    result
+}
+
 /// Calculates the "Transfer Matrix" (T) for Divergence-Free Spherical Elementary Current Systems (SECS).
 ///
 /// **What it does:**
@@ -120,6 +142,37 @@ mod tests {
     use super::*;
 
     const R_SECS: f32 = R_EARTH + 110e3;
+
+    #[test]
+    fn test_transpose_square_matrix() {
+        // Test transpose on a square matrix.
+        let m = vec![
+            vec![1.0, 2.0, 3.0],
+            vec![4.0, 5.0, 6.0],
+            vec![7.0, 8.0, 9.0],
+        ];
+        let expected = vec![
+            vec![1.0, 4.0, 7.0],
+            vec![2.0, 5.0, 8.0],
+            vec![3.0, 6.0, 9.0],
+        ];
+        assert_eq!(transpose_matrix(m), expected);
+    }
+
+    #[test]
+    fn test_transpose_rectangular_matrix() {
+        // Test transpose on a rectangular (non-square) matrix.
+        let m = vec![
+            vec![1.0, 2.0],
+            vec![3.0, 4.0],
+            vec![5.0, 6.0],
+        ];
+        let expected = vec![
+            vec![1.0, 3.0, 5.0],
+            vec![2.0, 4.0, 6.0],
+        ];
+        assert_eq!(transpose_matrix(m), expected);
+    }
 
     #[test]
     fn test_t_df_dimensions() {
