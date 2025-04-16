@@ -131,7 +131,7 @@ mod tests {
         let lon_range = 0.0..180.0;
         let lon_steps = 2;
         let altitude = 100.0;
-        let result = geographical_point(lat_range, lat_steps, lon_range, lon_steps, altitude);
+        let result = geographical_grid(lat_range, lat_steps, lon_range, lon_steps, altitude);
         assert_eq!(result.len(), 6);
         assert_relative_eq!(result[0].latitude, 0.0);
         assert_relative_eq!(result[0].longitude, 0.0);
