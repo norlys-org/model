@@ -6,11 +6,11 @@ const EARTH_RADIUS: f32 = 6371e3;
 #[derive(Debug, Clone, Copy)]
 pub struct GeographicalPoint {
     /// The longitude in degrees.
-    longitude: f32,
+    pub longitude: f32,
     /// The latitude in degrees.
-    latitude: f32,
+    pub latitude: f32,
     /// The radius from the Earth's center in meters
-    radius: f32,
+    pub radius: f32,
 }
 
 /// Return evenly spaced numbers over a specified interval.
@@ -61,7 +61,7 @@ fn linspace(start: f32, end: f32, num: usize) -> Vec<f32> {
 /// # Returns
 ///
 /// A vector of `GeographicalPoint` instances.
-pub fn geographical_point(
+pub fn geographical_grid(
     lat_range: Range<f32>,
     lat_steps: usize,
     lon_range: Range<f32>,
@@ -125,7 +125,7 @@ mod tests {
     }
 
     #[test]
-    fn test_geographical_point_basic() {
+    fn test_geographical_grid_basic() {
         let lat_range = 0.0..90.0;
         let lat_steps = 3;
         let lon_range = 0.0..180.0;
