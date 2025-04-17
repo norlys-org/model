@@ -1,6 +1,7 @@
 use crate::{
     grid::{geographical_grid, GeographicalPoint},
     matrix::t_df,
+    svd::solve_svd,
 };
 use std::mem;
 use std::ops::Range;
@@ -21,6 +22,17 @@ pub struct Observation {
     radius: f32,
 }
 
+pub struct PredictedPoint {
+    /// The longitude in degrees.
+    longitude: f32,
+    /// The latitude in degrees.
+    latitude: f32,
+    // i vector (usually x magnetometer component) in nano teslas
+    i: f32,
+    // j vector (usually y magnetometer component) in nano teslas
+    j: f32,
+}
+
 pub fn secs_interpolate(
     observations: Vec<Observation>,
     lat_range: Range<f32>,
@@ -28,7 +40,7 @@ pub fn secs_interpolate(
     lon_range: Range<f32>,
     lon_steps: usize,
     prediction_altitude: f32,
-) {
+) -> Vec<PredictedPoint> {
     let secs_locs = geographical_grid(0.0..10.0, 11, 0.0..10.0, 11, 110000f32);
     let obs_locs: Vec<GeographicalPoint> = observations
         .iter()
@@ -58,4 +70,34 @@ pub fn secs_interpolate(
             ]
         })
         .collect();
+
+    let sec_amps = solve_svd(flat_t, flat_b, 0.1f32);
+    let pred = geographical_grid(
+        lat_range,
+        lat_steps,
+        lon_range,
+        lon_steps,
+        prediction_altitude,
+    );
+    let t_pred = t_df(&pred, &secs_locs);
+
+    let mut result: Vec<PredictedPoint> = Vec::with_capacity(pred.len());
+    for i in 0..pred.len() {
+        let mut bx = 0f32;
+        let mut by = 0f32;
+
+        for j in 0..secs_locs.len() {
+            bx += t_pred[i][0][j] * sec_amps[j];
+            by += t_pred[i][1][j] * sec_amps[j];
+        }
+
+        result.push(PredictedPoint {
+            longitude: pred[i].longitude,
+            latitude: pred[i].latitude,
+            i: bx,
+            j: by,
+        })
+    }
+
+    result
 }

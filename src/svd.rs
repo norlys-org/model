@@ -10,7 +10,7 @@ use crate::matrix::{invert_matrix, multiply_matrices, multiply_matrix_vector, tr
 ///
 /// # Returns
 /// Solution vector x
-fn solve_svd(a: Vec<Vec<f32>>, b: Vec<f32>, epsilon: f32) -> Vec<f32> {
+pub fn solve_svd(a: Vec<Vec<f32>>, b: Vec<f32>, epsilon: f32) -> Vec<f32> {
     let at = transpose_matrix(a.clone());
     let mut ata = multiply_matrices(at.clone(), a);
 
