@@ -1,6 +1,6 @@
 mod grid;
 mod matrix;
-mod secs;
+pub mod secs;
 mod sphere;
 mod svd;
 
