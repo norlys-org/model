@@ -75,13 +75,6 @@ pub fn multiply_matrices(a: Vec<Vec<f32>>, b: Vec<Vec<f32>>) -> Vec<Vec<f32>> {
 /// # Panics
 /// * If the matrix is not square.
 /// * If the matrix is singular or nearly singular (‖pivot‖ < 1 × 10⁻⁶).
-///
-/// # Examples
-/// ```rust
-/// let a = vec![vec![4.0, 7.0], vec![2.0, 6.0]];
-/// let inv = invert_matrix(a.clone());
-/// // a · a⁻¹ = I
-/// ```
 pub fn invert_matrix(mut a: Vec<Vec<f32>>) -> Vec<Vec<f32>> {
     let n = a.len();
     assert!(n > 0, "Matrix must be non‑empty");
