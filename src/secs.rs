@@ -11,19 +11,19 @@ use wasm_bindgen::prelude::*;
 pub const R_EARTH: f32 = 6371e3;
 
 #[wasm_bindgen]
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Observation {
     /// The longitude in degrees.
-    longitude: f32,
+    pub longitude: f32,
     /// The latitude in degrees.
-    latitude: f32,
+    pub latitude: f32,
     // i vector (usually x magnetometer component) in nano teslas
-    i: f32,
+    pub i: f32,
     // j vector (usually y magnetometer component) in nano teslas
-    j: f32,
+    pub j: f32,
     // Altitude from the surface of the earth where the measurement has been conducted (usually 0)
     // in meters
-    altitude: f32,
+    pub altitude: f32,
 }
 
 #[wasm_bindgen]
@@ -113,23 +113,4 @@ pub fn secs_interpolate(
     }
 
     result
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_secs_interpolate() {
-        let obs: Vec<Observation> = vec![Observation {
-            latitude: 69f32,
-            longitude: 19f32,
-            i: -100f32,
-            j: -100f32,
-            altitude: 0f32,
-        }];
-
-        let pred = secs_interpolate(obs, 45f32..85f32, 37, -180f32..179f32, 130, 110e3, 0f32);
-        println!("{:?}", pred);
-    }
 }
