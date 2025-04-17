@@ -1,14 +1,1 @@
-data/imagery
-data/tromsoe_csv
-data/iaga
-data/magnetograms
-data/allsky-state.csv
-to-label-*.csv
-data/solarwind
-norlys/__pycache__
-__pycache__
-*.DS_Store
-legacy/temp
 node_modules/
-poc.js
-target/

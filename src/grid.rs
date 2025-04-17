@@ -9,8 +9,8 @@ pub struct GeographicalPoint {
     pub longitude: f32,
     /// The latitude in degrees.
     pub latitude: f32,
-    /// The radius from the Earth's center in meters
-    pub radius: f32,
+    /// Altitude from the surface of the earth
+    pub altitude: f32,
 }
 
 /// Return evenly spaced numbers over a specified interval.
@@ -72,14 +72,12 @@ pub fn geographical_grid(
     let longitudes = linspace(lon_range.start, lon_range.end, lon_steps);
     let mut result = Vec::with_capacity(lat_steps * lon_steps);
 
-    let radius = EARTH_RADIUS + altitude;
-
     for lat in latitudes {
         for &lon in &longitudes {
             result.push(GeographicalPoint {
                 longitude: lon,
                 latitude: lat,
-                radius,
+                altitude,
             })
         }
     }
@@ -153,9 +151,9 @@ mod tests {
         assert_eq!(result.len(), 6);
         assert_relative_eq!(result[0].latitude, 0.0);
         assert_relative_eq!(result[0].longitude, 0.0);
-        assert_relative_eq!(result[0].radius, EARTH_RADIUS + altitude);
+        assert_relative_eq!(result[0].altitude, altitude);
         assert_relative_eq!(result[5].latitude, 90.0);
         assert_relative_eq!(result[5].longitude, 180.0);
-        assert_relative_eq!(result[5].radius, EARTH_RADIUS + altitude);
+        assert_relative_eq!(result[5].altitude, altitude);
     }
 }

@@ -1,5 +1,6 @@
 use crate::{
     grid::GeographicalPoint,
+    secs::R_EARTH,
     sphere::{angular_distance, bearing},
 };
 use std::f32::consts::PI;
@@ -185,10 +186,10 @@ pub fn t_df(obs_locs: &[GeographicalPoint], secs_locs: &[GeographicalPoint]) -> 
 
     // Calculate transfer function for each observation-SEC pair
     for i in 0..nobs {
-        let obs_r = obs_locs[i].radius;
+        let obs_r = R_EARTH + obs_locs[i].altitude;
 
         for j in 0..nsec {
-            let sec_r = secs_locs[j].radius;
+            let sec_r = R_EARTH + secs_locs[j].altitude;
             let x = obs_r / sec_r;
             let sin_theta = theta[i][j].sin();
             let cos_theta = theta[i][j].cos();
@@ -286,29 +287,29 @@ mod tests {
             GeographicalPoint {
                 latitude: 0.0,
                 longitude: 0.0,
-                radius: R_EARTH,
+                altitude: 0.0,
             },
             GeographicalPoint {
                 latitude: 10.0,
                 longitude: 10.0,
-                radius: R_EARTH,
+                altitude: 0.0,
             },
         ];
         let secs_locs = vec![
             GeographicalPoint {
                 latitude: 90.0,
                 longitude: 0.0,
-                radius: R_SECS,
+                altitude: 0.0,
             },
             GeographicalPoint {
                 latitude: 80.0,
                 longitude: 0.0,
-                radius: R_SECS,
+                altitude: 0.0,
             },
             GeographicalPoint {
                 latitude: 70.0,
                 longitude: 0.0,
-                radius: R_SECS,
+                altitude: 0.0,
             },
         ];
 

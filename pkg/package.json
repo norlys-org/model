@@ -1,0 +1,15 @@
+{
+  "name": "norlys",
+  "type": "module",
+  "version": "0.1.0",
+  "files": [
+    "norlys_bg.wasm",
+    "norlys.js",
+    "norlys.d.ts"
+  ],
+  "main": "norlys.js",
+  "types": "norlys.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}
