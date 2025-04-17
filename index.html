@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en-US">
+  <head>
+    <meta charset="utf-8" />
+    <title>hello-wasm example</title>
+  </head>
+  <body>
+    <script type="module">
+        import init, { infer } from "./pkg/norlys.js";
+
+        (async () => {
+          await init();
+
+          const observations = [
+            { longitude: 17, latitude: 69, i: -100, j: -100, altitude: 0 }
+          ];
+
+          const predicted = infer(observations);
+          console.log(predicted);
+        })();
+    </script>
+  </body>
+</html>
