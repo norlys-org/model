@@ -90,8 +90,26 @@ pub fn geographical_grid(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use approx::assert_relative_eq;
 
+    #[macro_export]
+    macro_rules! assert_relative_eq {
+    ($a:expr, $b:expr) => {
+        assert_relative_eq!($a, $b, 1e-6);
+    };
+    ($a:expr, $b:expr, $epsilon:expr) => {
+        {
+            let a_val = $a;
+            let b_val = $b;
+            let eps = $epsilon;
+            let diff = if a_val > b_val { a_val - b_val } else { b_val - a_val };
+            assert!(
+                diff <= eps,
+                "assertion failed: `(left ≈ right)` (left: `{:?}`, right: `{:?}`, expected diff: `{:?}`, actual diff: `{:?}`)",
+                a_val, b_val, eps, diff
+            );
+        }
+    };
+}
     #[test]
     fn test_linspace_basic() {
         let result = linspace(0.0, 1.0, 5);
