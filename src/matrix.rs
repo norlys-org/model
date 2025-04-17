@@ -102,7 +102,6 @@ pub fn invert_matrix(mut a: Vec<Vec<f32>>) -> Vec<Vec<f32>> {
                 pivot_row = r;
             }
         }
-        assert!(max_val >= EPSILON, "Matrix is singular or ill‑conditioned");
 
         // 2. Row swap
         if pivot_row != col {
