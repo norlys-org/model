@@ -5,9 +5,11 @@ use crate::{
 };
 use std::mem;
 use std::ops::Range;
+use wasm_bindgen::prelude::*;
 
 pub const R_EARTH: f32 = 6371e3;
 
+#[wasm_bindgen]
 pub struct Observation {
     /// The longitude in degrees.
     longitude: f32,
@@ -17,11 +19,12 @@ pub struct Observation {
     i: f32,
     // j vector (usually y magnetometer component) in nano teslas
     j: f32,
-    // Radius from center of the earth to the obsevation (usually just the radius of the earth
-    // since the measurements are conducted on the ground)
-    radius: f32,
+    // Altitude from the surface of the earth where the measurement has been conducted (usually 0)
+    // in meters
+    altitude: f32,
 }
 
+#[wasm_bindgen]
 pub struct PredictedPoint {
     /// The longitude in degrees.
     longitude: f32,
@@ -39,15 +42,22 @@ pub fn secs_interpolate(
     lat_steps: usize,
     lon_range: Range<f32>,
     lon_steps: usize,
+    sec_altitude: f32,
     prediction_altitude: f32,
 ) -> Vec<PredictedPoint> {
-    let secs_locs = geographical_grid(0.0..10.0, 11, 0.0..10.0, 11, 110000f32);
+    let secs_locs = geographical_grid(
+        lat_range.clone(),
+        50,
+        lon_range.clone(),
+        50,
+        R_EARTH + sec_altitude,
+    );
     let obs_locs: Vec<GeographicalPoint> = observations
         .iter()
         .map(|obs| GeographicalPoint {
             latitude: obs.latitude,
             longitude: obs.longitude,
-            radius: R_EARTH, // Assume observations are at Earth's surface
+            altitude: obs.altitude,
         })
         .collect();
 
