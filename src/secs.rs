@@ -3,6 +3,7 @@ use crate::{
     matrix::t_df,
     svd::solve_svd,
 };
+use serde::{Deserialize, Serialize};
 use std::mem;
 use std::ops::Range;
 use wasm_bindgen::prelude::*;
@@ -10,6 +11,7 @@ use wasm_bindgen::prelude::*;
 pub const R_EARTH: f32 = 6371e3;
 
 #[wasm_bindgen]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Observation {
     /// The longitude in degrees.
     longitude: f32,
@@ -25,6 +27,7 @@ pub struct Observation {
 }
 
 #[wasm_bindgen]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct PredictedPoint {
     /// The longitude in degrees.
     longitude: f32,
@@ -110,4 +113,23 @@ pub fn secs_interpolate(
     }
 
     result
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_secs_interpolate() {
+        let obs: Vec<Observation> = vec![Observation {
+            latitude: 69f32,
+            longitude: 19f32,
+            i: -100f32,
+            j: -100f32,
+            altitude: 0f32,
+        }];
+
+        let pred = secs_interpolate(obs, 45f32..85f32, 37, -180f32..179f32, 130, 110e3, 0f32);
+        println!("{:?}", pred);
+    }
 }
