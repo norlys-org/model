@@ -1,6 +1,6 @@
 /* tslint:disable */
 /* eslint-disable */
-export function infer(observations: Observation[]): PredictedPoint[];
+export function infer(js_obs: any): any;
 export class Observation {
   private constructor();
   free(): void;
@@ -16,12 +16,13 @@ export interface InitOutput {
   readonly memory: WebAssembly.Memory;
   readonly __wbg_observation_free: (a: number, b: number) => void;
   readonly __wbg_predictedpoint_free: (a: number, b: number) => void;
-  readonly infer: (a: number, b: number) => [number, number];
-  readonly __wbindgen_export_0: WebAssembly.Table;
+  readonly infer: (a: any) => [number, number, number];
+  readonly __wbindgen_exn_store: (a: number) => void;
   readonly __externref_table_alloc: () => number;
+  readonly __wbindgen_export_2: WebAssembly.Table;
   readonly __wbindgen_malloc: (a: number, b: number) => number;
-  readonly __externref_drop_slice: (a: number, b: number) => void;
-  readonly __wbindgen_free: (a: number, b: number, c: number) => void;
+  readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
+  readonly __externref_table_dealloc: (a: number) => void;
   readonly __wbindgen_start: () => void;
 }
 
