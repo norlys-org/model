@@ -20,9 +20,9 @@ fn bench_secs_interpolate(b: &mut Bencher) {
         let out = secs_interpolate(
             obs.clone(),
             45.0f32..85.0f32,
-            37,
+            5,
             -180.0f32..179.0f32,
-            130,
+            5,
             110e3,
             0.0f32,
         );
