@@ -6,7 +6,7 @@ use crate::{
 use serde::{Deserialize, Serialize};
 use std::mem;
 use std::ops::Range;
-use std::time::{Duration, Instant};
+use std::time::Instant;
 use wasm_bindgen::prelude::*;
 
 pub const R_EARTH: f32 = 6371e3;
@@ -53,7 +53,7 @@ pub fn secs_interpolate(
     let total_start = Instant::now();
 
     let mut start = Instant::now();
-    let secs_locs = geographical_grid(45f32..85f32, 30, -170f32..35f32, 30, R_EARTH + sec_altitude);
+    let secs_locs = geographical_grid(45f32..85f32, 50, -170f32..35f32, 50, R_EARTH + sec_altitude);
     println!(" -> Generating secs_locs took: {:?}", start.elapsed());
 
     start = Instant::now();
@@ -189,7 +189,7 @@ mod tests {
             altitude: 0f32,
         }];
 
-        let pred = secs_interpolate(obs, 45f32..85f32, 10, -180f32..179f32, 10, 110e3, 0f32);
+        let pred = secs_interpolate(obs, 45f32..85f32, 37, -180f32..179f32, 130, 110e3, 0f32);
         println!("{:?}", pred);
     }
 }
