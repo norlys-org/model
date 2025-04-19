@@ -4,6 +4,17 @@ export function infer(js_obs: any): any;
 export class Observation {
   private constructor();
   free(): void;
+  /**
+   * The longitude in degrees.
+   */
+  longitude: number;
+  /**
+   * The latitude in degrees.
+   */
+  latitude: number;
+  i: number;
+  j: number;
+  altitude: number;
 }
 export class PredictedPoint {
   private constructor();
@@ -15,6 +26,16 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 export interface InitOutput {
   readonly memory: WebAssembly.Memory;
   readonly __wbg_observation_free: (a: number, b: number) => void;
+  readonly __wbg_get_observation_longitude: (a: number) => number;
+  readonly __wbg_set_observation_longitude: (a: number, b: number) => void;
+  readonly __wbg_get_observation_latitude: (a: number) => number;
+  readonly __wbg_set_observation_latitude: (a: number, b: number) => void;
+  readonly __wbg_get_observation_i: (a: number) => number;
+  readonly __wbg_set_observation_i: (a: number, b: number) => void;
+  readonly __wbg_get_observation_j: (a: number) => number;
+  readonly __wbg_set_observation_j: (a: number, b: number) => void;
+  readonly __wbg_get_observation_altitude: (a: number) => number;
+  readonly __wbg_set_observation_altitude: (a: number, b: number) => void;
   readonly __wbg_predictedpoint_free: (a: number, b: number) => void;
   readonly infer: (a: any) => [number, number, number];
   readonly __wbindgen_exn_store: (a: number) => void;
