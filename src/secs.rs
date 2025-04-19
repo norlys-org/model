@@ -6,7 +6,6 @@ use crate::{
 use serde::{Deserialize, Serialize};
 use std::mem;
 use std::ops::Range;
-use std::time::Instant;
 use wasm_bindgen::prelude::*;
 
 pub const R_EARTH: f32 = 6371e3;
@@ -49,14 +48,13 @@ pub fn secs_interpolate(
     sec_altitude: f32,
     prediction_altitude: f32,
 ) -> Vec<PredictedPoint> {
-    println!("--- Starting secs_interpolate ---");
-    let total_start = Instant::now();
-
-    let mut start = Instant::now();
-    let secs_locs = geographical_grid(45f32..85f32, 50, -170f32..35f32, 50, R_EARTH + sec_altitude);
-    println!(" -> Generating secs_locs took: {:?}", start.elapsed());
-
-    start = Instant::now();
+    let secs_locs = geographical_grid(
+        lat_range.clone(),
+        50,
+        lon_range.clone(),
+        50,
+        R_EARTH + sec_altitude,
+    );
     let obs_locs: Vec<GeographicalPoint> = observations
         .iter()
         .map(|obs| GeographicalPoint {
@@ -65,17 +63,8 @@ pub fn secs_interpolate(
             altitude: obs.altitude,
         })
         .collect();
-    println!(" -> Generating obs_locs took: {:?}", start.elapsed());
 
-    start = Instant::now();
-    let t_matrix_intermediate = t_df(&obs_locs, &secs_locs);
-    println!(
-        " -> Calculating intermediate T matrix (t_df) took: {:?}",
-        start.elapsed()
-    );
-
-    start = Instant::now();
-    let flat_t: Vec<Vec<f32>> = t_matrix_intermediate
+    let flat_t: Vec<Vec<f32>> = t_df(&obs_locs, &secs_locs)
         .into_iter()
         .flat_map(|mut row| {
             vec![
@@ -84,11 +73,9 @@ pub fn secs_interpolate(
             ]
         })
         .collect();
-    println!(" -> Flattening T matrix took: {:?}", start.elapsed());
 
-    start = Instant::now();
-    let flat_b: Vec<f32> = observations // Use into_iter if you don't need observations later
-        .into_iter() // Consumes observations
+    let flat_b: Vec<f32> = observations
+        .into_iter()
         .flat_map(|obs| {
             vec![
                 obs.i, // Bx component
@@ -96,16 +83,8 @@ pub fn secs_interpolate(
             ]
         })
         .collect();
-    println!(
-        " -> Flattening observations (B vector) took: {:?}",
-        start.elapsed()
-    );
 
-    start = Instant::now();
-    let sec_amps = solve_svd(flat_t, flat_b, 0.1f32); // Assuming flat_t and flat_b are consumed or cloned by solve_svd
-    println!(" -> Solving SVD took: {:?}", start.elapsed());
-
-    start = Instant::now();
+    let sec_amps = solve_svd(flat_t, flat_b, 0.1f32);
     let pred = geographical_grid(
         lat_range,
         lat_steps,
@@ -113,47 +92,16 @@ pub fn secs_interpolate(
         lon_steps,
         prediction_altitude,
     );
-    println!(" -> Generating prediction grid took: {:?}", start.elapsed());
-
-    start = Instant::now();
     let t_pred = t_df(&pred, &secs_locs);
-    println!(
-        " -> Calculating prediction T matrix (t_df) took: {:?}",
-        start.elapsed()
-    );
 
-    start = Instant::now();
     let mut result: Vec<PredictedPoint> = Vec::with_capacity(pred.len());
-    let num_pred_points = pred.len();
-    let num_sec_locs = secs_locs.len(); // Cache length for efficiency
-
-    for i in 0..num_pred_points {
+    for i in 0..pred.len() {
         let mut bx = 0f32;
         let mut by = 0f32;
 
-        // Ensure indices are valid if t_pred or sec_amps structure might vary
-        if i < t_pred.len() && t_pred[i].len() >= 2 {
-            // Pre-fetch rows for potential minor optimization
-            let t_pred_bx_row = &t_pred[i][0];
-            let t_pred_by_row = &t_pred[i][1];
-
-            for j in 0..num_sec_locs {
-                // Check bounds for robustness, though loop condition should guarantee j < num_sec_locs
-                if j < t_pred_bx_row.len() && j < t_pred_by_row.len() && j < sec_amps.len() {
-                    bx += t_pred_bx_row[j] * sec_amps[j];
-                    by += t_pred_by_row[j] * sec_amps[j];
-                } else {
-                    // Log an error or warning if indices go out of bounds unexpectedly
-                    eprintln!("Warning: Index out of bounds during final calculation. i={}, j={}, t_pred[i][0].len={}, t_pred[i][1].len={}, sec_amps.len={}",
-                              i, j, t_pred_bx_row.len(), t_pred_by_row.len(), sec_amps.len());
-                }
-            }
-        } else {
-            eprintln!(
-                "Warning: Index 'i' out of bounds for t_pred. i={}, t_pred.len={}",
-                i,
-                t_pred.len()
-            );
+        for j in 0..secs_locs.len() {
+            bx += t_pred[i][0][j] * sec_amps[j];
+            by += t_pred[i][1][j] * sec_amps[j];
         }
 
         result.push(PredictedPoint {
@@ -163,15 +111,7 @@ pub fn secs_interpolate(
             j: by,
         })
     }
-    println!(
-        " -> Final result calculation loop took: {:?}",
-        start.elapsed()
-    );
 
-    println!(
-        "--- Finished secs_interpolate. Total time: {:?} ---",
-        total_start.elapsed()
-    );
     result
 }
 
