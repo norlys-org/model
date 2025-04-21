@@ -4,13 +4,14 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/release-24.11";
     flake-utils.url = "github:numtide/flake-utils";
+    naersk.url = "github:nix-community/naersk";
     rust-overlay = {
       url = "github:oxalica/rust-overlay";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
 
-  outputs = { nixpkgs, flake-utils, rust-overlay, ... }:
+  outputs = { nixpkgs, flake-utils, rust-overlay, naersk, ... }:
     flake-utils.lib.eachDefaultSystem (system:
       let
         overlays = [ (import rust-overlay) ];
@@ -19,57 +20,38 @@
           config = { allowUnfree = true; };
         };
 
-        rustToolchain = pkgs.rust-bin.stable.latest.default.override {
+        toolchain = pkgs.rust-bin.stable.latest.default.override {
           targets = [ "wasm32-unknown-unknown" ];
         };
-
-        commonBuildInputs = with pkgs; [ rustToolchain wasm-pack ];
-
-        buildWasm = pkgs.writeShellApplication {
-          name = "build-wasm";
-          runtimeInputs = commonBuildInputs;
-          text = ''
-            cargo build --target wasm32-unknown-unknown --release
-            wasm-pack build --target web
-          '';
+        naersk' = pkgs.callPackage naersk {
+          cargo = toolchain;
+          rustc = toolchain;
         };
 
-        test = pkgs.writeShellApplication {
-          name = "test";
-          runtimeInputs = commonBuildInputs;
-          text = ''
-            cargo test
-          '';
-        };
-
-        testWithLogs = pkgs.writeShellApplication {
-          name = "test-logs";
-          runtimeInputs = commonBuildInputs;
-          text = ''
-            cargo test -- --nocapture
-          '';
-        };
-
-        lint = pkgs.writeShellApplication {
-          name = "lint";
-          runtimeInputs = commonBuildInputs ++ [ pkgs.clippy ];
-          text = ''
-            cargo clippy -- -D warnings
-          '';
-        };
+        manifest = (pkgs.lib.importTOML ./Cargo.toml).package;
       in {
-        packages = { inherit buildWasm; };
+        defaultPackage = naersk'.buildPackage {
+          name = manifest.name;
+          version = manifest.version;
 
-        apps = {
-          "build:wasm" = flake-utils.lib.mkApp { drv = buildWasm; };
-          test = flake-utils.lib.mkApp { drv = test; };
-          "test:verbose" = flake-utils.lib.mkApp { drv = testWithLogs; };
-          lint = flake-utils.lib.mkApp { drv = lint; };
+          src = ./.;
+
+          buildInputs = with pkgs; [ wasm-pack ];
+          CARGO_BUILD_TARGET = "wasm32-unknown-unknown";
+
+          buildPhase = ''
+            export CARGO_TARGET_DIR=$TMPDIR/cargo-target
+
+            # compile and generate JS bindings directly into $out
+            wasm-pack build \
+              --target web \
+              --release \
+              --out-dir $out;
+          '';
         };
 
-        devShells.default = pkgs.mkShell {
-          buildInputs = commonBuildInputs ++ [ pkgs.clippy ];
-
+        devShell = pkgs.mkShell {
+          buildInputs = with pkgs; [ rustc cargo clippy ];
           shellHook = ''
             echo "norlys model development environment"
           '';
