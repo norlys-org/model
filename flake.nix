@@ -42,6 +42,14 @@
           '';
         };
 
+        testWithLogs = pkgs.writeShellApplication {
+          name = "test-logs";
+          runtimeInputs = commonBuildInputs;
+          text = ''
+            cargo test -- --nocapture
+          '';
+        };
+
         lint = pkgs.writeShellApplication {
           name = "lint";
           runtimeInputs = commonBuildInputs ++ [ pkgs.clippy ];
@@ -55,6 +63,7 @@
         apps = {
           "build:wasm" = flake-utils.lib.mkApp { drv = buildWasm; };
           test = flake-utils.lib.mkApp { drv = test; };
+          "test:verbose" = flake-utils.lib.mkApp { drv = testWithLogs; };
           lint = flake-utils.lib.mkApp { drv = lint; };
         };
 
