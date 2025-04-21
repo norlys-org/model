@@ -2,45 +2,67 @@
   description = "norlys model";
 
   inputs = {
-    nixpkgs.url     = "github:NixOS/nixpkgs/release-24.11";
+    nixpkgs.url = "github:NixOS/nixpkgs/release-24.11";
     flake-utils.url = "github:numtide/flake-utils";
+    rust-overlay = {
+      url = "github:oxalica/rust-overlay";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = { self, nixpkgs, flake-utils }:
+  outputs = { nixpkgs, flake-utils, rust-overlay, ... }:
     flake-utils.lib.eachDefaultSystem (system:
       let
+        overlays = [ (import rust-overlay) ];
         pkgs = import nixpkgs {
-          inherit system;
+          inherit system overlays;
           config = { allowUnfree = true; };
         };
 
-        # bind the actual build script under a distinct name
+        rustToolchain = pkgs.rust-bin.stable.latest.default.override {
+          targets = [ "wasm32-unknown-unknown" ];
+        };
+
+        commonBuildInputs = with pkgs; [ rustToolchain wasm-pack ];
+
         buildWasm = pkgs.writeShellApplication {
           name = "build-wasm";
-          runtimeInputs = with pkgs; [ rustup wasm-pack ];
+          runtimeInputs = commonBuildInputs;
           text = ''
             cargo build --target wasm32-unknown-unknown --release
             wasm-pack build --target web
           '';
         };
+
+        test = pkgs.writeShellApplication {
+          name = "test";
+          runtimeInputs = commonBuildInputs;
+          text = ''
+            cargo test
+          '';
+        };
+
+        lint = pkgs.writeShellApplication {
+          name = "lint";
+          runtimeInputs = commonBuildInputs ++ [ pkgs.clippy ];
+          text = ''
+            cargo clippy -- -D warnings
+          '';
+        };
       in {
-        # any app you list here gets run by `nix run .#<key>`
+        packages = { inherit buildWasm; };
+
         apps = {
-          build-wasm = flake-utils.lib.mkApp { drv = buildWasm; };
+          "build:wasm" = flake-utils.lib.mkApp { drv = buildWasm; };
+          test = flake-utils.lib.mkApp { drv = test; };
+          lint = flake-utils.lib.mkApp { drv = lint; };
         };
 
-        # you can also expose it as a package, if you need to depend on it elsewhere
-        packages = {
-          inherit buildWasm;
-        };
-
-        # drop into a dev shell with your build tool on PATH
         devShells.default = pkgs.mkShell {
-          buildInputs = with pkgs; [ rustup wasm-pack ];
+          buildInputs = commonBuildInputs ++ [ pkgs.clippy ];
 
-          # optional: shell aliases
           shellHook = ''
-            echo "Shell ready: run \`build\` to build your WASM."
+            echo "norlys model development environment"
           '';
         };
       });
