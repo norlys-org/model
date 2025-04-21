@@ -36,18 +36,18 @@
 
           src = ./.;
 
-          buildInputs = with pkgs; [ wasm-pack ];
           CARGO_BUILD_TARGET = "wasm32-unknown-unknown";
+        };
 
-          buildPhase = ''
-            export CARGO_TARGET_DIR=$TMPDIR/cargo-target
-
-            # compile and generate JS bindings directly into $out
-            wasm-pack build \
-              --target web \
-              --release \
-              --out-dir $out;
-          '';
+        apps."build:wasm" = flake-utils.lib.mkApp {
+          drv = pkgs.writeShellApplication {
+            name = "build-wasm";  # MUST match the actual script filename
+            runtimeInputs = [ pkgs.wasm-pack toolchain ];
+            text = ''
+              echo "Running wasm-pack build..."
+              wasm-pack build --target web
+            '';
+          };
         };
 
         devShell = pkgs.mkShell {
