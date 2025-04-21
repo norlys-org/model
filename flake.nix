@@ -39,14 +39,38 @@
           CARGO_BUILD_TARGET = "wasm32-unknown-unknown";
         };
 
-        apps."build:wasm" = flake-utils.lib.mkApp {
-          drv = pkgs.writeShellApplication {
-            name = "build-wasm";  # MUST match the actual script filename
-            runtimeInputs = [ pkgs.wasm-pack toolchain ];
-            text = ''
-              echo "Running wasm-pack build..."
-              wasm-pack build --target web
-            '';
+        apps = {
+          "build:wasm" = flake-utils.lib.mkApp {
+            drv = pkgs.writeShellApplication {
+              name = "build:wasm";
+              runtimeInputs = [ pkgs.wasm-pack toolchain ];
+              text = ''
+                echo "$ wasm-pack build --target web"
+                wasm-pack build --target web
+              '';
+            };
+          };
+
+          test = flake-utils.lib.mkApp {
+            drv = pkgs.writeShellApplication {
+              name = "test";
+              runtimeInputs = [ toolchain ];
+              text = ''
+                echo "$ cargo test"
+                cargo test -- --nocapture
+              '';
+            };
+          };
+
+          benchmark = flake-utils.lib.mkApp {
+            drv = pkgs.writeShellApplication {
+              name = "benchmark";
+              runtimeInputs = [ toolchain ];
+              text = ''
+                echo "$ cargo bench"
+                cargo bench
+              '';
+            };
           };
         };
 
