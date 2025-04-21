@@ -65,11 +65,15 @@ pub fn secs_interpolate(
         .collect();
 
     let t = t_df(&obs_locs, &secs_locs);
-    println!("t_df dimensions: {} × {}  (obs × secs)", t.len(), t[0].len());
+    println!(
+        "t_df dimensions: {} × {}  (obs × secs)",
+        t.len(),
+        t[0].len()
+    );
     println!("first few entries t[0][0][..10] {:?}", &t[0][0][..10]);
 
     let flat_t: Vec<Vec<f32>> = t
-    // let flat_t: Vec<Vec<f32>> = t_df(&obs_locs, &secs_locs)
+        // let flat_t: Vec<Vec<f32>> = t_df(&obs_locs, &secs_locs)
         .into_iter()
         .flat_map(|mut row| {
             vec![
