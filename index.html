@@ -6,7 +6,7 @@
   </head>
   <body>
     <script type="module">
-        import init, { infer } from "./pkg/norlys.js";
+        import init, { infer } from "./pkg/model.js";
 
         (async () => {
           await init();
@@ -73,7 +73,8 @@
   { latitude: 65.136, longitude: -147.447, i: -303, j: -302 },
   { latitude: 64.786, longitude: -141.205, i: -128, j: 19 },
   { latitude: 68.627, longitude: -149.592, i: -360, j: 50 }
-];
+          ].map(o => ({ ...o, altitude: 0 }));
+          console.log(observations);
           const predicted = infer(observations);
           console.log(predicted);
         })();
