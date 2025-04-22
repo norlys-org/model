@@ -34,6 +34,10 @@
           text = ''
             echo "\$ wasm-pack build --target web $*"
             wasm-pack build --target web "$@";
+
+            echo "\$ Change name and registry of generated package.json" 
+            jq '.name = "@norlys-org/model" | .publishConfig = {registry: "https://npm.pkg.github.com/"}' pkg/package.json > pkg/package.tmp.json
+            mv pkg/package.tmp.json pkg/package.json
           '';
         };
 
