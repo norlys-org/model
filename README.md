@@ -8,6 +8,9 @@ Using ground measurements from magnetometers, `norlys` can compute a vector fiel
 ```bash
 nix run .#build:wasm -- --dev
 
+# builds wasm in dev mode and runs a web server on 8000
+nix run .#serve
+
 # run tests and benchmarks
 nix run .#test
 nix run .#benchmark
