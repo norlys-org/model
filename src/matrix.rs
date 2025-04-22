@@ -1,0 +1,335 @@
+use crate::{
+    grid::GeographicalPoint,
+    secs::R_EARTH,
+    sphere::{angular_distance, bearing},
+};
+use std::f32::consts::PI;
+
+/// Physical constant: permeability of free space (µ0)
+const MU0: f32 = 4.0 * PI * 1e-7;
+const EPSILON: f32 = 1e-6;
+
+pub fn multiply_matrix_vector(m: Vec<Vec<f32>>, v: Vec<f32>) -> Vec<f32> {
+    let rows = m.len();
+    let cols = m[0].len();
+    let mut result: Vec<f32> = vec![0f32; rows];
+
+    for i in 0..rows {
+        for j in 0..cols {
+            result[i] += m[i][j] * v[j];
+        }
+    }
+
+    result
+}
+
+pub fn transpose_matrix(matrix: Vec<Vec<f32>>) -> Vec<Vec<f32>> {
+    if matrix.is_empty() {
+        return Vec::new();
+    }
+
+    let row_count = matrix.len();
+    let col_count = matrix[0].len();
+
+    let mut result: Vec<Vec<f32>> = (0..col_count)
+        .map(|_| Vec::with_capacity(row_count))
+        .collect();
+
+    for row in matrix {
+        assert_eq!(row.len(), col_count, "Matrix must be rectangular");
+        for (j, elem) in row.into_iter().enumerate() {
+            result[j].push(elem);
+        }
+    }
+
+    result
+}
+
+pub fn multiply_matrices(a: Vec<Vec<f32>>, b: Vec<Vec<f32>>) -> Vec<Vec<f32>> {
+    let rows_a = a.len();
+    let cols_a = if a.is_empty() { 0 } else { a[0].len() };
+    let rows_b = b.len();
+    let cols_b = if b.is_empty() { 0 } else { b[0].len() };
+
+    assert!(
+        cols_a == rows_b,
+        "Number of columns in A must equal the number of rows in B"
+    );
+
+    // Create the result matrix initialized with zeros.
+    let mut result = vec![vec![0.0; cols_b]; rows_a];
+
+    // Multiply matrices
+    for i in 0..rows_a {
+        for j in 0..cols_b {
+            for k in 0..cols_a {
+                result[i][j] += a[i][k] * b[k][j];
+            }
+        }
+    }
+
+    result
+}
+
+/// Invert a square matrix represented as `Vec<Vec<f32>>`.
+///
+/// # Panics
+/// * If the matrix is not square.
+/// * If the matrix is singular or nearly singular (‖pivot‖ < 1 × 10⁻⁶).
+pub fn invert_matrix(mut a: Vec<Vec<f32>>) -> Vec<Vec<f32>> {
+    let n = a.len();
+    assert!(n > 0, "Matrix must be non‑empty");
+    assert!(!a.iter().any(|row| row.len() != n), "Matrix must be square");
+
+    // Build augmented matrix [A | I]
+    for (i, row) in a.iter_mut().enumerate() {
+        row.reserve_exact(n);
+        for j in 0..n {
+            row.push(if i == j { 1.0 } else { 0.0 });
+        }
+    }
+
+    let width = 2 * n;
+
+    // Gauss‑Jordan elimination with partial pivoting
+    for col in 0..n {
+        // 1. Pivot selection
+        let mut pivot_row = col;
+        let mut max_val = a[col][col].abs();
+        for r in (col + 1)..n {
+            if a[r][col].abs() > max_val {
+                max_val = a[r][col].abs();
+                pivot_row = r;
+            }
+        }
+
+        // 2. Row swap
+        if pivot_row != col {
+            a.swap(col, pivot_row);
+        }
+
+        // 3. Normalize pivot row
+        let pivot = a[col][col];
+        for c in 0..width {
+            a[col][c] /= pivot;
+        }
+
+        // 4. Eliminate other rows
+        for r in 0..n {
+            if r != col {
+                let factor = a[r][col];
+                if factor.abs() > 0.0 {
+                    for c in 0..width {
+                        a[r][c] -= factor * a[col][c];
+                    }
+                }
+            }
+        }
+    }
+
+    let mut inv = Vec::with_capacity(n);
+    for r in 0..n {
+        inv.push(a[r][n..].to_vec());
+    }
+    inv
+}
+
+/// Calculates the "Transfer Matrix" (T) for Divergence-Free Spherical Elementary Current Systems (SECS).
+///
+/// **What it does:**
+/// This function determines the magnetic field influence that each hypothetical "elementary current"
+/// located high above the Earth (at `secs_locs`) would have on each ground-based observation
+/// point (`obs_locs`). It essentially builds a map of potential influences.
+/// This function deals with "divergence-free" SECS, which represent currents that flow in closed loops.
+///
+/// **The Physics:**
+/// The calculation is based on the fundamental principle that electric currents create magnetic fields.
+/// This relationship is formally described by the Biot-Savart Law.
+/// (See: https://en.wikipedia.org/wiki/Biot%E2%80%93Savart_law)
+///
+/// **Specific Formulas:**
+/// The exact mathematical formulas implemented here are analytical solutions derived from the
+/// Biot-Savart law specifically for the geometry of these spherical elementary currents. They come
+/// from the work of Amm & Viljanen in their paper on using SECS for ionospheric field continuation.
+/// The comments below reference specific equations from that paper (e.g., Eq. 9, 10, A.7, A.8).
+/// (See: https://link.springer.com/content/pdf/10.1007/978-3-030-26732-2.pdf)
+///
+/// **The Transfer Matrix (Output):**
+/// The function returns a 3D matrix `T`. Each element `T[i][k][j]` represents the magnetic field's
+/// k-th component (where 0=Bx/North, 1=By/East, 2=Bz/Down) measured at the i-th observation point (`obs_locs[i]`),
+/// *caused by* the j-th elementary current (`secs_locs[j]`) *if that current had a standard strength of 1 Ampere*.
+///
+/// # Arguments
+/// * `obs_locs` - A slice of `GeographicalPoint` structures representing the observation locations (e.g., ground magnetometers).
+/// * `secs_locs` - A slice of `GeographicalPoint` structures representing the locations (poles) of the hypothetical Spherical Elementary Currents.
+///
+/// # Returns
+/// A 3D vector `Vec<Vec<Vec<f32>>>` representing the transfer matrix T, with dimensions [nobs][3][nsec].
+pub fn t_df(obs_locs: &[GeographicalPoint], secs_locs: &[GeographicalPoint]) -> Vec<Vec<Vec<f32>>> {
+    let nobs = obs_locs.len();
+    let nsec = secs_locs.len();
+
+    // Convert location data for calculations
+    let obs_lat_lon: Vec<(f32, f32)> = obs_locs.iter().map(|p| (p.latitude, p.longitude)).collect();
+    let secs_lat_lon: Vec<(f32, f32)> = secs_locs
+        .iter()
+        .map(|p| (p.latitude, p.longitude))
+        .collect();
+
+    let theta = angular_distance(&obs_lat_lon, &secs_lat_lon);
+    let alpha = bearing(&obs_lat_lon, &secs_lat_lon);
+
+    // Initialize the transfer matrix (3D vector)
+    // This creates a vector of size nobs x 3 x nsec filled with zeros
+    let mut t: Vec<Vec<Vec<f32>>> = vec![vec![vec![0.0; nsec]; 3]; nobs];
+
+    // Calculate transfer function for each observation-SEC pair
+    for i in 0..nobs {
+        let obs_r = R_EARTH + obs_locs[i].altitude;
+
+        for j in 0..nsec {
+            let sec_r = R_EARTH + secs_locs[j].altitude;
+            let x = obs_r / sec_r;
+            let sin_theta = theta[i][j].sin();
+            let cos_theta = theta[i][j].cos();
+
+            // Factor used in calculations
+            let factor = 1.0 / (1.0 - 2.0 * x * cos_theta + x * x).sqrt();
+
+            // Radial component - Amm & Viljanen: Equation 9
+            let mut br = MU0 / (4.0 * PI * obs_r) * (factor - 1.0);
+
+            // Theta component - Amm & Viljanen: Equation 10
+            let mut b_theta = -MU0 / (4.0 * PI * obs_r) * (factor * (x - cos_theta) + cos_theta);
+
+            if sin_theta != 0.0 {
+                b_theta /= sin_theta;
+            } else {
+                b_theta = 0.0;
+            }
+
+            // Check if SEC is below observation
+            if sec_r < obs_r {
+                // Flipped calculation for SECs below observations
+                let x = sec_r / obs_r;
+
+                // Amm & Viljanen: Equation A.7
+                br = MU0 * x / (4.0 * PI * obs_r)
+                    * (1.0 / (1.0 - 2.0 * x * cos_theta + x * x).sqrt() - 1.0);
+
+                // Amm & Viljanen: Equation A.8
+                b_theta = -MU0 / (4.0 * PI * obs_r)
+                    * ((obs_r - sec_r * cos_theta)
+                        / (obs_r * obs_r - 2.0 * obs_r * sec_r * cos_theta + sec_r * sec_r).sqrt()
+                        - 1.0);
+
+                if sin_theta != 0.0 {
+                    b_theta /= sin_theta;
+                } else {
+                    b_theta = 0.0;
+                }
+            }
+
+            // Transform to Cartesian coordinates
+            t[i][0][j] = -b_theta * alpha[i][j].sin(); // Bx
+            t[i][1][j] = -b_theta * alpha[i][j].cos(); // By
+            t[i][2][j] = -br; // Bz
+        }
+    }
+
+    t
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::secs::R_EARTH;
+
+    use super::*;
+
+    const R_SECS: f32 = R_EARTH + 110e3;
+
+    #[test]
+    fn test_transpose_square_matrix() {
+        let m = vec![
+            vec![1.0, 2.0, 3.0],
+            vec![4.0, 5.0, 6.0],
+            vec![7.0, 8.0, 9.0],
+        ];
+        let expected = vec![
+            vec![1.0, 4.0, 7.0],
+            vec![2.0, 5.0, 8.0],
+            vec![3.0, 6.0, 9.0],
+        ];
+        assert_eq!(transpose_matrix(m), expected);
+    }
+
+    #[test]
+    fn test_transpose_rectangular_matrix() {
+        let m = vec![vec![1.0, 2.0], vec![3.0, 4.0], vec![5.0, 6.0]];
+        let expected = vec![vec![1.0, 3.0, 5.0], vec![2.0, 4.0, 6.0]];
+        assert_eq!(transpose_matrix(m), expected);
+    }
+
+    #[test]
+    fn test_multiply_matrices_identity() {
+        let identity: Vec<Vec<f32>> = vec![vec![1.0, 0.0], vec![0.0, 1.0]];
+
+        let matrix: Vec<Vec<f32>> = vec![vec![2.0, 3.0], vec![4.0, 5.0]];
+
+        let result = multiply_matrices(identity, matrix.clone());
+
+        assert_eq!(result, matrix);
+    }
+    #[test]
+    fn test_t_df_dimensions() {
+        let obs_locs = vec![
+            GeographicalPoint {
+                latitude: 0.0,
+                longitude: 0.0,
+                altitude: 0.0,
+            },
+            GeographicalPoint {
+                latitude: 10.0,
+                longitude: 10.0,
+                altitude: 0.0,
+            },
+        ];
+        let secs_locs = vec![
+            GeographicalPoint {
+                latitude: 90.0,
+                longitude: 0.0,
+                altitude: 0.0,
+            },
+            GeographicalPoint {
+                latitude: 80.0,
+                longitude: 0.0,
+                altitude: 0.0,
+            },
+            GeographicalPoint {
+                latitude: 70.0,
+                longitude: 0.0,
+                altitude: 0.0,
+            },
+        ];
+
+        let result = t_df(&obs_locs, &secs_locs);
+
+        assert_eq!(result.len(), 2, "Number of observation points mismatch");
+        assert_eq!(
+            result[0].len(),
+            3,
+            "Number of components mismatch (should be 3: Bx, By, Bz)"
+        );
+        assert_eq!(result[0][0].len(), 3, "Number of SEC points mismatch");
+        assert_eq!(
+            result[1].len(),
+            3,
+            "Number of components mismatch for obs 2"
+        );
+        assert_eq!(
+            result[1][0].len(),
+            3,
+            "Number of SEC points mismatch for obs 2"
+        );
+    }
+}
