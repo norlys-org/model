@@ -28,6 +28,15 @@
           rustc = toolchain;
         };
 
+        buildWasmDrv = pkgs.writeShellApplication {
+          name = "build-wasm";
+          runtimeInputs = [ pkgs.wasm-pack toolchain ];
+          text = ''
+            echo "\$ wasm-pack build --target web $*"
+            wasm-pack build --target web "$@";
+          '';
+        };
+
         manifest = (pkgs.lib.importTOML ./Cargo.toml).package;
       in {
         defaultPackage = naersk'.buildPackage {
@@ -40,16 +49,7 @@
         };
 
         apps = {
-          "build:wasm" = flake-utils.lib.mkApp {
-            drv = pkgs.writeShellApplication {
-              name = "build:wasm";
-              runtimeInputs = [ pkgs.wasm-pack toolchain ];
-              text = ''
-                echo "$ wasm-pack build --target web"
-                wasm-pack build --target web
-              '';
-            };
-          };
+          "build:wasm" = flake-utils.lib.mkApp { drv = buildWasmDrv; };
 
           test = flake-utils.lib.mkApp {
             drv = pkgs.writeShellApplication {
@@ -69,6 +69,18 @@
               text = ''
                 echo "$ cargo bench"
                 cargo bench
+              '';
+            };
+          };
+
+          serve = flake-utils.lib.mkApp {
+            drv = pkgs.writeShellApplication {
+              name = "serve";
+              runtimeInputs = [ pkgs.python3 ];
+              text = ''
+                ${buildWasmDrv}/bin/build-wasm --dev
+                echo "$ python -m http.server"
+                python -m http.server
               '';
             };
           };
