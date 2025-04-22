@@ -5,6 +5,8 @@ The norlys machine learning model
 
 ```bash
 nix run .#build:wasm
+nix run .#test
+nix run .#benchmark
 ```
 
 ### technologies
