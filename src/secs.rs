@@ -65,12 +65,6 @@ pub fn secs_interpolate(
         .collect();
 
     let t = t_df(&obs_locs, &secs_locs);
-    println!(
-        "t_df dimensions: {} × {}  (obs × secs)",
-        t.len(),
-        t[0].len()
-    );
-    println!("first few entries t[0][0][..10] {:?}", &t[0][0][..10]);
 
     let flat_t: Vec<Vec<f32>> = t
         // let flat_t: Vec<Vec<f32>> = t_df(&obs_locs, &secs_locs)
@@ -93,13 +87,7 @@ pub fn secs_interpolate(
         })
         .collect();
 
-    println!("flat_t len = {}", flat_t.len());
-    println!("flat_t[0][0..10] = {:?}", &flat_t[0][..10]);
-    println!("flat_b len = {}", flat_b.len());
-    println!("flat_b[0..2] = {:?}", &flat_b[..2]);
-
     let sec_amps = solve_svd(flat_t, flat_b, 0f32);
-    println!("sec_amps: {:?}", &sec_amps[..10]);
     let pred = geographical_grid(
         lat_range,
         lat_steps,

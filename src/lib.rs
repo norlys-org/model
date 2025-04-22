@@ -9,7 +9,7 @@ use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
 pub fn infer(js_obs: JsValue) -> Result<JsValue, JsValue> {
-    println!("{:?}", js_obs);
+    console_error_panic_hook::set_once();
     let observations: Vec<Observation> =
         serde_wasm_bindgen::from_value(js_obs).expect("Failed to deserialize observations");
 
