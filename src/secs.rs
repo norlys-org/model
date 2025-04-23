@@ -12,7 +12,7 @@ pub const R_EARTH: f32 = 6371e3;
 
 #[wasm_bindgen]
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct Observation {
+pub struct ObservationVector {
     /// The longitude in degrees.
     pub longitude: f32,
     /// The latitude in degrees.
@@ -25,6 +25,8 @@ pub struct Observation {
     // in meters
     pub altitude: f32,
 }
+
+pub type ObservationMatrix = Vec<ObservationVector>;
 
 #[wasm_bindgen]
 #[derive(Serialize, Deserialize, Debug)]
@@ -40,7 +42,7 @@ pub struct Prediction {
 }
 
 pub fn secs_interpolate(
-    observations: Vec<Observation>,
+    observations: ObservationMatrix,
     lat_range: Range<f32>,
     lat_steps: usize,
     lon_range: Range<f32>,
@@ -124,7 +126,7 @@ mod tests {
 
     #[test]
     fn test_secs_interpolate() {
-        let obs: Vec<Observation> = vec![Observation {
+        let obs: ObservationMatrix = vec![ObservationVector {
             latitude: 69f32,
             longitude: 19f32,
             i: -100f32,
