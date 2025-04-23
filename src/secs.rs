@@ -30,7 +30,7 @@ pub type ObservationMatrix = Vec<ObservationVector>;
 
 #[wasm_bindgen]
 #[derive(Serialize, Deserialize, Debug)]
-pub struct Prediction {
+pub struct PredictionVector {
     /// The longitude in degrees.
     longitude: f32,
     /// The latitude in degrees.
@@ -41,6 +41,8 @@ pub struct Prediction {
     j: f32,
 }
 
+pub type PredictionMatrix = Vec<PredictionVector>;
+
 pub fn secs_interpolate(
     observations: ObservationMatrix,
     lat_range: Range<f32>,
@@ -49,7 +51,7 @@ pub fn secs_interpolate(
     lon_steps: usize,
     sec_altitude: f32,
     prediction_altitude: f32,
-) -> Vec<Prediction> {
+) -> PredictionMatrix {
     let secs_locs = geographical_grid(
         lat_range.clone(),
         50,
@@ -99,7 +101,7 @@ pub fn secs_interpolate(
     );
     let t_pred = t_df(&pred, &secs_locs);
 
-    let mut result: Vec<Prediction> = Vec::with_capacity(pred.len());
+    let mut result: PredictionMatrix = Vec::with_capacity(pred.len());
     for i in 0..pred.len() {
         let mut bx = 0f32;
         let mut by = 0f32;
@@ -109,7 +111,7 @@ pub fn secs_interpolate(
             by += t_pred[i][1][j] * sec_amps[j];
         }
 
-        result.push(Prediction {
+        result.push(PredictionVector {
             longitude: pred[i].longitude,
             latitude: pred[i].latitude,
             i: bx,
