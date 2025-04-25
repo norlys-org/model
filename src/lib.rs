@@ -12,11 +12,12 @@ use wasm_bindgen::prelude::*;
 #[wasm_bindgen]
 pub fn infer(bytes: &[u8]) -> Result<JsValue, JsValue> {
     console_error_panic_hook::set_once();
+
+    web_sys::console::log_1(&format!("{:?}", bytes).into());
     let observations = ObservationMatrix::decode(bytes)
         .map_err(|e| JsValue::from_str(&format!("Failed to deserialize observations: {}", e)))?;
 
-    println!("{:?}", observations);
-
+    web_sys::console::log_1(&format!("{:?}", observations).into());
     let pred = secs_interpolate(
         observations.matrix,
         45f32..85f32,
