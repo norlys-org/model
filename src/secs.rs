@@ -21,6 +21,8 @@ pub struct ObservationVector {
     pub i: f32,
     // j vector (usually y magnetometer component) in nano teslas
     pub j: f32,
+    // k vector (usually k magnetometer component) in nano teslas
+    pub k: f32,
     // Altitude from the surface of the earth where the measurement has been conducted (usually 0)
     // in meters
     pub alt: f32,
@@ -69,6 +71,7 @@ pub fn secs_interpolate(
             vec![
                 mem::take(&mut row[0]), // Bx row
                 mem::take(&mut row[1]), // By row
+                mem::take(&mut row[2]), // Bz row
             ]
         })
         .collect();
@@ -79,6 +82,7 @@ pub fn secs_interpolate(
             vec![
                 obs.i, // Bx component
                 obs.j, // By component
+                obs.k, // Bz component
             ]
         })
         .collect();
