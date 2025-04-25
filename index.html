@@ -11,12 +11,73 @@
         (async () => {
           await init();
 
-          // Encoded protobuf ObservationMatrix
-          const raw = "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"
-          const bytes = Uint8Array.from(atob(raw), c => c.charCodeAt(0));
+          const observations = [
+            { lat: 78.92, lon: 11.95, i: -79, j: -135 },
+            { lat: 78.2, lon: 15.82, i: -33, j: -128 },
+            { lat: 76.51, lon: 25.01, i: 44, j: -147 },
+            { lat: 74.5, lon: 19.2, i: 2, j: -124 },
+            { lat: 70.9, lon: 351.3, i: 132, j: -133 },
+            { lat: 71.09, lon: 25.79, i: 91, j: -68 },
+            { lat: 67.53, lon: 12.1, i: 174, j: -57 },
+            { lat: 70.54, lon: 22.22, i: 110, j: -64 },
+            { lat: 69.76, lon: 27.01, i: 82, j: -69 },
+            { lat: 69.66, lon: 18.94, i: 122, j: -59 },
+            { lat: 67.37, lon: 26.63, i: 89, j: -23 },
+            { lat: 69.46, lon: 23.7, i: 93, j: -67 },
+            { lat: 69.3, lon: 16.03, i: 141, j: -73 },
+            { lat: 66.4, lon: 16.98, i: 125, j: -25 },
+            { lat: 69.06, lon: 20.77, i: 119, j: -56 },
+            { lat: 68.56, lon: 27.29, i: 84, j: -57 },
+            { lat: 68.02, lon: 23.53, i: 115, j: -29 },
+            { lat: 66.9, lon: 24.08, i: 97, j: -15 },
+            { lat: 66.11, lon: 12.5, i: 139, j: -31 },
+            { lat: 65.54, lon: 26.25, i: 54, j: 1 },
+            { lat: 64.94, lon: 10.98, i: 99, j: -19 },
+            { lat: 64.52, lon: 27.23, i: 27, j: 10 },
+            { lat: 62.77, lon: 30.97, i: 8, j: 21 },
+            { lat: 62.25, lon: 26.6, i: 14, j: 10 },
+            { lat: 62.07, lon: 9.11, i: 35, j: -1 },
+            { lat: 61.08, lon: 4.84, i: 26, j: -1 },
+            { lat: 60.21, lon: 10.75, i: 10, j: 3 },
+            { lat: 60.5, lon: 24.65, i: 3, j: 20 },
+            { lat: 59.21, lon: 5.24, i: 10, j: 1 },
+            { lat: 58.26, lon: 26.46, i: -6, j: 24 },
+            { lat: 55.62, lon: 11.67, i: -6, j: 16 },
+            { lat: 77.47, lon: 290.77, i: -121, j: -90 },
+            { lat: 74.57, lon: 302.82, i: 160, j: -238 },
+            { lat: 72.78, lon: 303.85, i: 141, j: -103 },
+            { lat: 72.3, lon: 321.7, i: -61, j: 18 },
+            { lat: 70.68, lon: 307.87, i: 111, j: 164 },
+            { lat: 69.25, lon: 306.47, i: -38, j: -8 },
+            { lat: 67.02, lon: 309.28, i: 372, j: -125 },
+            { lat: 61.16, lon: 314.56, i: 234, j: 81 },
+            { lat: 65.42, lon: 307.1, i: 236, j: 153 },
+            { lat: 40.137, lon: 254.763, i: -32, j: -47 },
+            { lat: 71.322, lon: 203.378, i: -616, j: 147 },
+            { lat: 64.874, lon: 212.14, i: -88, j: -10 },
+            { lat: 48.265, lon: 242.878, i: -41, j: -36 },
+            { lat: 55.348, lon: 199.538, i: -21, j: 32 },
+            { lat: 57.058, lon: 224.675, i: -45, j: -24 },
+            { lat: 82.497, lon: 297.647, i: -122, j: 55 },
+            { lat: 64.3, lon: 264, i: 40, j: 104 },
+            { lat: 49.6, lon: 262.9, i: -40, j: -56 },
+            { lat: 69.2, lon: 255, i: -109, j: 104 },
+            { lat: 80, lon: 274.1, i: -76, j: 127 },
+            { lat: 58.8, lon: 265.9, i: 46, j: -32 },
+            { lat: 63.8, lon: 291.5, i: 219, j: 30 },
+            { lat: 54.6, lon: 246.7, i: -39, j: -44 },
+            { lat: 45.4, lon: 284.5, i: -32, j: -57 },
+            { lat: 74.7, lon: 265.1, i: -56, j: 154 },
+            { lat: 47.6, lon: 307.3, i: -6, j: -33 },
+            { lat: 48.6, lon: 236.6, i: -50, j: -23 },
+            { lat: 65.136, lon: -147.447, i: -303, j: -302 },
+            { lat: 64.786, lon: -141.205, i: -128, j: 19 },
+            { lat: 68.627, lon: -149.592, i: -360, j: 50 }
+          ].map(o => ({ ...o, alt: 0 }));
 
-          const predicted = infer(bytes);
+          const predicted = infer(observations);
           console.log(predicted);
+
         })();
     </script>
   </body>
