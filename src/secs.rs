@@ -3,7 +3,7 @@ use crate::{
     matrix::t_df,
     svd::solve_svd,
 };
-use protobufs::{ObservationMatrix, ObservationVector};
+use protobufs::{ObservationVector, PredictionVector};
 use serde::{Deserialize, Serialize};
 use std::mem;
 use std::ops::Range;
@@ -11,37 +11,7 @@ use wasm_bindgen::prelude::*;
 
 pub const R_EARTH: f32 = 6371e3;
 
-// #[wasm_bindgen]
-// #[derive(Serialize, Deserialize, Debug, Clone)]
-// pub struct ObservationVector {
-//     /// The longitude in degrees.
-//     pub longitude: f32,
-//     /// The latitude in degrees.
-//     pub latitude: f32,
-//     // i vector (usually x magnetometer component) in nano teslas
-//     pub i: f32,
-//     // j vector (usually y magnetometer component) in nano teslas
-//     pub j: f32,
-//     // Altitude from the surface of the earth where the measurement has been conducted (usually 0)
-//     // in meters
-//     pub altitude: f32,
-// }
-
 pub type ObservationMatrix = Vec<ObservationVector>;
-
-// #[wasm_bindgen]
-// #[derive(Serialize, Deserialize, Debug)]
-// pub struct PredictionVector {
-//     /// The longitude in degrees.
-//     longitude: f32,
-//     /// The latitude in degrees.
-//     latitude: f32,
-//     // i vector (usually x magnetometer component) in nano teslas
-//     i: f32,
-//     // j vector (usually y magnetometer component) in nano teslas
-//     j: f32,
-// }
-
 pub type PredictionMatrix = Vec<PredictionVector>;
 
 pub fn secs_interpolate(
@@ -72,7 +42,6 @@ pub fn secs_interpolate(
     let t = t_df(&obs_locs, &secs_locs);
 
     let flat_t: Vec<Vec<f32>> = t
-        // let flat_t: Vec<Vec<f32>> = t_df(&obs_locs, &secs_locs)
         .into_iter()
         .flat_map(|mut row| {
             vec![
@@ -138,6 +107,6 @@ mod tests {
         }];
 
         let pred = secs_interpolate(obs, 45f32..85f32, 37, -180f32..179f32, 130, 110e3, 0f32);
-        // println!("{:?}", pred);
+        println!("{:?}", &pred[..10]);
     }
 }
