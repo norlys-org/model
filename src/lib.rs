@@ -1,9 +1,11 @@
 mod grid;
 mod matrix;
+mod overlays;
 pub mod secs;
 mod sphere;
 mod svd;
 
+use overlays::{ponderate_i, ScoreVector};
 use secs::{secs_interpolate, ObservationMatrix, PredictionVector};
 use wasm_bindgen::prelude::*;
 
@@ -23,5 +25,14 @@ pub fn infer(js_obs: JsValue) -> Result<JsValue, JsValue> {
         0f32,
     );
 
-    Ok(serde_wasm_bindgen::to_value(&pred)?)
+    let pred_score: Vec<ScoreVector> = pred
+        .into_iter()
+        .map(|v| ScoreVector {
+            lon: v.lon,
+            lat: v.lat,
+            score: ponderate_i(v.i),
+        })
+        .collect();
+
+    Ok(serde_wasm_bindgen::to_value(&pred_score)?)
 }
