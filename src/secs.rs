@@ -3,11 +3,41 @@ use crate::{
     matrix::t_df,
     svd::solve_svd,
 };
-use protobufs::{ObservationVector, PredictionVector};
+use serde::{Deserialize, Serialize};
 use std::mem;
 use std::ops::Range;
+use wasm_bindgen::prelude::*;
 
 pub const R_EARTH: f32 = 6371e3;
+
+#[wasm_bindgen]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy)]
+pub struct ObservationVector {
+    /// The longitude in degrees.
+    pub lon: f32,
+    /// The latitude in degrees.
+    pub lat: f32,
+    // i vector (usually x magnetometer component) in nano teslas
+    pub i: f32,
+    // j vector (usually y magnetometer component) in nano teslas
+    pub j: f32,
+    // Altitude from the surface of the earth where the measurement has been conducted (usually 0)
+    // in meters
+    pub alt: f32,
+}
+
+#[wasm_bindgen]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy)]
+pub struct PredictionVector {
+    /// The longitude in degrees.
+    pub lon: f32,
+    /// The latitude in degrees.
+    pub lat: f32,
+    // i vector (usually x magnetometer component) in nano teslas
+    pub i: f32,
+    // j vector (usually y magnetometer component) in nano teslas
+    pub j: f32,
+}
 
 pub type ObservationMatrix = Vec<ObservationVector>;
 pub type PredictionMatrix = Vec<PredictionVector>;
@@ -21,19 +51,13 @@ pub fn secs_interpolate(
     sec_altitude: f32,
     prediction_altitude: f32,
 ) -> PredictionMatrix {
-    let secs_locs = geographical_grid(
-        lat_range.clone(),
-        50,
-        lon_range.clone(),
-        50,
-        R_EARTH + sec_altitude,
-    );
+    let secs_locs = geographical_grid(45f32..85f32, 50, -170f32..32f32, 50, R_EARTH + sec_altitude);
     let obs_locs: Vec<GeographicalPoint> = observations
         .iter()
         .map(|obs| GeographicalPoint {
-            latitude: obs.latitude,
-            longitude: obs.longitude,
-            altitude: obs.altitude,
+            latitude: obs.lat,
+            longitude: obs.lon,
+            altitude: obs.alt,
         })
         .collect();
 
@@ -80,8 +104,8 @@ pub fn secs_interpolate(
         }
 
         result.push(PredictionVector {
-            longitude: pred[i].longitude,
-            latitude: pred[i].latitude,
+            lon: pred[i].longitude,
+            lat: pred[i].latitude,
             i: bx,
             j: by,
         })
@@ -97,11 +121,11 @@ mod tests {
     #[test]
     fn test_secs_interpolate() {
         let obs: ObservationMatrix = vec![ObservationVector {
-            latitude: 69f32,
-            longitude: 19f32,
+            lat: 69f32,
+            lon: 19f32,
             i: -100f32,
             j: -100f32,
-            altitude: 0f32,
+            alt: 0f32,
         }];
 
         let pred = secs_interpolate(obs, 45f32..85f32, 37, -180f32..179f32, 130, 110e3, 0f32);
