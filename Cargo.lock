@@ -104,6 +104,7 @@ version = "0.25.4"
 dependencies = [
  "console_error_panic_hook",
  "nalgebra",
+ "prost",
  "protobufs",
  "serde",
  "serde-wasm-bindgen",
