@@ -4,10 +4,8 @@ use crate::{
     svd::solve_svd,
 };
 use protobufs::{ObservationVector, PredictionVector};
-use serde::{Deserialize, Serialize};
 use std::mem;
 use std::ops::Range;
-use wasm_bindgen::prelude::*;
 
 pub const R_EARTH: f32 = 6371e3;
 

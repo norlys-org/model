@@ -15,6 +15,8 @@ pub fn infer(bytes: &[u8]) -> Result<JsValue, JsValue> {
     let observations = ObservationMatrix::decode(bytes)
         .map_err(|e| JsValue::from_str(&format!("Failed to deserialize observations: {}", e)))?;
 
+    println!("{:?}", observations);
+
     let pred = secs_interpolate(
         observations.matrix,
         45f32..85f32,
