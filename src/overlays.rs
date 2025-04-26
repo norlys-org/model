@@ -30,7 +30,11 @@ pub fn ponderate_i(i: f32) -> f32 {
 
 /// Ponderate the derivative of the `i` component of the vector
 pub fn ponderate_didt(didt: f32) -> f32 {
-    didt < 10 ? 0 : d / 10
+    if (didt < 10) {
+        0
+    } else {
+        d / 10
+    }
 }
 
 /// Approximate the distance between two points on a sphere given in degrees
@@ -80,6 +84,6 @@ pub fn apply_auroral_zone_overlay(vec: ScoreVector) -> ScoreVector {
         lon: vec.lon,
         lat: vec.lat,
         // score: f32::max(vec.score * w, ponderate_didt())
-        score: vec.score * w
+        score: vec.score * w,
     }
 }
