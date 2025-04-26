@@ -1,8 +1,5 @@
 use std::ops::Range;
 
-/// Radius of the earth in meters
-const EARTH_RADIUS: f32 = 6371e3;
-
 #[derive(Debug, Clone, Copy)]
 pub struct GeographicalPoint {
     /// The longitude in degrees.
