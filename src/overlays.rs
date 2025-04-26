@@ -30,10 +30,10 @@ pub fn ponderate_i(i: f32) -> f32 {
 
 /// Ponderate the derivative of the `i` component of the vector
 pub fn ponderate_didt(didt: f32) -> f32 {
-    if (didt < 10) {
-        0
+    if didt < 10f32 {
+        0f32
     } else {
-        d / 10
+        didt / 10f32
     }
 }
 
