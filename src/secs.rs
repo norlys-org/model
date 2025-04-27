@@ -39,6 +39,8 @@ pub struct PredictionVector {
     pub i: f32,
     // j vector (usually y magnetometer component) in nano teslas
     pub j: f32,
+    // k vector (usually k magnetometer component) in nano teslas
+    pub k: f32,
 }
 
 pub type ObservationMatrix = Vec<ObservationVector>;
@@ -101,10 +103,12 @@ pub fn secs_interpolate(
     for i in 0..pred.len() {
         let mut bx = 0f32;
         let mut by = 0f32;
+        let mut bz = 0f32;
 
         for j in 0..secs_locs.len() {
             bx += t_pred[i][0][j] * sec_amps[j];
             by += t_pred[i][1][j] * sec_amps[j];
+            bz += t_pred[i][2][j] * sec_amps[j];
         }
 
         result.push(PredictionVector {
@@ -112,6 +116,7 @@ pub fn secs_interpolate(
             lat: pred[i].latitude,
             i: bx,
             j: by,
+            k: bz
         })
     }
 
