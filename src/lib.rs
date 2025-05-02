@@ -9,7 +9,7 @@ use overlays::{apply_auroral_zone_overlay, ponderate_i, ScoreVector};
 use secs::{secs_interpolate, ObservationMatrix};
 use wasm_bindgen::prelude::*;
 
-// #[wasm_bindgen]
+#[wasm_bindgen]
 pub fn infer(js_obs: JsValue) -> Result<JsValue, JsValue> {
     console_error_panic_hook::set_once();
     let observations: ObservationMatrix =
