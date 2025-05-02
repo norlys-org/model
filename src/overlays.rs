@@ -74,16 +74,12 @@ fn auroral_zone_weight(d: f32) -> f32 {
 }
 
 /// Given a ScoreVector ponderate the score depending on its vicinity to the auroral oval
-pub fn apply_auroral_zone_overlay(vec: ScoreVector) -> ScoreVector {
+pub fn apply_auroral_zone_overlay(lon: f32, lat: f32, score: f32) -> f32 {
     let geomag_n_pole: (f32, f32) = (-72.6_f32, 80.9_f32);
 
-    let d = approx_distance(vec.lat, vec.lon, geomag_n_pole.0, geomag_n_pole.1);
+    let d = approx_distance(lat, lon, geomag_n_pole.0, geomag_n_pole.1);
     let w = auroral_zone_weight(d);
 
-    ScoreVector {
-        lon: vec.lon,
-        lat: vec.lat,
-        // score: f32::max(vec.score * w, ponderate_didt())
-        score: vec.score * w,
-    }
+    // score: f32::max(vec.score * w, ponderate_didt())
+    score * w
 }
