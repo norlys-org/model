@@ -1,0 +1,50 @@
+                                                               May 2025
+norlys
+
+                              NORLYS MODEL
+                         NY OVAL REPRESENTASJON 
+                              FOR NORDLYS
+                        NEW OVAL REPRESENTATION 
+                           OF NORTHERN LIGHTS
+
+                                   by
+
+                             Hugo Lageneste
+                             Tromsø, Norway
+
+
+
+                           TABLE OF CONTENTS
+
+    PREFACE
+
+1.  INTRODUCTION
+
+2.  SPECIFICATION
+
+2.1 Technologies
+2.2 Transport Format
+2.3 Deployment
+
+                                                               May 2025
+norlys
+Introduction
+
+
+                                                               May 2025
+norlys
+Specification
+
+
+                            2. SPECIFICATION
+
+2.1 Technologies
+  
+  It has been decided to write the model in Rust as it is has good 
+  oberservability over the memory usage. 
+  Another factor is the good support of WebAssembly. With WebAssembly
+  it is therefore easy to deploy to either a V8 backend, or to the 
+  Internet Computer directly.
+
+2.2 Transport Format
+
