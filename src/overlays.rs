@@ -83,3 +83,12 @@ pub fn apply_auroral_zone_overlay(lon: f32, lat: f32, score: f32) -> f32 {
     // score: f32::max(vec.score * w, ponderate_didt())
     score * w
 }
+
+/// Encodes the score and the derivative flag into a single byte, see specification document
+pub fn encode_score(val: f32, flag: bool) -> u8 {
+    let clamped = val.clamp(0.0, 10.0);
+    let rounded = (clamped * 10.0).round() as u8;
+    assert!(rounded <= 100);
+    let flag_bit = if flag { 1 << 7 } else { 0 };
+    flag_bit | (rounded & 0b0111_1111)
+}

@@ -5,7 +5,7 @@ pub mod secs;
 mod sphere;
 mod svd;
 
-use overlays::{apply_auroral_zone_overlay, ponderate_i, ScoreVector};
+use overlays::{apply_auroral_zone_overlay, encode_score, ponderate_i, ScoreVector};
 use secs::{secs_interpolate, ObservationMatrix};
 use wasm_bindgen::prelude::*;
 
@@ -25,12 +25,14 @@ pub fn infer(js_obs: JsValue) -> Result<JsValue, JsValue> {
         0f32,
     );
 
-    let pred_score: Vec<ScoreVector> = pred
+    let pred_score: Vec<f32> = pred
         .into_iter()
-        .map(|v| ScoreVector {
-            lon: v.lon,
-            lat: v.lat,
-            score: apply_auroral_zone_overlay(v.lon, v.lat, ponderate_i(v.i)),
+        .map(|v| {
+            // encode_score(
+                // apply_auroral_zone_overlay(v.lon, v.lat, ponderate_i(v.i))
+            v.i
+            //     false, // TODO: Leave to false as of now derivative is not computed
+            // )
         })
         .collect();
 
