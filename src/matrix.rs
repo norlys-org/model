@@ -1,7 +1,7 @@
 use crate::{
     grid::GeographicalPoint,
     secs::R_EARTH,
-    sphere::{angular_distance, bearing},
+    sphere::{calc_angular_distance, calc_bearing},
 };
 use std::f32::consts::PI;
 
@@ -43,15 +43,8 @@ pub fn t_df(obs_locs: &[GeographicalPoint], secs_locs: &[GeographicalPoint]) -> 
     let nobs = obs_locs.len();
     let nsec = secs_locs.len();
 
-    // Convert location data for calculations
-    let obs_lat_lon: Vec<(f32, f32)> = obs_locs.iter().map(|p| (p.latitude, p.longitude)).collect();
-    let secs_lat_lon: Vec<(f32, f32)> = secs_locs
-        .iter()
-        .map(|p| (p.latitude, p.longitude))
-        .collect();
-
-    let theta = angular_distance(&obs_lat_lon, &secs_lat_lon);
-    let alpha = bearing(&obs_lat_lon, &secs_lat_lon);
+    let theta = calc_angular_distance(obs_locs, secs_locs);
+    let alpha = calc_bearing(obs_locs, secs_locs);
 
     // Initialize the transfer matrix (3D vector)
     // This creates a vector of size nobs x 3 x nsec filled with zeros
