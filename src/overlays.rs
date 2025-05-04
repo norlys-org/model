@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::f32::consts::PI;
 use wasm_bindgen::prelude::*;
 
-use crate::secs::R_EARTH;
+use crate::grid::R_EARTH;
 
 #[wasm_bindgen]
 #[derive(Serialize, Deserialize, Debug, Clone, Copy)]

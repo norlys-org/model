@@ -1,5 +1,7 @@
 use std::ops::Range;
 
+pub const R_EARTH: f32 = 6371e3;
+
 #[derive(Debug, Clone, Copy)]
 pub struct GeographicalPoint {
     /// The longitude in degrees.
@@ -12,7 +14,26 @@ pub struct GeographicalPoint {
 
 impl GeographicalPoint {
     pub fn new(latitude: f32, longitude: f32, altitude: f32) -> Self {
-        Self { latitude, longitude, altitude }
+        Self {
+            latitude,
+            longitude,
+            altitude,
+        }
+    }
+
+    /// Returns the radius from the center of the Earth in meters.
+    pub fn radius(&self) -> f32 {
+        self.altitude + R_EARTH
+    }
+
+    /// Returns latitude in radians.
+    pub fn lat_rad(&self) -> f32 {
+        self.latitude.to_radians()
+    }
+
+    /// Returns longitude in radians.
+    pub fn lon_rad(&self) -> f32 {
+        self.longitude.to_radians()
     }
 }
 
