@@ -10,6 +10,12 @@ pub struct GeographicalPoint {
     pub altitude: f32,
 }
 
+impl GeographicalPoint {
+    pub fn new(latitude: f32, longitude: f32, altitude: f32) -> Self {
+        Self { latitude, longitude, altitude }
+    }
+}
+
 /// Return evenly spaced numbers over a specified interval.
 ///
 /// # Panics

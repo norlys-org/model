@@ -22,7 +22,7 @@ pub fn infer(js_obs: JsValue) -> Result<JsValue, JsValue> {
         -180f32..179f32,
         130,
         110e3,
-        0f32,
+        0.1,
     );
 
     let pred_score: Vec<f32> = pred

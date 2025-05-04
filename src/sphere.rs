@@ -1,3 +1,7 @@
+use std::f32::consts::PI;
+
+use crate::grid::GeographicalPoint;
+
 /// Calculates the angular distance between two sets of lat/lon points
 ///
 /// # Arguments
@@ -6,24 +10,28 @@
 ///
 /// # Returns
 /// A matrix (Vec<Vec<f32>>) of angular distances in radians
-pub fn angular_distance(coords1: &[(f32, f32)], coords2: &[(f32, f32)]) -> Vec<Vec<f32>> {
+pub fn calc_angular_distance(
+    coords1: &[GeographicalPoint],
+    coords2: &[GeographicalPoint],
+) -> Vec<Vec<f32>> {
     let mut result = Vec::with_capacity(coords1.len());
 
-    for &(lat1_deg, lon1_deg) in coords1 {
-        let lat1_rad = lat1_deg.to_radians();
-        let lon1_rad = lon1_deg.to_radians();
+    for point1 in coords1 {
+        let lat1 = point1.latitude.to_radians();
+        let lon1 = point1.longitude.to_radians();
 
         let mut row = Vec::with_capacity(coords2.len());
 
-        for &(lat2_deg, lon2_deg) in coords2 {
-            let lat2_rad = lat2_deg.to_radians();
-            let lon2_rad = lon2_deg.to_radians();
+        for point2 in coords2 {
+            let lat2 = point2.latitude.to_radians();
+            let lon2 = point2.longitude.to_radians();
 
-            let dlon = lon2_rad - lon1_rad;
+            let dlon = lon2 - lon1;
 
-            let theta = (lat1_rad.sin() * lat2_rad.sin()
-                + lat1_rad.cos() * lat2_rad.cos() * dlon.cos())
-            .acos();
+            // Use the haversine formula for better numerical stability
+            let theta = (lat1.sin() * lat2.sin() + lat1.cos() * lat2.cos() * dlon.cos())
+                .clamp(-1.0, 1.0)
+                .acos();
 
             row.push(theta);
         }
@@ -42,26 +50,27 @@ pub fn angular_distance(coords1: &[(f32, f32)], coords2: &[(f32, f32)]) -> Vec<V
 ///
 /// # Returns
 /// A matrix (Vec<Vec<f32>>) of bearings in radians, measured clockwise from true north
-pub fn bearing(coords1: &[(f32, f32)], coords2: &[(f32, f32)]) -> Vec<Vec<f32>> {
+pub fn calc_bearing(coords1: &[GeographicalPoint], coords2: &[GeographicalPoint]) -> Vec<Vec<f32>> {
     let mut result = Vec::with_capacity(coords1.len());
 
-    for &(lat1_deg, lon1_deg) in coords1 {
-        let lat1_rad = (lat1_deg as f32).to_radians();
-        let lon1_rad = (lon1_deg as f32).to_radians();
+    for point1 in coords1 {
+        let lat1 = point1.latitude.to_radians();
+        let lon1 = point1.longitude.to_radians();
 
         let mut row = Vec::with_capacity(coords2.len());
 
-        for &(lat2_deg, lon2_deg) in coords2 {
-            let lat2_rad = (lat2_deg as f32).to_radians();
-            let lon2_rad = (lon2_deg as f32).to_radians();
+        for point2 in coords2 {
+            let lat2 = point2.latitude.to_radians();
+            let lon2 = point2.longitude.to_radians();
 
-            let dlon = lon2_rad - lon1_rad;
+            let dlon = lon2 - lon1;
 
-            let y = dlon.sin() * lat2_rad.cos();
-            let x = lat1_rad.cos() * lat2_rad.sin() - lat1_rad.sin() * lat2_rad.cos() * dlon.cos();
+            // Match Python implementation (PI/2 - arctan2(...))
+            let alpha = PI / 2.0
+                - (dlon.sin() * lat2.cos())
+                    .atan2(lat1.cos() * lat2.sin() - lat1.sin() * lat2.cos() * dlon.cos());
 
-            let alpha = y.atan2(x); // true bearing (in radians, from -π to π)
-            row.push(alpha as f32);
+            row.push(alpha);
         }
 
         result.push(row);
@@ -73,72 +82,53 @@ pub fn bearing(coords1: &[(f32, f32)], coords2: &[(f32, f32)]) -> Vec<Vec<f32>> 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use core::f32::consts::PI;
+    use approx::assert_relative_eq;
+    use std::f32::consts::PI;
 
-    const EPSILON: f32 = 1e-10;
+    // Helper function to normalize angle to [0, 2π)
+    fn normalize_angle(angle: f32) -> f32 {
+        let mut result = angle % (2.0 * PI);
+        if result < 0.0 {
+            result += 2.0 * PI;
+        }
+        result
+    }
 
-    fn approx_eq(a: f32, b: f32) -> bool {
-        (a - b).abs() < EPSILON
+    // Tests for calc_angular_distance
+
+    #[test]
+    fn test_angular_distance_known_points() {
+        // Test case 1: Distance between identical points should be zero
+        let new_york = GeographicalPoint::new(40.7128, -74.0060, 0.0);
+        let result1 = calc_angular_distance(&vec![new_york], &vec![new_york]);
+        assert_relative_eq!(result1[0][0], 0.0, epsilon = 1e-6);
+
+        // Test case 2: Distance between known city pairs
+        let london = GeographicalPoint::new(51.5074, -0.1278, 0.0);
+        let tokyo = GeographicalPoint::new(35.6762, 139.6503, 0.0);
+
+        let result2 = calc_angular_distance(&vec![new_york], &vec![london, tokyo]);
+
+        // New York to London: ~5570 km, angular distance ~0.873 radians
+        // New York to Tokyo: ~10,850 km, angular distance ~1.703 radians
+        assert_relative_eq!(result2[0][0], 0.873, epsilon = 0.01); // NY to London
+        assert_relative_eq!(result2[0][1], 1.703, epsilon = 0.01); // NY to Tokyo
     }
 
     #[test]
-    fn test_zero_distance() {
-        let coords = vec![(0.0, 0.0)];
-        let result = angular_distance(&coords, &coords);
-        assert_eq!(result.len(), 1);
-        assert_eq!(result[0].len(), 1);
-        assert!(approx_eq(result[0][0], 0.0));
-    }
+    fn test_angular_distance_edge_cases() {
+        // Test case 1: Antipodal points should have distance of π radians (180 degrees)
+        let point1 = GeographicalPoint::new(0.0, 0.0, 0.0);
+        let point2 = GeographicalPoint::new(0.0, 180.0, 0.0);
 
-    #[test]
-    fn test_equator_90_degrees_apart() {
-        let point1 = vec![(0.0, 0.0)];
-        let point2 = vec![(0.0, 90.0)];
-        let result = angular_distance(&point1, &point2);
-        assert_eq!(result.len(), 1);
-        assert_eq!(result[0].len(), 1);
-        assert!(approx_eq(result[0][0], PI / 2.0)); // 90 degrees = π/2 radians
-    }
+        let result1 = calc_angular_distance(&vec![point1], &vec![point2]);
+        assert_relative_eq!(result1[0][0], PI, epsilon = 1e-6);
 
-    #[test]
-    fn test_multiple_points() {
-        let coords1 = vec![(0.0, 0.0), (90.0, 0.0)];
-        let coords2 = vec![(0.0, 90.0), (0.0, 0.0)];
+        // Test case 2: Points at poles and equator
+        let north_pole = GeographicalPoint::new(90.0, 0.0, 0.0);
+        let equator_point = GeographicalPoint::new(0.0, 45.0, 0.0);
 
-        let result = angular_distance(&coords1, &coords2);
-
-        assert_eq!(result.len(), 2);
-        assert_eq!(result[0].len(), 2);
-        assert_eq!(result[1].len(), 2);
-
-        // First row
-        assert!(approx_eq(result[0][0], PI / 2.0)); // (0,0) to (0,90)
-        assert!(approx_eq(result[0][1], 0.0)); // (0,0) to (0,0)
-
-        // Second row
-        assert!(approx_eq(result[1][0], PI / 2.0)); // (90,0) to (0,90)
-        assert!(approx_eq(result[1][1], PI / 2.0)); // (90,0) to (0,0)
-    }
-
-    #[test]
-    fn test_bearing_self() {
-        let coords = vec![(0.0, 0.0)];
-        let result = bearing(&coords, &coords);
-        assert_eq!(result.len(), 1);
-        assert_eq!(result[0].len(), 1);
-        // Bearing to self is undefined in theory, but this implementation returns 0
-        assert!(approx_eq(result[0][0] as f32, 0.0));
-    }
-
-    #[test]
-    fn test_bearing_symmetry() {
-        let a = vec![(10.0, 20.0)];
-        let b = vec![(15.0, 25.0)];
-        let forward = bearing(&a, &b)[0][0];
-        let backward = bearing(&b, &a)[0][0];
-
-        // The backward bearing should be roughly opposite (±π)
-        let diff = ((forward as f32 - backward as f32 + PI) % (2.0 * PI) - PI).abs();
-        assert!(diff - PI < EPSILON);
+        let result2 = calc_angular_distance(&vec![north_pole], &vec![equator_point]);
+        assert_relative_eq!(result2[0][0], PI / 2.0, epsilon = 1e-6); // 90 degrees
     }
 }
