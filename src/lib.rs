@@ -4,6 +4,7 @@ mod overlays;
 pub mod secs;
 mod sphere;
 mod svd;
+pub mod test_helpers;
 
 use overlays::{apply_auroral_zone_overlay, encode_score, ponderate_i, ScoreVector};
 use secs::{secs_interpolate, ObservationMatrix};
@@ -29,7 +30,7 @@ pub fn infer(js_obs: JsValue) -> Result<JsValue, JsValue> {
         .into_iter()
         .map(|v| {
             // encode_score(
-                // apply_auroral_zone_overlay(v.lon, v.lat, ponderate_i(v.i))
+            // apply_auroral_zone_overlay(v.lon, v.lat, ponderate_i(v.i))
             v.i
             //     false, // TODO: Leave to false as of now derivative is not computed
             // )
