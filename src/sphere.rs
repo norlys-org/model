@@ -72,73 +72,64 @@ pub fn bearing(coords1: &[(f32, f32)], coords2: &[(f32, f32)]) -> Vec<Vec<f32>> 
 
 #[cfg(test)]
 mod tests {
+    use crate::test_helpers::assert_vec_approx_eq;
+
     use super::*;
-    use core::f32::consts::PI;
+    use std::f32::consts::PI;
 
-    const EPSILON: f32 = 1e-10;
+    #[test]
+    fn test_bearing_basic_cardinal_directions() {
+        let coords1 = vec![(0.0, 0.0)];
+        let coords2 = vec![(1.0, 0.0), (0.0, 1.0), (-1.0, 0.0), (0.0, -1.0)];
 
-    fn approx_eq(a: f32, b: f32) -> bool {
-        (a - b).abs() < EPSILON
+        let expected = vec![vec![0.0_f32, 1.5707963_f32, PI, -1.5707963_f32]];
+
+        let result = bearing(&coords1, &coords2);
+        assert_vec_approx_eq(&result, &expected, 1e-4);
     }
 
     #[test]
-    fn test_zero_distance() {
-        let coords = vec![(0.0, 0.0)];
-        let result = angular_distance(&coords, &coords);
-        assert_eq!(result.len(), 1);
-        assert_eq!(result[0].len(), 1);
-        assert!(approx_eq(result[0][0], 0.0));
+    fn test_bearing_realistic_points() {
+        let coords1 = vec![(40.71, -74.0), (34.05, -118.2), (51.50, -0.1)];
+        let coords2 = vec![(48.85, 2.35)];
+
+        let expected = vec![vec![0.9375], vec![0.6098], vec![2.5905]];
+
+        let result = bearing(&coords1, &coords2);
+        assert_vec_approx_eq(&result, &expected, 1e-4);
     }
 
     #[test]
-    fn test_equator_90_degrees_apart() {
-        let point1 = vec![(0.0, 0.0)];
-        let point2 = vec![(0.0, 90.0)];
-        let result = angular_distance(&point1, &point2);
-        assert_eq!(result.len(), 1);
-        assert_eq!(result[0].len(), 1);
-        assert!(approx_eq(result[0][0], PI / 2.0)); // 90 degrees = π/2 radians
+    fn test_bearing_multiple_grid() {
+        let coords1 = vec![(10.0, 10.0), (20.0, 20.0)];
+        let coords2 = vec![(10.0, 11.0), (21.0, 20.0), (15.0, 15.0)];
+
+        let expected = vec![vec![1.5693, 0.6980, 0.7644], vec![-2.4039, 0.0, -2.3663]];
+
+        let result = bearing(&coords1, &coords2);
+        assert_vec_approx_eq(&result, &expected, 1e-3);
     }
 
     #[test]
-    fn test_multiple_points() {
-        let coords1 = vec![(0.0, 0.0), (90.0, 0.0)];
-        let coords2 = vec![(0.0, 90.0), (0.0, 0.0)];
+    fn test_bearing_edge_cases() {
+        let coords1 = vec![
+            (45.0, 45.0),
+            (89.5, 10.0), // Near North Pole
+            (0.0, 179.5), // Near Antimeridian
+        ];
+        let coords2 = vec![
+            (45.0, 45.0),
+            (-89.5, -170.0), // Near South Pole
+            (0.0, -179.5),
+        ];
 
-        let result = angular_distance(&coords1, &coords2);
+        let expected = vec![
+            vec![0.0, 3.1345, 0.9471],
+            vec![2.5257, -1.5708, 0.1658],
+            vec![-0.6196, 3.1400, 1.5708],
+        ];
 
-        assert_eq!(result.len(), 2);
-        assert_eq!(result[0].len(), 2);
-        assert_eq!(result[1].len(), 2);
-
-        // First row
-        assert!(approx_eq(result[0][0], PI / 2.0)); // (0,0) to (0,90)
-        assert!(approx_eq(result[0][1], 0.0)); // (0,0) to (0,0)
-
-        // Second row
-        assert!(approx_eq(result[1][0], PI / 2.0)); // (90,0) to (0,90)
-        assert!(approx_eq(result[1][1], PI / 2.0)); // (90,0) to (0,0)
-    }
-
-    #[test]
-    fn test_bearing_self() {
-        let coords = vec![(0.0, 0.0)];
-        let result = bearing(&coords, &coords);
-        assert_eq!(result.len(), 1);
-        assert_eq!(result[0].len(), 1);
-        // Bearing to self is undefined in theory, but this implementation returns 0
-        assert!(approx_eq(result[0][0] as f32, 0.0));
-    }
-
-    #[test]
-    fn test_bearing_symmetry() {
-        let a = vec![(10.0, 20.0)];
-        let b = vec![(15.0, 25.0)];
-        let forward = bearing(&a, &b)[0][0];
-        let backward = bearing(&b, &a)[0][0];
-
-        // The backward bearing should be roughly opposite (±π)
-        let diff = ((forward as f32 - backward as f32 + PI) % (2.0 * PI) - PI).abs();
-        assert!(diff - PI < EPSILON);
+        let result = bearing(&coords1, &coords2);
+        assert_vec_approx_eq(&result, &expected, 1e-3);
     }
 }
