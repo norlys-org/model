@@ -39,54 +39,53 @@ def calc_angular_distance(latlon1: np.ndarray, latlon2: np.ndarray) -> np.ndarra
 
 # Test Case 1: Identical and Antipodal Points
 test1_latlon1 = np.array([
-    [0.0, 0.0],      # Origin
-    [90.0, 0.0],     # North Pole
-    [45.0, 45.0],    # Point P
+    [0.0, 0.0],
+    [90.0, 0.0],
+    [45.0, 45.0],
 ])
 test1_latlon2 = np.array([
-    [0.0, 0.0],      # Identical to Origin
-    [-90.0, 0.0],    # South Pole (antipodal to North Pole)
-    [-45.0, -135.0], # Antipodal to Point P
-    [45.0, 45.0],    # Identical to Point P
+    [0.0, 0.0],
+    [-90.0, 0.0],
+    [-45.0, -135.0],
+    [45.0, 45.0],
 ])
 test1_name = "Identical and Antipodal Points"
 test1_notes = "Expect distances (rad): 0 for identical, pi for antipodal."
 
 # Test Case 2: Points on Equator and Meridians
 test2_latlon1 = np.array([
-    [0.0, 0.0],   # Origin
-    [0.0, 0.0],   # Origin
+    [0.0, 0.0],
+    [0.0, 0.0],
 ])
 test2_latlon2 = np.array([
-    [0.0, 90.0],  # 90 deg East on Equator
-    [0.0, 180.0], # 180 deg East/West on Equator
-    [90.0, 0.0],  # North Pole from Origin
+    [0.0, 90.0],
+    [0.0, 180.0],
+    [90.0, 0.0],
 ])
 test2_name = "Equator and Meridian Distances"
 test2_notes = "Expect (rad): pi/2 (90deg lon diff), pi (180deg lon diff), pi/2 (origin to pole)."
 
 # Test Case 3: Multiple Realistic Start Points to Single End Point
 test3_latlon1 = np.array([
-    [40.71, -74.0],  # Approx NYC
-    [34.05, -118.2], # Approx LA
-    [51.50, -0.1],   # Approx London
+    [40.71, -74.0],
+    [34.05, -118.2],
+    [51.50, -0.1],
 ])
 test3_latlon2 = np.array([
-    [48.85, 2.35]    # Approx Paris
+    [48.85, 2.35]
 ])
 test3_name = "Realistic Points (NYC, LA, London -> Paris)"
 test3_notes = "Calculate angular distances from 3 cities towards Paris."
 
 
-# Test Case 4: Grid Calculation with various points
 test4_latlon1 = np.array([
     [10.0, 10.0],
     [-20.0, -30.0],
 ])
 test4_latlon2 = np.array([
-    [10.0, 11.0],    # Close to first point
-    [80.0, 10.0],    # Far north of first point
-    [-20.001, -30.001] # Very close to second point
+    [10.0, 11.0],
+    [80.0, 10.0],
+    [-20.001, -30.001]
 ])
 test4_name = "Grid Calculation - Various Distances"
 test4_notes = "Calculates 2x3 angular distance matrix."
@@ -111,7 +110,7 @@ for name, latlon1, latlon2, notes in test_cases:
 
     try:
         result_rad = calc_angular_distance(latlon1, latlon2)
-        result_deg = np.rad2deg(result_rad) # Also show in degrees for easier intuition
+        result_deg = np.rad2deg(result_rad)
 
         print(f"\nResult (shape {result_rad.shape}):")
         print("Radians:")
@@ -124,5 +123,5 @@ for name, latlon1, latlon2, notes in test_cases:
     except Exception as e:
         print(f"\nError during calculation: {e}")
 
-    print("-" * (len(name) + 25)) # Adjusted separator length
+    print("-" * (len(name) + 25))
     print()
