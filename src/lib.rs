@@ -1,10 +1,10 @@
 mod grid;
+pub mod helpers;
 mod matrix;
 mod overlays;
 pub mod secs;
 mod sphere;
 mod svd;
-pub mod test_helpers;
 
 use overlays::{apply_auroral_zone_overlay, encode_score, ponderate_i, ScoreVector};
 use secs::{secs_interpolate, ObservationMatrix};

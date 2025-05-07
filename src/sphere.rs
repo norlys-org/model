@@ -72,7 +72,7 @@ pub fn bearing(coords1: &[(f32, f32)], coords2: &[(f32, f32)]) -> Vec<Vec<f32>> 
 
 #[cfg(test)]
 mod tests {
-    use crate::test_helpers::assert_vec_approx_eq;
+    use crate::helpers::test::assert_vec_approx_eq;
 
     use super::*;
     use std::f32::consts::PI;
