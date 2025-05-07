@@ -132,4 +132,58 @@ mod tests {
         let result = bearing(&coords1, &coords2);
         assert_vec_approx_eq(&result, &expected, 1e-3);
     }
+
+    #[test]
+    fn test_angular_distance_identical_and_antipodal_points() {
+        let coords1 = vec![(0.0, 0.0), (90.0, 0.0), (45.0, 45.0)];
+        let coords2 = vec![(0.0, 0.0), (-90.0, 0.0), (-45.0, -135.0), (45.0, 45.0)];
+
+        let expected = vec![
+            vec![0.0_f32, 1.5708_f32, 2.0944_f32, 1.0472_f32],
+            vec![1.5708_f32, 3.1416_f32, 2.3562_f32, 0.7854_f32],
+            vec![1.0472_f32, 2.3562_f32, 3.1416_f32, 0.0_f32],
+        ];
+
+        let result = angular_distance(&coords1, &coords2);
+        assert_vec_approx_eq(&result, &expected, 5e-4);
+    }
+
+    #[test]
+    fn test_angular_distance_equator_and_meridian_distances() {
+        let coords1 = vec![(0.0, 0.0), (0.0, 0.0)];
+        let coords2 = vec![(0.0, 90.0), (0.0, 180.0), (90.0, 0.0)];
+
+        let expected = vec![
+            vec![1.5708_f32, 3.1416_f32, 1.5708_f32],
+            vec![1.5708_f32, 3.1416_f32, 1.5708_f32],
+        ];
+
+        let result = angular_distance(&coords1, &coords2);
+        assert_vec_approx_eq(&result, &expected, 5e-4);
+    }
+
+    #[test]
+    fn test_angular_distance_realistic_points_distance() {
+        let coords1 = vec![(40.71, -74.0), (34.05, -118.2), (51.50, -0.1)];
+        let coords2 = vec![(48.85, 2.35)];
+
+        let expected = vec![vec![0.9162_f32], vec![1.4258_f32], vec![0.0537_f32]];
+
+        let result = angular_distance(&coords1, &coords2);
+        assert_vec_approx_eq(&result, &expected, 5e-4);
+    }
+
+    #[test]
+    fn test_angular_distance_grid_calculation_various_distances() {
+        let coords1 = vec![(10.0, 10.0), (-20.0, -30.0)];
+        let coords2 = vec![(10.0, 11.0), (80.0, 10.0), (-20.001, -30.001)];
+
+        let expected = vec![
+            vec![0.0172_f32, 1.2217_f32, 0.8639_f32],
+            vec![0.8776_f32, 1.7842_f32, 0.0_f32],
+        ];
+
+        let result = angular_distance(&coords1, &coords2);
+        assert_vec_approx_eq(&result, &expected, 5e-4);
+    }
 }
