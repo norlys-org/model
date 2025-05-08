@@ -113,3 +113,208 @@ pub fn t_df(obs_locs: &[GeographicalPoint], secs_locs: &[GeographicalPoint]) -> 
 
     t
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const EPSILON: f32 = 1e-5;
+
+    fn assert_matrix_approx_val(
+        matrix: &Vec<Vec<Vec<f32>>>,
+        expected_val: f32,
+        epsilon: f32,
+        test_name: &str,
+    ) {
+        for i in 0..matrix.len() {
+            assert_eq!(
+                matrix[i].len(),
+                3,
+                "Test '{}': Obs {} should have 3 components",
+                test_name,
+                i
+            );
+            for k in 0..3 {
+                // 0:North, 1:East, 2:Down
+                for j in 0..matrix[i][k].len() {
+                    let actual = matrix[i][k][j];
+                    assert!(
+                        (actual - expected_val).abs() < epsilon,
+                        "Test '{}': T[{}][{}][{}] failed: {} is not close to {} (epsilon: {})",
+                        test_name,
+                        i,
+                        k,
+                        j,
+                        actual,
+                        expected_val,
+                        epsilon
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_t_df_case_1_single_obs_two_secs() {
+        let obs_locs = vec![
+            GeographicalPoint {
+                latitude: 0.0,
+                longitude: 0.0,
+                altitude: 0.0,
+            }, // R_EARTH + 0.0
+        ];
+        let secs_locs = vec![
+            GeographicalPoint {
+                latitude: 10.0,
+                longitude: 0.0,
+                altitude: 100e3,
+            }, // R_EARTH + 100e3
+            GeographicalPoint {
+                latitude: 0.0,
+                longitude: 10.0,
+                altitude: -50e3,
+            }, // R_EARTH - 50e3
+        ];
+
+        // Expected Python output (shape 1,3,2) was all zeros at precision 5
+        // [[[ 0. -0.] [ 0. -0.] [-0. -0.]]]
+        let result = t_df(&obs_locs, &secs_locs);
+
+        assert_eq!(result.len(), 1, "Test Case 1: nobs mismatch");
+        assert_eq!(result[0].len(), 3, "Test Case 1: components mismatch");
+        assert_eq!(
+            result[0][0].len(),
+            2,
+            "Test Case 1: nsec mismatch for T[0][0]"
+        );
+
+        assert_matrix_approx_val(&result, 0.0, EPSILON, "Test Case 1");
+    }
+
+    #[test]
+    fn test_t_df_case_2_two_obs_single_sec() {
+        let obs_locs = vec![
+            GeographicalPoint {
+                latitude: 0.0,
+                longitude: 0.0,
+                altitude: 0.0,
+            },
+            GeographicalPoint {
+                latitude: 20.0,
+                longitude: 0.0,
+                altitude: 10e3,
+            },
+        ];
+        let secs_locs = vec![GeographicalPoint {
+            latitude: 10.0,
+            longitude: 10.0,
+            altitude: 110e3,
+        }];
+
+        let result = t_df(&obs_locs, &secs_locs);
+
+        assert_eq!(result.len(), 2, "Test Case 2: nobs mismatch");
+        assert_eq!(
+            result[0].len(),
+            3,
+            "Test Case 2: components mismatch for obs 0"
+        );
+        assert_eq!(
+            result[0][0].len(),
+            1,
+            "Test Case 2: nsec mismatch for T[0][0]"
+        );
+        assert_eq!(
+            result[1].len(),
+            3,
+            "Test Case 2: components mismatch for obs 1"
+        );
+        assert_eq!(
+            result[1][0].len(),
+            1,
+            "Test Case 2: nsec mismatch for T[1][0]"
+        );
+
+        assert_matrix_approx_val(&result, 0.0, EPSILON, "Test Case 2");
+    }
+
+    #[test]
+    fn test_t_df_case_3_special_same_lat_lon() {
+        let obs_locs = vec![GeographicalPoint {
+            latitude: 45.0,
+            longitude: 45.0,
+            altitude: 0.0,
+        }];
+        let secs_locs = vec![GeographicalPoint {
+            latitude: 45.0,
+            longitude: 45.0,
+            altitude: 200e3,
+        }];
+
+        let result = t_df(&obs_locs, &secs_locs);
+
+        assert_eq!(result.len(), 1, "Test Case 3: nobs mismatch");
+        assert_eq!(result[0].len(), 3, "Test Case 3: components mismatch");
+        assert_eq!(
+            result[0][0].len(),
+            1,
+            "Test Case 3: nsec mismatch for T[0][0]"
+        );
+
+        assert_matrix_approx_val(&result, 0.0, EPSILON, "Test Case 3");
+    }
+
+    #[test]
+    fn test_t_df_case_4_complex_interaction() {
+        let obs_locs = vec![
+            GeographicalPoint {
+                latitude: 10.0,
+                longitude: 10.0,
+                altitude: 0.0,
+            },
+            GeographicalPoint {
+                latitude: -10.0,
+                longitude: -10.0,
+                altitude: 20e3,
+            },
+        ];
+        let secs_locs = vec![
+            GeographicalPoint {
+                latitude: 15.0,
+                longitude: 15.0,
+                altitude: 50e3,
+            },
+            GeographicalPoint {
+                latitude: -15.0,
+                longitude: -15.0,
+                altitude: -30e3,
+            },
+        ];
+
+        let result = t_df(&obs_locs, &secs_locs);
+
+        assert_eq!(result.len(), 2, "Test Case 4: nobs mismatch");
+        assert_eq!(
+            result[0].len(),
+            3,
+            "Test Case 4: components mismatch for obs 0"
+        );
+        assert_eq!(
+            result[0][0].len(),
+            2,
+            "Test Case 4: nsec mismatch for T[0][0]"
+        );
+        assert_eq!(
+            result[1].len(),
+            3,
+            "Test Case 4: components mismatch for obs 1"
+        );
+        assert_eq!(
+            result[1][0].len(),
+            2,
+            "Test Case 4: nsec mismatch for T[1][0]"
+        );
+
+        assert_matrix_approx_val(&result, 0.0, EPSILON, "Test Case 4");
+    }
+}
