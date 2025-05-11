@@ -70,7 +70,7 @@ impl SECS {
     /// and reshaped.
     fn _calc_t_obs_flat(&self, obs_loc_vec: &[GeographicalPoint]) -> DMatrix<f32> {
         let nobs = obs_loc_vec.len();
-        let current_nsec = self.nsec();
+        let current_nsec = self.secs_locs.len();
 
         if nobs == 0 || current_nsec == 0 {
             return DMatrix::zeros(nobs * 3, current_nsec);
