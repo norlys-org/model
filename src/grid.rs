@@ -1,6 +1,6 @@
 use std::ops::Range;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(PartialEq, Debug, Clone, Copy)]
 pub struct GeographicalPoint {
     /// The longitude in degrees.
     pub longitude: f32,
