@@ -6,9 +6,7 @@ pub mod secs;
 mod sphere;
 mod svd;
 
-// use overlays::{apply_auroral_zone_overlay, encode_score, ponderate_i, ScoreVector};
-// use secs::ObservationMatrix;
-// use wasm_bindgen::prelude::*;
+use secs::{ObservationMatrix, ObservationVector};
 
 // #[wasm_bindgen]
 // pub fn infer(js_obs: JsValue) -> Result<JsValue, JsValue> {
@@ -39,3 +37,27 @@ mod svd;
 //
 //     Ok(serde_wasm_bindgen::to_value(&pred_score)?)
 // }
+
+#[cfg(test)]
+mod tests {
+    use crate::{grid::geographical_grid, secs::SECS};
+
+    use super::*;
+
+    #[test]
+    fn test_secs() {
+        let grid = geographical_grid(45.0..85.0, 37, -180.0..179.0, 130, 110.0);
+        let obs: ObservationMatrix = vec![ObservationVector {
+            lat: 69f32,
+            lon: 19f32,
+            i: -100f32,
+            j: -100f32,
+            k: -100f32,
+            alt: 0f32,
+        }];
+
+        let mut secs = SECS::new(grid.clone());
+        secs.fit(&obs, 0.1);
+        secs.predict_b(&grid);
+    }
+}

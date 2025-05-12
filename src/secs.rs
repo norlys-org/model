@@ -55,9 +55,9 @@ pub struct SECS {
 }
 
 impl SECS {
-    pub fn new(secs_df_loc: Vec<GeographicalPoint>) -> Self {
+    pub fn new(secs_locs: Vec<GeographicalPoint>) -> Self {
         SECS {
-            secs_locs: secs_df_loc,
+            secs_locs,
             sec_amps: None,
             sec_amps_var: None,
             _obs_loc_cache: None,
@@ -216,5 +216,107 @@ impl SECS {
         self.sec_amps_var = Some(DVector::from_vec(sec_amps_var_values));
 
         self
+    }
+
+    /// Calculate the predicted magnetic field (B).
+    ///
+    /// After a set of observations has been fit to this system using `.fit()`,
+    /// this function predicts the magnetic fields at any other location based
+    /// on the fitted SEC amplitudes. This implementation only considers
+    /// divergence-free SECs.
+    ///
+    /// Parameters
+    /// ----------
+    /// pred_locs: &[GeographicalPoint]
+    ///     A slice of geographical points where the predictions are desired.
+    ///
+    /// Returns
+    /// -------
+    /// Result<Vec<PredictionVector>, String>
+    ///     A vector of predicted B-fields (i=Bx, j=By, k=Bz components) at each `pred_loc`,
+    ///     or an error string if the model hasn't been fitted or dimensions mismatch.
+    pub fn predict_b(
+        &self,
+        pred_locs: &[GeographicalPoint],
+    ) -> Result<Vec<PredictionVector>, String> {
+        let npred = pred_locs.len();
+        let current_nsec = self.secs_locs.len();
+
+        if npred == 0 {
+            return Ok(Vec::new()); // No locations to predict at.
+        }
+
+        // Check if fit() has been called and amps are available and valid
+        let sec_amps_vec = match &self.sec_amps {
+            Some(amps) => {
+                if amps.len() != current_nsec {
+                    return Err(format!(
+                         "Fitted amplitude count ({}) does not match current SEC count ({}). Refit the model.",
+                         amps.len(), current_nsec
+                     ));
+                }
+                if current_nsec == 0 && amps.len() == 0 {
+                    // Special case: 0 SECs fitted, prediction is zero.
+                    let zero_predictions = pred_locs
+                        .iter()
+                        .map(|loc| PredictionVector {
+                            lon: loc.longitude,
+                            lat: loc.latitude,
+                            i: 0.0,
+                            j: 0.0,
+                            k: 0.0,
+                        })
+                        .collect();
+                    return Ok(zero_predictions);
+                }
+                amps // Return the valid amps vector
+            }
+            None => {
+                return Err(String::from(
+                    "SECS model has not been fitted yet. Call .fit() before .predict_b().",
+                ));
+            }
+        };
+
+        // At this point, current_nsec > 0 and sec_amps_vec.len() == current_nsec
+
+        // Calculate the prediction transfer matrix T_pred = (npred, 3, nsec)
+        // For DF only, this comes directly from t_df
+        // t_pred_3d[p][k][s] is influence of sec 's' on component 'k' at point 'p'
+        // TODO: Implement caching here if desired
+        let t_pred_3d = t_df(pred_locs, &self.secs_locs);
+
+        // --- Core Calculation ---
+        // predicted_B[p][k] = sum_s (sec_amps_vec[s] * t_pred_3d[p][k][s])
+
+        let mut predictions: Vec<PredictionVector> = Vec::with_capacity(npred);
+
+        for p in 0..npred {
+            // Basic dimension check on t_pred_3d before indexing
+            if p >= t_pred_3d.len()
+                || t_pred_3d[p].len() != 3
+                || (current_nsec > 0 && t_pred_3d[p][0].len() != current_nsec)
+            {
+                return Err(format!("Internal error: Unexpected dimension of T_pred matrix at prediction index p={}. NPred={}, Nsec={}. T_pred[p].len={}, T_pred[p][0].len={}",
+                     p, npred, current_nsec, t_pred_3d.get(p).map_or(0, |v| v.len()), t_pred_3d.get(p).and_then(|v| v.get(0)).map_or(0, |v| v.len())
+                 ));
+            }
+
+            // Use dot product for the sum: B_k = T_k . amps
+            // where T_k is the k-th row vector [T(p,k,0), T(p,k,1), ..., T(p,k,nsec-1)]
+            let bx = DVector::from_row_slice(&t_pred_3d[p][0]).dot(sec_amps_vec);
+            let by = DVector::from_row_slice(&t_pred_3d[p][1]).dot(sec_amps_vec);
+            let bz = DVector::from_row_slice(&t_pred_3d[p][2]).dot(sec_amps_vec);
+
+            predictions.push(PredictionVector {
+                lon: pred_locs[p].longitude,
+                lat: pred_locs[p].latitude,
+                i: bx,
+                j: by,
+                k: bz,
+            });
+        }
+
+        Ok(predictions)
     }
 }
