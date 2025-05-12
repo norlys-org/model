@@ -235,10 +235,7 @@ impl SECS {
     /// Result<Vec<PredictionVector>, String>
     ///     A vector of predicted B-fields (i=Bx, j=By, k=Bz components) at each `pred_loc`,
     ///     or an error string if the model hasn't been fitted or dimensions mismatch.
-    pub fn predict_b(
-        &self,
-        pred_locs: &[GeographicalPoint],
-    ) -> Result<Vec<PredictionVector>, String> {
+    pub fn predict(&self, pred_locs: &[GeographicalPoint]) -> Result<PredictionMatrix, String> {
         let npred = pred_locs.len();
         let current_nsec = self.secs_locs.len();
 
