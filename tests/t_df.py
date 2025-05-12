@@ -1,7 +1,5 @@
 import numpy as np
-from bearing import calc_bearing
-from angular_distance import calc_angular_distance
-from tests.secs import T_df
+from secs import T_df
 
 
 R_EARTH = 6371e3

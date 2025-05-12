@@ -1,5 +1,5 @@
 import numpy as np
-from tests.secs import calc_bearing
+from secs import calc_bearing
 
 # Test Case 1: Basic Cardinal Directions from Origin
 test1_latlon1 = np.array([[0.0, 0.0]])  # Origin
