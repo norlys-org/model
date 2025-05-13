@@ -5,8 +5,8 @@
 /// * `coords2` - Second set of points as a vector of (lat, lon) tuples in degrees
 ///
 /// # Returns
-/// A matrix (Vec<Vec<f32>>) of angular distances in radians
-pub fn angular_distance(coords1: &[(f32, f32)], coords2: &[(f32, f32)]) -> Vec<Vec<f32>> {
+/// A matrix (Vec<Vec<f64>>) of angular distances in radians
+pub fn angular_distance(coords1: &[(f64, f64)], coords2: &[(f64, f64)]) -> Vec<Vec<f64>> {
     let mut result = Vec::with_capacity(coords1.len());
 
     for &(lat1_deg, lon1_deg) in coords1 {
@@ -41,19 +41,19 @@ pub fn angular_distance(coords1: &[(f32, f32)], coords2: &[(f32, f32)]) -> Vec<V
 /// * `coords2` - Second set of points as a vector of (lat, lon) tuples in degrees
 ///
 /// # Returns
-/// A matrix (Vec<Vec<f32>>) of bearings in radians, measured clockwise from true north
-pub fn bearing(coords1: &[(f32, f32)], coords2: &[(f32, f32)]) -> Vec<Vec<f32>> {
+/// A matrix (Vec<Vec<f64>>) of bearings in radians, measured clockwise from true north
+pub fn bearing(coords1: &[(f64, f64)], coords2: &[(f64, f64)]) -> Vec<Vec<f64>> {
     let mut result = Vec::with_capacity(coords1.len());
 
     for &(lat1_deg, lon1_deg) in coords1 {
-        let lat1_rad = (lat1_deg as f32).to_radians();
-        let lon1_rad = (lon1_deg as f32).to_radians();
+        let lat1_rad = (lat1_deg as f64).to_radians();
+        let lon1_rad = (lon1_deg as f64).to_radians();
 
         let mut row = Vec::with_capacity(coords2.len());
 
         for &(lat2_deg, lon2_deg) in coords2 {
-            let lat2_rad = (lat2_deg as f32).to_radians();
-            let lon2_rad = (lon2_deg as f32).to_radians();
+            let lat2_rad = (lat2_deg as f64).to_radians();
+            let lon2_rad = (lon2_deg as f64).to_radians();
 
             let dlon = lon2_rad - lon1_rad;
 
@@ -61,7 +61,7 @@ pub fn bearing(coords1: &[(f32, f32)], coords2: &[(f32, f32)]) -> Vec<Vec<f32>> 
             let x = lat1_rad.cos() * lat2_rad.sin() - lat1_rad.sin() * lat2_rad.cos() * dlon.cos();
 
             let alpha = y.atan2(x); // true bearing (in radians, from -π to π)
-            row.push(alpha as f32);
+            row.push(alpha as f64);
         }
 
         result.push(row);
@@ -75,14 +75,14 @@ mod tests {
     use crate::helpers::test::assert_vec_approx_eq;
 
     use super::*;
-    use std::f32::consts::PI;
+    use std::f64::consts::PI;
 
     #[test]
     fn test_bearing_basic_cardinal_directions() {
         let coords1 = vec![(0.0, 0.0)];
         let coords2 = vec![(1.0, 0.0), (0.0, 1.0), (-1.0, 0.0), (0.0, -1.0)];
 
-        let expected = vec![vec![0.0_f32, 1.5707963_f32, PI, -1.5707963_f32]];
+        let expected = vec![vec![0.0_f64, 1.5707963_f64, PI, -1.5707963_f64]];
 
         let result = bearing(&coords1, &coords2);
         assert_vec_approx_eq(&result, &expected, 1e-4);
@@ -139,9 +139,9 @@ mod tests {
         let coords2 = vec![(0.0, 0.0), (-90.0, 0.0), (-45.0, -135.0), (45.0, 45.0)];
 
         let expected = vec![
-            vec![0.0_f32, 1.5708_f32, 2.0944_f32, 1.0472_f32],
-            vec![1.5708_f32, 3.1416_f32, 2.3562_f32, 0.7854_f32],
-            vec![1.0472_f32, 2.3562_f32, 3.1416_f32, 0.0_f32],
+            vec![0.0_f64, 1.5708_f64, 2.0944_f64, 1.0472_f64],
+            vec![1.5708_f64, 3.1416_f64, 2.3562_f64, 0.7854_f64],
+            vec![1.0472_f64, 2.3562_f64, 3.1416_f64, 0.0_f64],
         ];
 
         let result = angular_distance(&coords1, &coords2);
@@ -154,8 +154,8 @@ mod tests {
         let coords2 = vec![(0.0, 90.0), (0.0, 180.0), (90.0, 0.0)];
 
         let expected = vec![
-            vec![1.5708_f32, 3.1416_f32, 1.5708_f32],
-            vec![1.5708_f32, 3.1416_f32, 1.5708_f32],
+            vec![1.5708_f64, 3.1416_f64, 1.5708_f64],
+            vec![1.5708_f64, 3.1416_f64, 1.5708_f64],
         ];
 
         let result = angular_distance(&coords1, &coords2);
@@ -167,7 +167,7 @@ mod tests {
         let coords1 = vec![(40.71, -74.0), (34.05, -118.2), (51.50, -0.1)];
         let coords2 = vec![(48.85, 2.35)];
 
-        let expected = vec![vec![0.9162_f32], vec![1.4258_f32], vec![0.0537_f32]];
+        let expected = vec![vec![0.9162_f64], vec![1.4258_f64], vec![0.0537_f64]];
 
         let result = angular_distance(&coords1, &coords2);
         assert_vec_approx_eq(&result, &expected, 5e-4);
@@ -179,8 +179,8 @@ mod tests {
         let coords2 = vec![(10.0, 11.0), (80.0, 10.0), (-20.001, -30.001)];
 
         let expected = vec![
-            vec![0.0172_f32, 1.2217_f32, 0.8639_f32],
-            vec![0.8776_f32, 1.7842_f32, 0.0_f32],
+            vec![0.0172_f64, 1.2217_f64, 0.8639_f64],
+            vec![0.8776_f64, 1.7842_f64, 0.0_f64],
         ];
 
         let result = angular_distance(&coords1, &coords2);

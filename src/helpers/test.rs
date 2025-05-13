@@ -1,7 +1,7 @@
-use std::f32::consts::PI;
+use std::f64::consts::PI;
 
 // Helper function for approximate comparison of float vectors
-pub fn assert_vec_approx_eq(result: &Vec<Vec<f32>>, expected: &Vec<Vec<f32>>, tolerance: f32) {
+pub fn assert_vec_approx_eq(result: &Vec<Vec<f64>>, expected: &Vec<Vec<f64>>, tolerance: f64) {
     assert_eq!(result.len(), expected.len(), "Number of rows mismatch");
     for i in 0..result.len() {
         assert_eq!(
