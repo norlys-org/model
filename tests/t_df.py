@@ -1,90 +1,9 @@
 import numpy as np
-from bearing import calc_bearing
-from angular_distance import calc_angular_distance
+from secs import T_df
 
 
 R_EARTH = 6371e3
 MU0 = 4 * np.pi * 1e-7
-
-
-def T_df(obs_loc: np.ndarray, sec_loc: np.ndarray) -> np.ndarray:
-    """Calculate the divergence free magnetic field transfer function.
-
-    The transfer function goes from SEC location to observation location
-    and assumes unit current SECs at the given locations.
-
-    Parameters
-    ----------
-    obs_loc : ndarray (nobs, 3 [lat, lon, r])
-        The locations of the observation points.
-
-    sec_loc : ndarray (nsec, 3 [lat, lon, r])
-        The locations of the SEC points.
-
-    Returns
-    -------
-    ndarray (nobs, 3, nsec)
-        The T transfer matrix.
-    """
-    nobs = len(obs_loc)
-    nsec = len(sec_loc)
-
-    obs_r = obs_loc[:, 2][:, np.newaxis]
-    sec_r = sec_loc[:, 2][np.newaxis, :]
-
-    theta = calc_angular_distance(obs_loc[:, :2], sec_loc[:, :2])
-    alpha = calc_bearing(obs_loc[:, :2], sec_loc[:, :2])
-
-    mu0 = 4 * np.pi * 1e-7
-
-    x = obs_r / sec_r
-
-    sin_theta = np.sin(theta)
-    cos_theta = np.cos(theta)
-    factor = 1.0 / np.sqrt(1 - 2 * x * cos_theta + x**2)
-
-    Br = mu0 / (4 * np.pi * obs_r) * (factor - 1)
-
-    Btheta = -mu0 / (4 * np.pi * obs_r) * (factor * (x - cos_theta) + cos_theta)
-    Btheta = np.divide(
-        Btheta, sin_theta, out=np.zeros_like(sin_theta), where=sin_theta != 0
-    )
-
-    under_locs = sec_r < obs_r
-
-    if np.any(under_locs):
-        x = sec_r / obs_r
-
-        Br2 = (
-            mu0
-            * x
-            / (4 * np.pi * obs_r)
-            * (1.0 / np.sqrt(1 - 2 * x * cos_theta + x**2) - 1)
-        )
-
-        Btheta2 = (
-            -mu0
-            / (4 * np.pi * obs_r)
-            * (
-                (obs_r - sec_r * cos_theta)
-                / np.sqrt(obs_r**2 - 2 * obs_r * sec_r * cos_theta + sec_r**2)
-                - 1
-            )
-        )
-        Btheta2 = np.divide(
-            Btheta2, sin_theta, out=np.zeros_like(sin_theta), where=sin_theta != 0
-        )
-
-        Btheta[under_locs] = Btheta2[under_locs]
-        Br[under_locs] = Br2[under_locs]
-
-    T = np.empty((nobs, 3, nsec))
-    T[:, 0, :] = -Btheta * np.sin(alpha)
-    T[:, 1, :] = -Btheta * np.cos(alpha)
-    T[:, 2, :] = -Br
-
-    return T
-
 
 test1_obs_loc = np.array([[0.0, 0.0, R_EARTH]])
 test1_sec_loc = np.array(
