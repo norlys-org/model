@@ -68,8 +68,8 @@ impl SECS {
     /// Calculate the T transfer matrix (magnetic field from unit currents).
     /// This is analogous to _calc_T in Python, but simplified for df-only
     /// and reshaped.
-    fn _calc_t_obs_flat(&self, obs_loc_vec: &[GeographicalPoint]) -> DMatrix<f32> {
-        let nobs = obs_loc_vec.len();
+    fn _calc_t_obs_flat(&self, obs_locs: &[GeographicalPoint]) -> DMatrix<f32> {
+        let nobs = obs_locs.len();
         let current_nsec = self.secs_locs.len();
 
         if nobs == 0 || current_nsec == 0 {
@@ -77,7 +77,7 @@ impl SECS {
         }
 
         // t_matrix_3d has shape (nobs, 3, nsec)
-        let t_matrix_3d = t_df(obs_loc_vec, &self.secs_locs);
+        let t_matrix_3d = t_df(obs_locs, &self.secs_locs);
         let n_flat_obs = nobs * 3;
 
         // Reshape t_matrix_3d into DMatrix<f32> of shape (n_flat_obs, nsec)
@@ -119,17 +119,17 @@ impl SECS {
     /// ------
     /// Panics if SVD computation or pseudo-inverse fails (e.g., due to ill-conditioned matrix
     /// or an extreme `epsilon_reg` value).
-    pub fn fit(&mut self, obs: &[ObservationVector], epsilon_reg: f32) -> &mut Self {
+    pub fn fit(
+        &mut self,
+        obs: &[ObservationVector],
+        epsilon_reg: f32,
+    ) -> Result<&mut Self, String> {
         let nobs = obs.len();
         let current_nsec = self.secs_locs.len();
 
-        // Extract obs_loc_vec, obs_b_flat, obs_std_flat from obs
-        // obs_loc_vec is (nobs, 3 [lat, lon, r]) equivalent
         let mut current_obs_loc_vec: Vec<GeographicalPoint> = Vec::with_capacity(nobs);
         let n_flat_obs = nobs * 3;
-        // obs_B_flat is (nobs * 3)
         let mut obs_b_values: Vec<f32> = Vec::with_capacity(n_flat_obs);
-        // obs_std : ndarray (ntimes, nobs, 3), default: ones -> (nobs*3) vector of 1.0s
         let mut obs_std_values: Vec<f32> = Vec::with_capacity(n_flat_obs);
 
         for ob_item in obs {
@@ -138,11 +138,10 @@ impl SECS {
                 longitude: ob_item.lon,
                 altitude: ob_item.alt,
             });
-            obs_b_values.push(ob_item.i); // Bx
-            obs_b_values.push(ob_item.j); // By
-            obs_b_values.push(ob_item.k); // Bz
+            obs_b_values.push(ob_item.i);
+            obs_b_values.push(ob_item.j);
+            obs_b_values.push(ob_item.k);
 
-            // Assume unit standard error of all measurements
             obs_std_values.push(1.0);
             obs_std_values.push(1.0);
             obs_std_values.push(1.0);
@@ -151,7 +150,6 @@ impl SECS {
         let obs_b_dvector = DVector::from_vec(obs_b_values);
         let obs_std_dvector = DVector::from_vec(obs_std_values);
 
-        // Calculate the transfer functions, using cached values if possible
         let t_obs_flat: DMatrix<f32>;
         match &self._obs_loc_cache {
             Some(cached_locs) if *cached_locs == current_obs_loc_vec => {
@@ -163,59 +161,91 @@ impl SECS {
             }
             _ => {
                 let new_t_obs_flat = self._calc_t_obs_flat(&current_obs_loc_vec);
-                self._obs_loc_cache = Some(current_obs_loc_vec); // current_obs_loc_vec is consumed here
+                self._obs_loc_cache = Some(current_obs_loc_vec);
                 self._t_obs_flat_cache = Some(new_t_obs_flat.clone());
                 t_obs_flat = new_t_obs_flat;
             }
         }
 
-        // --- This part is analogous to _compute_VWU and the main fit logic that uses it ---
-
-        // Weight the design matrix: weighted_T = T_obs_flat / std_flat[:, np.newaxis]
-        // This means weighted_T[j,k] = T_obs_flat[j,k] / obs_std_dvector[j]
-        // DMatrix is column-major, so iterate accordingly for from_vec
         let mut weighted_t_data = Vec::with_capacity(n_flat_obs * current_nsec);
         for c_idx in 0..current_nsec {
-            // Iterate over columns (SECs)
             for r_idx in 0..n_flat_obs {
-                // Iterate over rows (observation components)
                 weighted_t_data.push(t_obs_flat[(r_idx, c_idx)] / obs_std_dvector[r_idx]);
             }
         }
         let weighted_t = DMatrix::from_vec(n_flat_obs, current_nsec, weighted_t_data);
 
-        // SVD
-        let svd_weighted_t = weighted_t.svd(true, true);
+        // --- SVD and Pseudo-inverse construction to match Python's "relative" mode ---
+        let svd_weighted_t = weighted_t.clone().svd(true, true);
 
-        // VWU in Python is V @ S_inv_filtered @ U.T, which is the pseudo-inverse.
-        // nalgebra's pseudo_inverse uses a threshold: singular values < threshold are cut.
-        // The epsilon_reg for fit corresponds to this threshold when mode='relative'.
-        let pinv_weighted_t = svd_weighted_t.pseudo_inverse(epsilon_reg)
-            .expect("Failed to compute pseudo-inverse. Matrix might be ill-conditioned or epsilon_reg is too restrictive.");
+        let u_matrix = svd_weighted_t
+            .u
+            .as_ref()
+            .ok_or_else(|| "SVD U factor missing".to_string())?;
+        let v_t_matrix = svd_weighted_t
+            .v_t
+            .as_ref()
+            .ok_or_else(|| "SVD V_t factor missing".to_string())?;
+        let singular_values_vec = &svd_weighted_t.singular_values;
 
-        // Calculate SEC amplitudes: sec_amps = VWU @ (obs_B_flat / obs_std_flat)
-        // or sec_amps = pseudo_inverse(weighted_T) @ (obs_B_flat / obs_std_flat)
+        let pinv_weighted_t: DMatrix<f32>;
+
+        if singular_values_vec.is_empty() {
+            // This case implies weighted_t has a zero dimension (e.g., 0 observations or 0 SECs after flattening)
+            // The pseudo-inverse of an Mx0 or 0xN matrix is an 0xM or Nx0 zero matrix.
+            pinv_weighted_t = DMatrix::zeros(weighted_t.ncols(), weighted_t.nrows());
+        } else {
+            let s_max = singular_values_vec.amax();
+
+            // Python: valid = S >= epsilon * S.max()
+            // W = 1.0 / S (where S is S[valid])
+            // Effectively, if s_i < epsilon * S.max(), its inverse is treated as 0.
+            let actual_threshold = epsilon_reg * s_max;
+
+            let mut s_inv_filtered_values = DVector::zeros(singular_values_vec.len());
+            for i in 0..singular_values_vec.len() {
+                if singular_values_vec[i] >= actual_threshold {
+                    // If singular_values_vec[i] is zero here, it means actual_threshold is also zero.
+                    // 1.0 / 0.0 results in f32::INFINITY, matching Python's behavior.
+                    s_inv_filtered_values[i] = 1.0 / singular_values_vec[i];
+                }
+                // Else, it remains 0.0 from initialization (singular value's inverse is cut)
+            }
+
+            let s_inv_filtered_diag_matrix = DMatrix::from_diagonal(&s_inv_filtered_values);
+
+            // Pseudo-inverse = V * S_inv_filtered_diag * U^T
+            // svd_weighted_t.v_t is V^T, so svd_weighted_t.v_t.transpose() is V
+            pinv_weighted_t =
+                v_t_matrix.transpose() * s_inv_filtered_diag_matrix * u_matrix.transpose();
+        }
+
+        // --- End of SVD and Pseudo-inverse ---
+
         let b_weighted = obs_b_dvector.component_div(&obs_std_dvector);
-        let fitted_sec_amps = &pinv_weighted_t * b_weighted; // Shape: (nsec, 1)
+        let fitted_sec_amps = &pinv_weighted_t * b_weighted;
         self.sec_amps = Some(fitted_sec_amps);
 
-        // Calculate variance of SEC amplitudes
-        // sec_amps_var[i] = sum_j ( (VWU[i,j] * obs_std_dvector[j])^2 )
-        // where VWU is pinv_weighted_t (nsec, n_flat_obs)
         let mut sec_amps_var_values: Vec<f32> = Vec::with_capacity(current_nsec);
-        for i_sec in 0..current_nsec {
-            // For each SEC amplitude
-            let mut sum_sq_val = 0.0;
-            for j_obs_comp in 0..n_flat_obs {
-                // Sum over (weighted) observation components influence
-                let val = pinv_weighted_t[(i_sec, j_obs_comp)] * obs_std_dvector[j_obs_comp];
-                sum_sq_val += val * val;
+        if n_flat_obs > 0 {
+            // only calculate variance if there are observations
+            for i_sec in 0..current_nsec {
+                let mut sum_sq_val = 0.0;
+                for j_obs_comp in 0..n_flat_obs {
+                    let val = pinv_weighted_t[(i_sec, j_obs_comp)] * obs_std_dvector[j_obs_comp];
+                    sum_sq_val += val * val;
+                }
+                sec_amps_var_values.push(sum_sq_val);
             }
-            sec_amps_var_values.push(sum_sq_val);
+        } else {
+            // No observations, variance is undefined or zero
+            for _ in 0..current_nsec {
+                sec_amps_var_values.push(0.0); // Or perhaps f32::NAN or Option<f32>
+            }
         }
         self.sec_amps_var = Some(DVector::from_vec(sec_amps_var_values));
 
-        self
+        Ok(self)
     }
 
     /// Calculate the predicted magnetic field (B).

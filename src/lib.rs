@@ -518,10 +518,12 @@ mod tests {
         ];
 
         let mut secs = SECS::new(grid.clone());
-        secs.fit(&obs, 0.00);
+        secs.fit(&obs, 0.05);
         match secs.predict(&grid) {
             Ok(r) => {
-                for item in r.iter().filter(|x| x.i > 0.0).take(10) {
+                let mut v: Vec<_> = r.iter().filter(|x| x.i.is_finite()).collect();
+                v.sort_by(|a, b| b.i.partial_cmp(&a.i).unwrap());
+                for item in v.into_iter().take(10) {
                     println!("{:?}", item);
                 }
             }
