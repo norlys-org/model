@@ -17,28 +17,25 @@ pub fn infer(js_obs: JsValue) -> Result<JsValue, JsValue> {
     console_error_panic_hook::set_once();
     let observations: ObservationMatrix =
         serde_wasm_bindgen::from_value(js_obs).expect("Failed to deserialize observations");
-    console::log_1(&format!("{:?}", observations).into());
 
-    let grid = geographical_grid(45.0..85.0, 30, -180.0..179.0, 50, 110.0);
-    // let grid = geographical_grid(45.0..85.0, 37, -180.0..179.0, 130, 110.0);
-    //
+    let grid = geographical_grid(45.0..85.0, 37, -180.0..179.0, 130, 110.0);
 
     let mut secs = SECS::new(grid.clone());
-    secs.fit(&observations, 0.0);
+    secs.fit(&observations, 0.05);
     let pred = secs.predict(&grid).unwrap();
 
-    let pred_score: Vec<f32> = pred
-        .into_iter()
-        .map(|v| {
-            // encode_score(
-            // apply_auroral_zone_overlay(v.lon, v.lat, ponderate_i(v.i))
-            v.i
-            //     false, // TODO: Leave to false as of now derivative is not computed
-            // )
-        })
-        .collect();
+    // let pred_score: Vec<f32> = pred
+    //     .into_iter()
+    //     .map(|v| {
+    //         // encode_score(
+    //         // apply_auroral_zone_overlay(v.lon, v.lat, ponderate_i(v.i))
+    //         v.i
+    //         //     false, // TODO: Leave to false as of now derivative is not computed
+    //         // )
+    //     })
+    //     .collect();
 
-    Ok(serde_wasm_bindgen::to_value(&pred_score)?)
+    Ok(serde_wasm_bindgen::to_value(&pred)?)
 }
 
 #[cfg(test)]
