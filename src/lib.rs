@@ -24,7 +24,7 @@ pub fn infer(js_obs: JsValue) -> Result<JsValue, JsValue> {
     secs.fit(&observations, 0.05);
     let pred = secs.predict(&grid).unwrap();
 
-    // let pred_score: Vec<f32> = pred
+    // let pred_score: Vec<f64> = pred
     //     .into_iter()
     //     .map(|v| {
     //         // encode_score(

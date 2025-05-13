@@ -3,10 +3,10 @@ use crate::{
     secs::R_EARTH,
     sphere::{angular_distance, bearing},
 };
-use std::f32::consts::PI;
+use std::f64::consts::PI;
 
 /// Physical constant: permeability of free space (µ0)
-const MU0: f32 = 4.0 * PI * 1e-7;
+const MU0: f64 = 4.0 * PI * 1e-7;
 
 /// Calculates the "Transfer Matrix" (T) for Divergence-Free Spherical Elementary Current Systems (SECS).
 ///
@@ -38,14 +38,14 @@ const MU0: f32 = 4.0 * PI * 1e-7;
 /// * `secs_locs` - A slice of `GeographicalPoint` structures representing the locations (poles) of the hypothetical Spherical Elementary Currents.
 ///
 /// # Returns
-/// A 3D vector `Vec<Vec<Vec<f32>>>` representing the transfer matrix T, with dimensions [nobs][3][nsec].
-pub fn t_df(obs_locs: &[GeographicalPoint], secs_locs: &[GeographicalPoint]) -> Vec<Vec<Vec<f32>>> {
+/// A 3D vector `Vec<Vec<Vec<f64>>>` representing the transfer matrix T, with dimensions [nobs][3][nsec].
+pub fn t_df(obs_locs: &[GeographicalPoint], secs_locs: &[GeographicalPoint]) -> Vec<Vec<Vec<f64>>> {
     let nobs = obs_locs.len();
     let nsec = secs_locs.len();
 
     // Convert location data for calculations
-    let obs_lat_lon: Vec<(f32, f32)> = obs_locs.iter().map(|p| (p.latitude, p.longitude)).collect();
-    let secs_lat_lon: Vec<(f32, f32)> = secs_locs
+    let obs_lat_lon: Vec<(f64, f64)> = obs_locs.iter().map(|p| (p.latitude, p.longitude)).collect();
+    let secs_lat_lon: Vec<(f64, f64)> = secs_locs
         .iter()
         .map(|p| (p.latitude, p.longitude))
         .collect();
@@ -55,7 +55,7 @@ pub fn t_df(obs_locs: &[GeographicalPoint], secs_locs: &[GeographicalPoint]) -> 
 
     // Initialize the transfer matrix (3D vector)
     // This creates a vector of size nobs x 3 x nsec filled with zeros
-    let mut t: Vec<Vec<Vec<f32>>> = vec![vec![vec![0.0; nsec]; 3]; nobs];
+    let mut t: Vec<Vec<Vec<f64>>> = vec![vec![vec![0.0; nsec]; 3]; nobs];
 
     // Calculate transfer function for each observation-SEC pair
     for i in 0..nobs {
@@ -118,12 +118,12 @@ pub fn t_df(obs_locs: &[GeographicalPoint], secs_locs: &[GeographicalPoint]) -> 
 mod tests {
     use super::*;
 
-    const EPSILON: f32 = 1e-5;
+    const EPSILON: f64 = 1e-5;
 
     fn assert_matrix_approx_val(
-        matrix: &Vec<Vec<Vec<f32>>>,
-        expected_val: f32,
-        epsilon: f32,
+        matrix: &Vec<Vec<Vec<f64>>>,
+        expected_val: f64,
+        epsilon: f64,
         test_name: &str,
     ) {
         for i in 0..matrix.len() {

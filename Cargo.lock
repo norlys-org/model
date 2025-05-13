@@ -105,7 +105,6 @@ dependencies = [
  "console_error_panic_hook",
  "nalgebra",
  "prost",
- "protobufs",
  "serde",
  "serde-wasm-bindgen",
  "thiserror",
@@ -230,13 +229,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
-]
-
-[[package]]
-name = "protobufs"
-version = "0.1.0"
-dependencies = [
- "prost",
 ]
 
 [[package]]

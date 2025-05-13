@@ -3,11 +3,11 @@ use std::ops::Range;
 #[derive(PartialEq, Debug, Clone, Copy)]
 pub struct GeographicalPoint {
     /// The longitude in degrees.
-    pub longitude: f32,
+    pub longitude: f64,
     /// The latitude in degrees.
-    pub latitude: f32,
+    pub latitude: f64,
     /// Altitude from the surface of the earth
-    pub altitude: f32,
+    pub altitude: f64,
 }
 
 /// Return evenly spaced numbers over a specified interval.
@@ -21,7 +21,7 @@ pub struct GeographicalPoint {
 /// * `start` - The starting value of the sequence.
 /// * `end` - The ending value of the sequence.
 /// * `num` - The number of samples to generate.
-fn linspace(start: f32, end: f32, num: usize) -> Vec<f32> {
+fn linspace(start: f64, end: f64, num: usize) -> Vec<f64> {
     let mut result = Vec::with_capacity(num);
 
     if end <= start {
@@ -37,9 +37,9 @@ fn linspace(start: f32, end: f32, num: usize) -> Vec<f32> {
         return result;
     }
 
-    let step = (end - start) / ((num - 1) as f32);
+    let step = (end - start) / ((num - 1) as f64);
     for i in 0..num {
-        result.push(start + (i as f32) * step);
+        result.push(start + (i as f64) * step);
     }
 
     result
@@ -59,11 +59,11 @@ fn linspace(start: f32, end: f32, num: usize) -> Vec<f32> {
 ///
 /// A vector of `GeographicalPoint` instances.
 pub fn geographical_grid(
-    lat_range: Range<f32>,
+    lat_range: Range<f64>,
     lat_steps: usize,
-    lon_range: Range<f32>,
+    lon_range: Range<f64>,
     lon_steps: usize,
-    altitude: f32,
+    altitude: f64,
 ) -> Vec<GeographicalPoint> {
     let latitudes = linspace(lat_range.start, lat_range.end, lat_steps);
     let longitudes = linspace(lon_range.start, lon_range.end, lon_steps);
