@@ -8,11 +8,11 @@ edition = "2021"
 [lib]
 crate-type = ["cdylib", "rlib"]
 
-[workspace]
-members = [".", "protobufs/build"]
+# [workspace]
+# members = [".", "protobufs/build"]
 
 [dependencies]
-protobufs = { path = "./protobufs/build" }
+# protobufs = { path = "./protobufs/build" }
 console_error_panic_hook = "0.1.7"
 web-sys = { version = "0.3", features = ["console"] }
 nalgebra = "0.33.2"

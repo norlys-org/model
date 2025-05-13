@@ -3,39 +3,39 @@ use nalgebra::{DMatrix, DVector};
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
-pub const R_EARTH: f32 = 6371e3;
+pub const R_EARTH: f64 = 6371e3;
 
 // #[wasm_bindgen]
 #[derive(Serialize, Deserialize, Debug, Clone, Copy)]
 pub struct ObservationVector {
     /// The longitude in degrees.
-    pub lon: f32,
+    pub lon: f64,
     /// The latitude in degrees.
-    pub lat: f32,
+    pub lat: f64,
     // i vector (usually x magnetometer component) in nano teslas
-    pub i: f32,
+    pub i: f64,
     // j vector (usually y magnetometer component) in nano teslas
-    pub j: f32,
+    pub j: f64,
     // k vector (usually k magnetometer component) in nano teslas
-    pub k: f32,
+    pub k: f64,
     // Altitude from the surface of the earth where the measurement has been conducted (usually 0)
     // in meters
-    pub alt: f32,
+    pub alt: f64,
 }
 
 // #[wasm_bindgen]
 #[derive(Serialize, Deserialize, Debug, Clone, Copy)]
 pub struct PredictionVector {
     /// The longitude in degrees.
-    pub lon: f32,
+    pub lon: f64,
     /// The latitude in degrees.
-    pub lat: f32,
+    pub lat: f64,
     // i vector (usually x magnetometer component) in nano teslas
-    pub i: f32,
+    pub i: f64,
     // j vector (usually y magnetometer component) in nano teslas
-    pub j: f32,
+    pub j: f64,
     // k vector (usually k magnetometer component) in nano teslas
-    pub k: f32,
+    pub k: f64,
 }
 
 pub type ObservationMatrix = Vec<ObservationVector>;
@@ -45,13 +45,13 @@ pub struct SECS {
     /// The latitude, longiutde, and radius of the divergence free (df) SEC locations.
     secs_locs: Vec<GeographicalPoint>,
     /// Storage of the scaling factors (amplitudes) for SECs for the last fit.
-    pub sec_amps: Option<DVector<f32>>,
+    pub sec_amps: Option<DVector<f64>>,
     /// Storage of the variance of the scaling factors for SECs for the last fit.
-    pub sec_amps_var: Option<DVector<f32>>,
+    pub sec_amps_var: Option<DVector<f64>>,
 
     // Cache fields for transfer function calculation
     _obs_loc_cache: Option<Vec<GeographicalPoint>>,
-    _t_obs_flat_cache: Option<DMatrix<f32>>,
+    _t_obs_flat_cache: Option<DMatrix<f64>>,
 }
 
 impl SECS {
@@ -68,7 +68,7 @@ impl SECS {
     /// Calculate the T transfer matrix (magnetic field from unit currents).
     /// This is analogous to _calc_T in Python, but simplified for df-only
     /// and reshaped.
-    fn _calc_t_obs_flat(&self, obs_locs: &[GeographicalPoint]) -> DMatrix<f32> {
+    fn _calc_t_obs_flat(&self, obs_locs: &[GeographicalPoint]) -> DMatrix<f64> {
         let nobs = obs_locs.len();
         let current_nsec = self.secs_locs.len();
 
@@ -80,7 +80,7 @@ impl SECS {
         let t_matrix_3d = t_df(obs_locs, &self.secs_locs);
         let n_flat_obs = nobs * 3;
 
-        // Reshape t_matrix_3d into DMatrix<f32> of shape (n_flat_obs, nsec)
+        // Reshape t_matrix_3d into DMatrix<f64> of shape (n_flat_obs, nsec)
         // DMatrix is column-major. from_fn fills (0,0), (1,0)...(R-1,0), (0,1)...
         // t_matrix_3d[obs_idx][comp_idx][sec_idx]
         // r_flat = obs_idx * 3 + comp_idx  => obs_idx = r_flat / 3
@@ -104,7 +104,7 @@ impl SECS {
     ///     Contains latitude, longitude, radius, and B-field components (i, j, k)
     ///     of the observation locations. This represents a single time snapshot.
     ///
-    /// epsilon_reg : f32
+    /// epsilon_reg : f64
     ///     Value used to regularize/smooth the SECS amplitudes. Singular values `s`
     ///     are filtered such that `s < epsilon_reg * s_max` are effectively treated
     ///     as zero in the pseudo-inverse. Corresponds to 'relative' mode in Python.
@@ -122,15 +122,15 @@ impl SECS {
     pub fn fit(
         &mut self,
         obs: &[ObservationVector],
-        epsilon_reg: f32,
+        epsilon_reg: f64,
     ) -> Result<&mut Self, String> {
         let nobs = obs.len();
         let current_nsec = self.secs_locs.len();
 
         let mut current_obs_loc_vec: Vec<GeographicalPoint> = Vec::with_capacity(nobs);
         let n_flat_obs = nobs * 3;
-        let mut obs_b_values: Vec<f32> = Vec::with_capacity(n_flat_obs);
-        let mut obs_std_values: Vec<f32> = Vec::with_capacity(n_flat_obs);
+        let mut obs_b_values: Vec<f64> = Vec::with_capacity(n_flat_obs);
+        let mut obs_std_values: Vec<f64> = Vec::with_capacity(n_flat_obs);
 
         for ob_item in obs {
             current_obs_loc_vec.push(GeographicalPoint {
@@ -150,7 +150,7 @@ impl SECS {
         let obs_b_dvector = DVector::from_vec(obs_b_values);
         let obs_std_dvector = DVector::from_vec(obs_std_values);
 
-        let t_obs_flat: DMatrix<f32>;
+        let t_obs_flat: DMatrix<f64>;
         match &self._obs_loc_cache {
             Some(cached_locs) if *cached_locs == current_obs_loc_vec => {
                 t_obs_flat = self
@@ -188,7 +188,7 @@ impl SECS {
             .ok_or_else(|| "SVD V_t factor missing".to_string())?;
         let singular_values_vec = &svd_weighted_t.singular_values;
 
-        let pinv_weighted_t: DMatrix<f32>;
+        let pinv_weighted_t: DMatrix<f64>;
 
         if singular_values_vec.is_empty() {
             // This case implies weighted_t has a zero dimension (e.g., 0 observations or 0 SECs after flattening)
@@ -206,7 +206,7 @@ impl SECS {
             for i in 0..singular_values_vec.len() {
                 if singular_values_vec[i] >= actual_threshold {
                     // If singular_values_vec[i] is zero here, it means actual_threshold is also zero.
-                    // 1.0 / 0.0 results in f32::INFINITY, matching Python's behavior.
+                    // 1.0 / 0.0 results in f64::INFINITY, matching Python's behavior.
                     s_inv_filtered_values[i] = 1.0 / singular_values_vec[i];
                 }
                 // Else, it remains 0.0 from initialization (singular value's inverse is cut)
@@ -226,7 +226,7 @@ impl SECS {
         let fitted_sec_amps = &pinv_weighted_t * b_weighted;
         self.sec_amps = Some(fitted_sec_amps);
 
-        let mut sec_amps_var_values: Vec<f32> = Vec::with_capacity(current_nsec);
+        let mut sec_amps_var_values: Vec<f64> = Vec::with_capacity(current_nsec);
         if n_flat_obs > 0 {
             // only calculate variance if there are observations
             for i_sec in 0..current_nsec {
@@ -240,7 +240,7 @@ impl SECS {
         } else {
             // No observations, variance is undefined or zero
             for _ in 0..current_nsec {
-                sec_amps_var_values.push(0.0); // Or perhaps f32::NAN or Option<f32>
+                sec_amps_var_values.push(0.0); // Or perhaps f64::NAN or Option<f64>
             }
         }
         self.sec_amps_var = Some(DVector::from_vec(sec_amps_var_values));
