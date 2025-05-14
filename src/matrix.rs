@@ -115,206 +115,286 @@ pub fn t_df(obs_locs: &[GeographicalPoint], secs_locs: &[GeographicalPoint]) -> 
 }
 
 #[cfg(test)]
-mod tests {
+mod secs_t_df_tests {
     use super::*;
+    use crate::grid::GeographicalPoint;
 
-    const EPSILON: f64 = 1e-5;
-
-    fn assert_matrix_approx_val(
-        matrix: &Vec<Vec<Vec<f64>>>,
-        expected_val: f64,
-        epsilon: f64,
-        test_name: &str,
-    ) {
-        for i in 0..matrix.len() {
-            assert_eq!(
-                matrix[i].len(),
-                3,
-                "Test '{}': Obs {} should have 3 components",
-                test_name,
-                i
-            );
-            for k in 0..3 {
-                // 0:North, 1:East, 2:Down
-                for j in 0..matrix[i][k].len() {
-                    let actual = matrix[i][k][j];
-                    assert!(
-                        (actual - expected_val).abs() < epsilon,
-                        "Test '{}': T[{}][{}][{}] failed: {} is not close to {} (epsilon: {})",
-                        test_name,
-                        i,
-                        k,
-                        j,
-                        actual,
-                        expected_val,
-                        epsilon
-                    );
-                }
-            }
+    // If not using assert_approx_eq crate, define a helper:
+    fn assert_f64_near(a: f64, b: f64, epsilon: f64, msg: &str) {
+        if (a.is_nan() && b.is_nan())
+            || (a.is_infinite() && b.is_infinite() && a.signum() == b.signum())
+        {
+            return;
         }
+        assert!(
+            (a - b).abs() < epsilon,
+            "{} | {:.10e} != {:.10e}",
+            msg,
+            a,
+            b
+        );
     }
 
+    // Define a default epsilon for comparisons, can be adjusted per test if needed
+    const DEFAULT_EPSILON: f64 = 1e-15; // A bit looser than Python's typical float64 precision for safety
+    const IONO_ALT_M: f64 = 110_000.0;
+    const SAT_ALT_M: f64 = 400_000.0;
+    const SAT_ALT2_M: f64 = 200_000.0;
+
     #[test]
-    fn test_t_df_case_1_single_obs_two_secs() {
+    fn test_case_1_ground_obs_iono_sec() {
         let obs_locs = vec![
             GeographicalPoint {
-                latitude: 0.0,
+                latitude: 60.0,
                 longitude: 0.0,
                 altitude: 0.0,
-            }, // R_EARTH + 0.0
+            }, // R_EARTH
         ];
         let secs_locs = vec![
             GeographicalPoint {
-                latitude: 10.0,
-                longitude: 0.0,
-                altitude: 100e3,
-            }, // R_EARTH + 100e3
-            GeographicalPoint {
-                latitude: 0.0,
-                longitude: 10.0,
-                altitude: -50e3,
-            }, // R_EARTH - 50e3
+                latitude: 62.0,
+                longitude: 5.0,
+                altitude: IONO_ALT_M,
+            }, // R_EARTH + 110e3
         ];
 
-        // Expected Python output (shape 1,3,2) was all zeros at precision 5
-        // [[[ 0. -0.] [ 0. -0.] [-0. -0.]]]
-        let result = t_df(&obs_locs, &secs_locs);
+        let t = t_df(&obs_locs, &secs_locs);
 
-        assert_eq!(result.len(), 1, "Test Case 1: nobs mismatch");
-        assert_eq!(result[0].len(), 3, "Test Case 1: components mismatch");
-        assert_eq!(
-            result[0][0].len(),
-            2,
-            "Test Case 1: nsec mismatch for T[0][0]"
-        );
-
-        assert_matrix_approx_val(&result, 0.0, EPSILON, "Test Case 1");
+        // Expected from Python:
+        // Bx:  1.38473593e-13
+        // By:  1.55458626e-13
+        // Bz: -2.59975868e-13
+        assert_f64_near(t[0][0][0], 1.38473593e-13, DEFAULT_EPSILON, "TC1 Bx");
+        assert_f64_near(t[0][1][0], 1.55458626e-13, DEFAULT_EPSILON, "TC1 By");
+        assert_f64_near(t[0][2][0], -2.59975868e-13, DEFAULT_EPSILON, "TC1 Bz");
     }
 
     #[test]
-    fn test_t_df_case_2_two_obs_single_sec() {
+    fn test_case_2_satellite_obs_iono_sec() {
         let obs_locs = vec![
             GeographicalPoint {
-                latitude: 0.0,
+                latitude: 70.0,
+                longitude: 10.0,
+                altitude: SAT_ALT_M,
+            }, // R_EARTH + 400e3
+        ];
+        let secs_locs = vec![
+            GeographicalPoint {
+                latitude: 71.0,
+                longitude: 12.0,
+                altitude: IONO_ALT_M,
+            }, // R_EARTH + 110e3
+        ];
+
+        let t = t_df(&obs_locs, &secs_locs);
+
+        // Expected from Python:
+        // Bx: -5.55039253e-14
+        // By: -3.57533223e-14
+        // Bz: -2.83500034e-13
+        assert_f64_near(t[0][0][0], -5.55039253e-14, DEFAULT_EPSILON, "TC2 Bx");
+        assert_f64_near(t[0][1][0], -3.57533223e-14, DEFAULT_EPSILON, "TC2 By");
+        assert_f64_near(t[0][2][0], -2.83500034e-13, DEFAULT_EPSILON, "TC2 Bz");
+    }
+
+    #[test]
+    fn test_case_3_obs_and_sec_at_same_radius() {
+        let obs_locs = vec![GeographicalPoint {
+            latitude: 50.0,
+            longitude: -20.0,
+            altitude: IONO_ALT_M,
+        }];
+        let secs_locs = vec![GeographicalPoint {
+            latitude: 50.5,
+            longitude: -19.0,
+            altitude: IONO_ALT_M,
+        }];
+
+        let t = t_df(&obs_locs, &secs_locs);
+
+        // Expected from Python:
+        // Bx:  6.81364374e-13
+        // By:  8.59460003e-13
+        // Bz: -1.07371836e-12
+        assert_f64_near(t[0][0][0], 6.81364374e-13, DEFAULT_EPSILON, "TC3 Bx");
+        assert_f64_near(t[0][1][0], 8.59460003e-13, DEFAULT_EPSILON, "TC3 By");
+        assert_f64_near(t[0][2][0], -1.07371836e-12, DEFAULT_EPSILON, "TC3 Bz");
+    }
+
+    #[test]
+    fn test_case_4_obs_directly_above_sec() {
+        let obs_locs = vec![
+            GeographicalPoint {
+                latitude: 80.0,
+                longitude: 30.0,
+                altitude: SAT_ALT2_M,
+            }, // R_EARTH + 200e3
+        ];
+        let secs_locs = vec![
+            GeographicalPoint {
+                latitude: 80.0,
+                longitude: 30.0,
+                altitude: IONO_ALT_M,
+            }, // R_EARTH + 110e3
+        ];
+
+        let t = t_df(&obs_locs, &secs_locs);
+
+        // Expected from Python (Bx and By are effectively zero):
+        // Bx: -9.74437523e-19
+        // By: -5.96670897e-35 (extremely small, treat as 0)
+        // Bz: -1.08088278e-12
+        let high_precision_epsilon = 1e-20; // For very small numbers near zero.
+                                            // Or an epsilon relative to the magnitude if not comparing to zero.
+        assert_f64_near(
+            t[0][0][0],
+            -9.74437523e-19,
+            high_precision_epsilon,
+            "TC4 Bx",
+        ); // Python has sin(alpha) non-zero
+        assert_f64_near(t[0][1][0], 0.0, high_precision_epsilon, "TC4 By"); // Python has cos(alpha) effectively zero
+        assert_f64_near(t[0][2][0], -1.08088278e-12, DEFAULT_EPSILON, "TC4 Bz");
+    }
+
+    #[test]
+    fn test_case_5_obs_at_sec_location_singularity() {
+        let obs_locs = vec![GeographicalPoint {
+            latitude: 85.0,
+            longitude: 45.0,
+            altitude: IONO_ALT_M,
+        }];
+        let secs_locs = vec![GeographicalPoint {
+            latitude: 85.0,
+            longitude: 45.0,
+            altitude: IONO_ALT_M,
+        }];
+
+        let t = t_df(&obs_locs, &secs_locs);
+
+        // Expected from Python:
+        // Bx: -0.
+        // By: -0.
+        // Bz: -inf
+        assert_f64_near(t[0][0][0], 0.0, DEFAULT_EPSILON, "TC5 Bx"); // Python had -0.0
+        assert_f64_near(t[0][1][0], 0.0, DEFAULT_EPSILON, "TC5 By"); // Python had -0.0
+        assert!(
+            t[0][2][0].is_infinite() && t[0][2][0].is_sign_negative(),
+            "TC5 Bz should be -inf, got {}",
+            t[0][2][0]
+        );
+    }
+
+    #[test]
+    fn test_case_6_multiple_obs_single_sec() {
+        let obs_locs = vec![
+            GeographicalPoint {
+                latitude: 60.0,
                 longitude: 0.0,
                 altitude: 0.0,
             },
             GeographicalPoint {
-                latitude: 20.0,
-                longitude: 0.0,
-                altitude: 10e3,
+                latitude: 70.0,
+                longitude: 10.0,
+                altitude: SAT_ALT_M,
             },
         ];
         let secs_locs = vec![GeographicalPoint {
-            latitude: 10.0,
-            longitude: 10.0,
-            altitude: 110e3,
+            latitude: 65.0,
+            longitude: 5.0,
+            altitude: IONO_ALT_M,
         }];
 
-        let result = t_df(&obs_locs, &secs_locs);
+        let t = t_df(&obs_locs, &secs_locs);
 
-        assert_eq!(result.len(), 2, "Test Case 2: nobs mismatch");
-        assert_eq!(
-            result[0].len(),
-            3,
-            "Test Case 2: components mismatch for obs 0"
-        );
-        assert_eq!(
-            result[0][0].len(),
-            1,
-            "Test Case 2: nsec mismatch for T[0][0]"
-        );
-        assert_eq!(
-            result[1].len(),
-            3,
-            "Test Case 2: components mismatch for obs 1"
-        );
-        assert_eq!(
-            result[1][0].len(),
-            1,
-            "Test Case 2: nsec mismatch for T[1][0]"
-        );
+        // Obs 1:
+        // Bx:  1.31095734e-13
+        // By:  5.45320388e-14
+        // Bz: -1.46625859e-13
+        assert_f64_near(t[0][0][0], 1.31095734e-13, DEFAULT_EPSILON, "TC6 Obs1 Bx");
+        assert_f64_near(t[0][1][0], 5.45320388e-14, DEFAULT_EPSILON, "TC6 Obs1 By");
+        assert_f64_near(t[0][2][0], -1.46625859e-13, DEFAULT_EPSILON, "TC6 Obs1 Bz");
 
-        assert_matrix_approx_val(&result, 0.0, EPSILON, "Test Case 2");
+        // Obs 2:
+        // Bx:  7.77118539e-14
+        // By:  3.34219561e-14
+        // Bz: -1.26026766e-13
+        assert_f64_near(t[1][0][0], 7.77118539e-14, DEFAULT_EPSILON, "TC6 Obs2 Bx");
+        assert_f64_near(t[1][1][0], 3.34219561e-14, DEFAULT_EPSILON, "TC6 Obs2 By");
+        assert_f64_near(t[1][2][0], -1.26026766e-13, DEFAULT_EPSILON, "TC6 Obs2 Bz");
     }
 
     #[test]
-    fn test_t_df_case_3_special_same_lat_lon() {
+    fn test_case_7_single_obs_multiple_secs() {
         let obs_locs = vec![GeographicalPoint {
-            latitude: 45.0,
-            longitude: 45.0,
+            latitude: 60.0,
+            longitude: 0.0,
+            altitude: 0.0,
+        }];
+        let secs_locs = vec![
+            GeographicalPoint {
+                latitude: 62.0,
+                longitude: 5.0,
+                altitude: IONO_ALT_M,
+            },
+            GeographicalPoint {
+                latitude: 63.0,
+                longitude: -5.0,
+                altitude: IONO_ALT_M + 10_000.0,
+            },
+        ];
+
+        let t = t_df(&obs_locs, &secs_locs);
+
+        // SEC 1:
+        // Bx:  1.38473593e-13
+        // By:  1.55458626e-13
+        // Bz: -2.59975868e-13
+        assert_f64_near(t[0][0][0], 1.38473593e-13, DEFAULT_EPSILON, "TC7 SEC1 Bx");
+        assert_f64_near(t[0][1][0], 1.55458626e-13, DEFAULT_EPSILON, "TC7 SEC1 By");
+        assert_f64_near(t[0][2][0], -2.59975868e-13, DEFAULT_EPSILON, "TC7 SEC1 Bz");
+
+        // SEC 2:
+        // Bx:  1.44132837e-13
+        // By: -1.05941124e-13
+        // Bz: -2.12584479e-13
+        assert_f64_near(t[0][0][1], 1.44132837e-13, DEFAULT_EPSILON, "TC7 SEC2 Bx");
+        assert_f64_near(t[0][1][1], -1.05941124e-13, DEFAULT_EPSILON, "TC7 SEC2 By");
+        assert_f64_near(t[0][2][1], -2.12584479e-13, DEFAULT_EPSILON, "TC7 SEC2 Bz");
+    }
+
+    #[test]
+    fn test_case_8_antipodal_case() {
+        let obs_locs = vec![GeographicalPoint {
+            latitude: 60.0,
+            longitude: 0.0,
             altitude: 0.0,
         }];
         let secs_locs = vec![GeographicalPoint {
-            latitude: 45.0,
-            longitude: 45.0,
-            altitude: 200e3,
+            latitude: -60.0,
+            longitude: 180.0,
+            altitude: IONO_ALT_M,
         }];
 
-        let result = t_df(&obs_locs, &secs_locs);
+        let t = t_df(&obs_locs, &secs_locs);
 
-        assert_eq!(result.len(), 1, "Test Case 3: nobs mismatch");
-        assert_eq!(result[0].len(), 3, "Test Case 3: components mismatch");
-        assert_eq!(
-            result[0][0].len(),
-            1,
-            "Test Case 3: nsec mismatch for T[0][0]"
-        );
-
-        assert_matrix_approx_val(&result, 0.0, EPSILON, "Test Case 3");
+        // Expected from Python:
+        // Bx: 0.0
+        // By: 0.0
+        // Bz: 7.78089013e-15
+        assert_f64_near(t[0][0][0], 0.0, DEFAULT_EPSILON, "TC8 Bx");
+        assert_f64_near(t[0][1][0], 0.0, DEFAULT_EPSILON, "TC8 By");
+        assert_f64_near(t[0][2][0], 7.78089013e-15, DEFAULT_EPSILON, "TC8 Bz");
     }
 
+    // It's also good to ensure R_EARTH is what we expect for these tests.
+    // This isn't a test of t_df itself, but a sanity check for the test setup.
     #[test]
-    fn test_t_df_case_4_complex_interaction() {
-        let obs_locs = vec![
-            GeographicalPoint {
-                latitude: 10.0,
-                longitude: 10.0,
-                altitude: 0.0,
-            },
-            GeographicalPoint {
-                latitude: -10.0,
-                longitude: -10.0,
-                altitude: 20e3,
-            },
-        ];
-        let secs_locs = vec![
-            GeographicalPoint {
-                latitude: 15.0,
-                longitude: 15.0,
-                altitude: 50e3,
-            },
-            GeographicalPoint {
-                latitude: -15.0,
-                longitude: -15.0,
-                altitude: -30e3,
-            },
-        ];
-
-        let result = t_df(&obs_locs, &secs_locs);
-
-        assert_eq!(result.len(), 2, "Test Case 4: nobs mismatch");
+    fn check_r_earth_constant_for_tests() {
+        // This value MUST match the one used in the Python script (6371e3 meters)
+        // for the altitude calculations to be correct.
         assert_eq!(
-            result[0].len(),
-            3,
-            "Test Case 4: components mismatch for obs 0"
+            R_EARTH, 6371_000.0,
+            "R_EARTH constant mismatch with Python script assumptions."
         );
-        assert_eq!(
-            result[0][0].len(),
-            2,
-            "Test Case 4: nsec mismatch for T[0][0]"
-        );
-        assert_eq!(
-            result[1].len(),
-            3,
-            "Test Case 4: components mismatch for obs 1"
-        );
-        assert_eq!(
-            result[1][0].len(),
-            2,
-            "Test Case 4: nsec mismatch for T[1][0]"
-        );
-
-        assert_matrix_approx_val(&result, 0.0, EPSILON, "Test Case 4");
     }
 }
