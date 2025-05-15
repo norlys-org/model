@@ -5,7 +5,7 @@
 // pub mod secs;
 mod sphere;
 // mod svd;
-// mod t_df;
+mod t_df;
 
 // use grid::geographical_grid;
 // use secs::{ObservationMatrix, SECS};
