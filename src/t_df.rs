@@ -1,9 +1,12 @@
 use crate::{
     grid::GeographicalPoint,
+    secs::R_EARTH,
     sphere::{angular_distance, bearing},
 };
 
-pub fn t_df(obs_locs: &[GeographicalPoint], secs_locs: &[GeographicalPoint]) -> Vec<Vec<Vec<f64>>> {
+const MU0: f64 = 1e-7;
+
+pub fn t_df(obs_locs: &[GeographicalPoint], secs_locs: &[GeographicalPoint]) {
     let nobs = obs_locs.len();
     let nsec = secs_locs.len();
 
@@ -26,5 +29,9 @@ pub fn t_df(obs_locs: &[GeographicalPoint], secs_locs: &[GeographicalPoint]) -> 
         .map(|row| row.iter().map(|&x| x.cos()).collect())
         .collect();
 
-    // only implement lower
+    let x: Vec<f64> = obs_locs
+        .iter()
+        .zip(secs_locs.iter())
+        .map(|(obs, sec)| obs.altitude / sec.altitude)
+        .collect(); // only implement lower
 }
