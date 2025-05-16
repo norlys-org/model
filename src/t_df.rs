@@ -49,13 +49,13 @@ pub fn t_df(obs_locs: &[GeographicalPoint], secs_locs: &[GeographicalPoint]) {
         .into_shape((obs_locs.len(), secs_locs.len()))
         .unwrap();
 
-    // let mut b_theta_divided = Array2::<f64>::zeros(sin_theta.dim());
-    // Zip::from(&mut b_theta_divided)
-    //     .and(&b_theta)
-    //     .and(&sin_theta)
-    //     .for_each(|result_val, &a, &b| {
-    //         *result_val = if b == 0.0 { 0.0 } else { a / b };
-    //     });
+    let mut b_theta_divided = Array2::<f64>::zeros(sin_theta.dim());
+    Zip::from(&mut b_theta_divided)
+        .and(&b_theta)
+        .and(&sin_theta)
+        .for_each(|result_val, &a, &b| {
+            *result_val = if b == 0.0 { 0.0 } else { a / b };
+        });
 }
 
 #[cfg(test)]
