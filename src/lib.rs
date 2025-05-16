@@ -1,4 +1,4 @@
-// mod grid;
+mod grid;
 // pub mod helpers;
 // mod matrix;
 // mod overlays;

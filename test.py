@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def _calc_angular_distance_and_bearing(
     latlon1: np.ndarray, latlon2: np.ndarray
 ) -> tuple[np.ndarray, np.ndarray]:
@@ -57,6 +58,7 @@ def _calc_angular_distance_and_bearing(
 
     return theta, alpha
 
+
 def _calc_T_df_under(
     obs_r: np.ndarray, sec_r: np.ndarray, cos_theta: np.ndarray
 ) -> tuple[np.ndarray, np.ndarray]:
@@ -64,8 +66,8 @@ def _calc_T_df_under(
     mu0_over_4pi = 1e-7
     # print(obs_r, sec_r)
     x = obs_r / sec_r
-    # print(x)
-    # print(cos_theta)
+    print(x)
+    print(cos_theta)
     factor = 1.0 / np.sqrt(1 - 2 * x * cos_theta + x**2)
 
     # Amm & Viljanen: Equation 9
@@ -100,6 +102,7 @@ def _calc_T_df_over(
     )
 
     return Br, Btheta
+
 
 def T_df(obs_loc: np.ndarray, sec_loc: np.ndarray) -> np.ndarray:
     """Calculate the divergence free magnetic field transfer function.
@@ -175,6 +178,6 @@ def T_df(obs_loc: np.ndarray, sec_loc: np.ndarray) -> np.ndarray:
 
 
 T_df(
-    np.array([ np.array([ 50, 20, 3000 ]), np.array([ 51, 21, 3000 ]) ]),
-    np.array([ np.array([ 10, 30, 4000 ]), np.array([ 11, 31, 4000 ]) ])
+    np.array([np.array([50, 20, 3000]), np.array([51, 21, 3000])]),
+    np.array([np.array([10, 30, 4000]), np.array([11, 31, 4000])]),
 )
