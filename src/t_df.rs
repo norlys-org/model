@@ -4,7 +4,7 @@ use ndarray::{Array1, Array2, Array3, ArrayView1, Zip};
 const MU0: f64 = 1e-7;
 pub const R_EARTH: f64 = 6371e3;
 
-pub fn t_df(obs_locs: &[GeographicalPoint], secs_locs: &[GeographicalPoint]) {
+pub fn t_df(obs_locs: &[GeographicalPoint], secs_locs: &[GeographicalPoint]) -> Array3<f64> {
     let nobs = obs_locs.len();
     let nsec = secs_locs.len();
 
@@ -56,6 +56,19 @@ pub fn t_df(obs_locs: &[GeographicalPoint], secs_locs: &[GeographicalPoint]) {
         .for_each(|result_val, &a, &b| {
             *result_val = if b == 0.0 { 0.0 } else { a / b };
         });
+
+    let mut t = Array3::<f64>::zeros((obs_locs.len(), 3, secs_locs.len()));
+    let alpha_array = Array2::from_shape_fn((nobs, nsec), |(i, j)| alpha[i][j]);
+
+    for i in 0..nobs {
+        for j in 0..nsec {
+            t[[i, 0, j]] = -b_theta_divided[[i, j]] * alpha_array[[i, j]].sin();
+            t[[i, 1, j]] = -b_theta_divided[[i, j]] * alpha_array[[i, j]].cos();
+            t[[i, 2, j]] = -br[[i, j]];
+        }
+    }
+
+    t
 }
 
 #[cfg(test)]
