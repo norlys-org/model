@@ -66,8 +66,6 @@ def _calc_T_df_under(
     mu0_over_4pi = 1e-7
     # print(obs_r, sec_r)
     x = obs_r / sec_r
-    print(x)
-    print(cos_theta)
     factor = 1.0 / np.sqrt(1 - 2 * x * cos_theta + x**2)
 
     # Amm & Viljanen: Equation 9
@@ -127,7 +125,6 @@ def T_df(obs_loc: np.ndarray, sec_loc: np.ndarray) -> np.ndarray:
     nsec = len(sec_loc)
 
     theta, alpha = _calc_angular_distance_and_bearing(obs_loc[:, :2], sec_loc[:, :2])
-    print(theta)
 
     sin_theta = np.sin(theta)
     cos_theta = np.cos(theta)
@@ -154,9 +151,10 @@ def T_df(obs_loc: np.ndarray, sec_loc: np.ndarray) -> np.ndarray:
         # over_locs is a 2d array of booleans
         under_indices = np.where(under_locs)
         obs_r = obs_loc[under_indices[0], 2]
+        print(obs_loc)
+        print(under_indices[0])
+        print(obs_r)
         sec_r = sec_loc[under_indices[1], 2]
-        print(cos_theta)
-        print(cos_theta[under_locs])
         Br[under_locs], Btheta[under_locs] = _calc_T_df_under(
             obs_r, sec_r, cos_theta[under_locs]
         )
@@ -179,5 +177,5 @@ def T_df(obs_loc: np.ndarray, sec_loc: np.ndarray) -> np.ndarray:
 
 T_df(
     np.array([np.array([50, 20, 3000]), np.array([51, 21, 3000])]),
-    np.array([np.array([10, 30, 4000]), np.array([11, 31, 4000])]),
+    np.array([np.array([10, 30, 4000]), np.array([11, 31, 4000]), np.array([12, 32, 4000])]),
 )
