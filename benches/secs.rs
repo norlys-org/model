@@ -1,6 +1,6 @@
-#![feature(test)]
-extern crate test;
-use norlys::secs::{secs_interpolate, Observation};
+// #![feature(test)]
+// extern crate test;
+// use norlys::secs::{secs_interpolate, Observation};
 use test::Bencher;
 
 fn make_input() -> Vec<Observation> {
