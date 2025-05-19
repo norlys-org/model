@@ -34,7 +34,7 @@ pub fn t_df(obs_locs: &[GeographicalPoint], secs_locs: &[GeographicalPoint]) -> 
     );
 
     // MARK: calc_t_df_under
-    let x = &sec_r / &obs_r;
+    let x = &obs_r / &sec_r;
     let factor =
         1.0 / (1.0 - 2.0 * x.clone() * &cos_theta + x.mapv(|val| val.powi(2))).mapv(f64::sqrt);
 
@@ -76,37 +76,82 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_t_df() {
-        t_df(
+    fn test_t_df_few_points() {
+        let t = t_df(
             &[
                 GeographicalPoint {
                     latitude: 50.0,
                     longitude: 20.0,
-                    altitude: 3000.0,
+                    altitude: 3000.0 - R_EARTH,
                 },
                 GeographicalPoint {
                     latitude: 51.0,
                     longitude: 21.0,
-                    altitude: 3000.0,
+                    altitude: 3000.0 - R_EARTH,
                 },
             ],
             &[
                 GeographicalPoint {
                     latitude: 10.0,
                     longitude: 30.0,
-                    altitude: 4000.0,
+                    altitude: 4000.0 - R_EARTH,
                 },
                 GeographicalPoint {
                     latitude: 11.0,
                     longitude: 31.0,
-                    altitude: 3000.0,
+                    altitude: 4000.0 - R_EARTH,
                 },
                 GeographicalPoint {
                     latitude: 12.0,
                     longitude: 32.0,
-                    altitude: 3000.0,
+                    altitude: 4000.0 - R_EARTH,
                 },
             ],
         );
+
+        // values generated from the python code
+        let expected = Array3::from_shape_vec(
+            (2, 3, 3),
+            vec![
+                -3.67250861e-11,
+                -3.67476077e-11,
+                -3.67074095e-11,
+                9.94787927e-12,
+                1.11826106e-11,
+                1.24566687e-11,
+                -1.76265553e-11,
+                -1.84618364e-11,
+                -1.92994257e-11,
+                -3.66568665e-11,
+                -3.67415083e-11,
+                -3.67687370e-11,
+                8.73331388e-12,
+                9.92220548e-12,
+                1.11521060e-11,
+                -1.68114853e-11,
+                -1.76472830e-11,
+                -1.84884113e-11,
+            ],
+        )
+        .unwrap();
+
+        assert_eq!(t.shape(), expected.shape(), "T have different shapes");
+
+        let epsilon = 1e-15;
+        t.iter()
+            .zip(expected.iter())
+            .enumerate()
+            .for_each(|(i, (&a, &b))| {
+                let diff = (a - b).abs();
+                assert!(
+                    diff <= epsilon,
+                    "T differ at index {}: {} vs {} (diff: {}, epsilon: {})",
+                    i,
+                    a,
+                    b,
+                    diff,
+                    epsilon
+                );
+            });
     }
 }
