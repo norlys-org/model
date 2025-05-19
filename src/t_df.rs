@@ -1,6 +1,5 @@
-use crate::geo::GeographicalPoint;
-use crate::sphere::calc_angular_distance_and_bearing;
-use ndarray::{Array1, Array2, Array3, ArrayView1, Zip};
+use crate::{geo::GeographicalPoint, sphere::angular_distance_and_bearing};
+use ndarray::{Array1, Array2, Array3, Zip};
 
 /// Physical constant: permeability of free space (µ0)
 const MU0: f64 = 1e-7;
@@ -47,12 +46,10 @@ pub fn t_df(obs_locs: &[GeographicalPoint], secs_locs: &[GeographicalPoint]) -> 
         .map(|p| (p.latitude, p.longitude))
         .collect();
 
-    let (theta, alpha) = calc_angular_distance_and_bearing(&obs_lat_lon, &secs_lat_lon);
+    let (theta, alpha) = angular_distance_and_bearing(&obs_lat_lon, &secs_lat_lon);
 
-    let theta_array = Array2::from_shape_fn((nobs, nsec), |(i, j)| theta[i][j]);
-    let sin_theta = theta_array.mapv(|x| x.sin());
-    // Flatten + cos
-    let cos_theta = Array1::from_iter(theta.iter().flat_map(|row| row.iter().map(|&x| x.cos())));
+    let sin_theta = theta.mapv(|x| x.sin());
+    let cos_theta = theta.mapv(|x| x.cos()).into_shape((nobs * nsec,)).unwrap(); // cos + flatten
 
     let obs_r = Array1::from_iter(
         obs_locs
@@ -90,12 +87,11 @@ pub fn t_df(obs_locs: &[GeographicalPoint], secs_locs: &[GeographicalPoint]) -> 
         });
 
     let mut t = Array3::<f64>::zeros((obs_locs.len(), 3, secs_locs.len()));
-    let alpha_array = Array2::from_shape_fn((nobs, nsec), |(i, j)| alpha[i][j]);
 
     for i in 0..nobs {
         for j in 0..nsec {
-            t[[i, 0, j]] = -b_theta_divided[[i, j]] * alpha_array[[i, j]].sin();
-            t[[i, 1, j]] = -b_theta_divided[[i, j]] * alpha_array[[i, j]].cos();
+            t[[i, 0, j]] = -b_theta_divided[[i, j]] * alpha[[i, j]].sin();
+            t[[i, 1, j]] = -b_theta_divided[[i, j]] * alpha[[i, j]].cos();
             t[[i, 2, j]] = -br[[i, j]];
         }
     }
