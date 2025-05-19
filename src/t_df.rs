@@ -115,6 +115,8 @@ mod tests {
                 GeographicalPoint {
                     latitude: 50.0,
                     longitude: 20.0,
+                    // Substract R_EARTH in order to have same results as python code as `t_df`
+                    // adds R_EARTH
                     altitude: 3000.0 - R_EARTH,
                 },
                 GeographicalPoint {
