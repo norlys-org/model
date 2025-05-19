@@ -1,5 +1,8 @@
 use std::ops::Range;
 
+// Earth radius in meters
+pub const R_EARTH: f64 = 6371e3;
+
 #[derive(PartialEq, Debug, Clone, Copy)]
 pub struct GeographicalPoint {
     /// The longitude in degrees
@@ -8,6 +11,31 @@ pub struct GeographicalPoint {
     pub latitude: f64,
     /// Altitude from the surface of the earth in meters
     pub altitude: f64,
+}
+
+impl GeographicalPoint {
+    pub fn new(latitude: f64, longitude: f64, altitude: f64) -> Self {
+        Self {
+            latitude,
+            longitude,
+            altitude,
+        }
+    }
+
+    /// Returns the radius from the center of the Earth in meters
+    pub fn radius(&self) -> f64 {
+        self.altitude + R_EARTH
+    }
+
+    /// Returns latitude in radians
+    pub fn lat_rad(&self) -> f64 {
+        self.latitude.to_radians()
+    }
+
+    /// Returns longitude in radians
+    pub fn lon_rad(&self) -> f64 {
+        self.longitude.to_radians()
+    }
 }
 
 /// Return evenly spaced numbers over a specified interval.

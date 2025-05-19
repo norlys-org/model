@@ -1,10 +1,9 @@
-use crate::{grid::GeographicalPoint, sphere::calc_angular_distance_and_bearing};
+use crate::geo::GeographicalPoint;
+use crate::sphere::calc_angular_distance_and_bearing;
 use ndarray::{Array1, Array2, Array3, ArrayView1, Zip};
 
 /// Physical constant: permeability of free space (µ0)
 const MU0: f64 = 1e-7;
-// Earth radius in meters
-pub const R_EARTH: f64 = 6371e3;
 
 /// Calculates the "Transfer Matrix" (T) for Divergence-Free Spherical Elementary Current Systems (SECS).
 ///
@@ -58,12 +57,12 @@ pub fn t_df(obs_locs: &[GeographicalPoint], secs_locs: &[GeographicalPoint]) -> 
     let obs_r = Array1::from_iter(
         obs_locs
             .iter()
-            .flat_map(|obs| vec![R_EARTH + obs.altitude; secs_locs.len()]),
+            .flat_map(|obs| vec![obs.radius(); secs_locs.len()]),
     );
     let sec_r = Array1::from_iter(
         secs_locs
             .iter()
-            .flat_map(|sec| vec![R_EARTH + sec.altitude; obs_locs.len()]),
+            .flat_map(|sec| vec![sec.radius(); obs_locs.len()]),
     );
 
     // MARK: calc_t_df_under
@@ -107,40 +106,25 @@ pub fn t_df(obs_locs: &[GeographicalPoint], secs_locs: &[GeographicalPoint]) -> 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::geo::R_EARTH;
 
     #[test]
     fn test_t_df_few_points() {
         let t = t_df(
             &[
-                GeographicalPoint {
-                    latitude: 50.0,
-                    longitude: 20.0,
+                GeographicalPoint::new(
+                    50.0,
+                    20.0,
                     // Substract R_EARTH in order to have same results as python code as `t_df`
                     // adds R_EARTH
-                    altitude: 3000.0 - R_EARTH,
-                },
-                GeographicalPoint {
-                    latitude: 51.0,
-                    longitude: 21.0,
-                    altitude: 3000.0 - R_EARTH,
-                },
+                    3000.0 - R_EARTH,
+                ),
+                GeographicalPoint::new(51.0, 21.0, 3000.0 - R_EARTH),
             ],
             &[
-                GeographicalPoint {
-                    latitude: 10.0,
-                    longitude: 30.0,
-                    altitude: 4000.0 - R_EARTH,
-                },
-                GeographicalPoint {
-                    latitude: 11.0,
-                    longitude: 31.0,
-                    altitude: 4000.0 - R_EARTH,
-                },
-                GeographicalPoint {
-                    latitude: 12.0,
-                    longitude: 32.0,
-                    altitude: 4000.0 - R_EARTH,
-                },
+                GeographicalPoint::new(10.0, 30.0, 4000.0 - R_EARTH),
+                GeographicalPoint::new(11.0, 31.0, 4000.0 - R_EARTH),
+                GeographicalPoint::new(12.0, 32.0, 4000.0 - R_EARTH),
             ],
         );
 
