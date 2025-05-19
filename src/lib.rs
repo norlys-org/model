@@ -1,11 +1,12 @@
 mod geo;
+mod model;
+mod sphere;
+mod t_df;
 // pub mod helpers;
 // mod matrix;
 // mod overlays;
 // pub mod secs;
-mod sphere;
 // mod svd;
-mod t_df;
 
 // use grid::geographical_grid;
 // use secs::{ObservationMatrix, SECS};
