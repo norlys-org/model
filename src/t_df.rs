@@ -1,9 +1,42 @@
 use crate::{grid::GeographicalPoint, sphere::calc_angular_distance_and_bearing};
 use ndarray::{Array1, Array2, Array3, ArrayView1, Zip};
 
+/// Physical constant: permeability of free space (µ0)
 const MU0: f64 = 1e-7;
+// Earth radius in meters
 pub const R_EARTH: f64 = 6371e3;
 
+/// Calculates the "Transfer Matrix" (T) for Divergence-Free Spherical Elementary Current Systems (SECS).
+///
+/// **What it does:**
+/// This function determines the magnetic field influence that each hypothetical "elementary current"
+/// located high above the Earth – ~110km – (at `secs_locs`) would have on each ground-based observation
+/// point (`obs_locs`). It essentially builds a map of potential influences.
+/// This function deals with "divergence-free" SECS, which represent currents that flow in closed loops.
+///
+/// **The Physics:**
+/// The calculation is based on the fundamental principle that electric currents create magnetic fields.
+/// This relationship is formally described by the Biot-Savart Law.
+/// (See: https://en.wikipedia.org/wiki/Biot%E2%80%93Savart_law)
+///
+/// **Specific Formulas:**
+/// The exact mathematical formulas implemented here are analytical solutions derived from the
+/// Biot-Savart law specifically for the geometry of these spherical elementary currents. They come
+/// from the work of Amm & Viljanen in their paper on using SECS for ionospheric field continuation.
+/// The comments below reference specific equations from that paper (e.g., Eq. 9, 10, A.7, A.8).
+/// (See: https://link.springer.com/content/pdf/10.1007/978-3-030-26732-2.pdf)
+///
+/// **The Transfer Matrix (Output):**
+/// The function returns a 3D matrix `T`. Each element `T[i][k][j]` represents the magnetic field's
+/// k-th component (where 0=Bx/North, 1=By/East, 2=Bz/Down) measured at the i-th observation point (`obs_locs[i]`),
+/// *caused by* the j-th elementary current (`secs_locs[j]`) *if that current had a standard strength of 1 Ampere*.
+///
+/// # Arguments
+/// * `obs_locs` - A slice of `GeographicalPoint` structures representing the observation locations (e.g., ground magnetometers).
+/// * `secs_locs` - A slice of `GeographicalPoint` structures representing the locations (poles) of the hypothetical Spherical Elementary Currents.
+///
+/// # Returns
+/// `Array3<f64>` representing the transfer matrix T, with dimensions [nobs][3][nsec].
 pub fn t_df(obs_locs: &[GeographicalPoint], secs_locs: &[GeographicalPoint]) -> Array3<f64> {
     let nobs = obs_locs.len();
     let nsec = secs_locs.len();
