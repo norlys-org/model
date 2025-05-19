@@ -2,11 +2,11 @@ use std::ops::Range;
 
 #[derive(PartialEq, Debug, Clone, Copy)]
 pub struct GeographicalPoint {
-    /// The longitude in degrees.
+    /// The longitude in degrees
     pub longitude: f64,
-    /// The latitude in degrees.
+    /// The latitude in degrees
     pub latitude: f64,
-    /// Altitude from the surface of the earth
+    /// Altitude from the surface of the earth in meters
     pub altitude: f64,
 }
 
