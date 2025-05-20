@@ -1,10 +1,13 @@
 use nalgebra::{DMatrix, DVector};
-use ndarray::Array;
+use ndarray::{Array, Array3};
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 use web_sys::console::assert;
 
-use crate::geo::GeographicalPoint;
+use crate::{
+    geo::GeographicalPoint,
+    t_df::{self, t_df},
+};
 
 pub const R_EARTH: f64 = 6371e3;
 
@@ -50,8 +53,8 @@ pub struct SECS {
     pub sec_amps_var: Option<DVector<f64>>,
 
     // Cache fields for transfer function calculation
-    _obs_loc_cache: Option<Vec<GeographicalPoint>>,
-    _t_obs_flat_cache: Option<DMatrix<f64>>,
+    obs_locs_cache: Vec<GeographicalPoint>,
+    t_obs_flat_cache: Option<Array3<f64>>,
 }
 
 impl SECS {
@@ -60,8 +63,8 @@ impl SECS {
             secs_locs,
             sec_amps: None,
             sec_amps_var: None,
-            _obs_loc_cache: None,
-            _t_obs_flat_cache: None,
+            obs_locs_cache: vec![],
+            t_obs_flat_cache: None,
         }
     }
 
@@ -74,6 +77,17 @@ impl SECS {
                 .collect(),
         )
         .unwrap();
+
+        let obs_locs: Vec<GeographicalPoint> = obs
+            .iter()
+            .map(|obs| GeographicalPoint::new(obs.lat, obs.lon, obs.alt))
+            .collect();
+
+        // Check if transfer matrix has already been computed in this instance
+        if obs_locs != self.obs_locs_cache {
+            self.t_obs_flat_cache = Some(t_df(&obs_locs, &self.secs_locs));
+            self.obs_locs_cache = obs_locs;
+        }
     }
 
     // pub fn predict(&self, pred_locs: &[GeographicalPoint]) -> Result<PredictionMatrix, String> {}
