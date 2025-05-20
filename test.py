@@ -202,6 +202,7 @@ class SECS:
         if np.allclose(obs_std_flat, obs_std_flat[0]):
             # The SVD is the same for all time steps, so we can calculate it once
             # and broadcast it to all time steps avoiding the for-loop below
+            print(obs_std_flat[0], mode)
             VWU = self._compute_VWU(self._T_obs_flat, obs_std_flat[0], epsilon, mode)
             self.sec_amps[:] = (obs_B_flat / obs_std_flat) @ VWU.T
 

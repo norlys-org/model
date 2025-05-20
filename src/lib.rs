@@ -1,6 +1,7 @@
 mod geo;
 mod model;
 mod sphere;
+mod svd;
 mod t_df;
 // pub mod helpers;
 // mod matrix;
