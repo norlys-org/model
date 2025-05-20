@@ -1,4 +1,7 @@
-## model
+<p align="center">
+<a href="https://norlys.live" target="_blank" rel="noopener noreferrer"><img src="https://github.com/user-attachments/assets/d1cca4b6-82d1-4b99-a724-da9e8430af18" alt="norlys name on painting"></a>
+</p>
+
 >
 > Norlys stands for "Ny Oval Representasjon for nordLYS", meaning "New Oval Representation of the northern Lights" in norwegian
 
