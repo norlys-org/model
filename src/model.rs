@@ -9,8 +9,6 @@ use crate::{
     t_df::{self, t_df},
 };
 
-pub const R_EARTH: f64 = 6371e3;
-
 // #[wasm_bindgen]
 #[derive(Serialize, Deserialize, Debug, Clone, Copy)]
 pub struct ObservationVector {
@@ -88,6 +86,8 @@ impl SECS {
             self.t_obs_flat_cache = Some(t_df(&obs_locs, &self.secs_locs));
             self.obs_locs_cache = obs_locs;
         }
+
+        // SVD
     }
 
     // pub fn predict(&self, pred_locs: &[GeographicalPoint]) -> Result<PredictionMatrix, String> {}
