@@ -1,5 +1,5 @@
 use nalgebra::{DMatrix, DVector};
-use ndarray::{Array, Array3};
+use ndarray::{Array, Array2, Array3};
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 use web_sys::console::assert;
@@ -52,7 +52,7 @@ pub struct SECS {
 
     // Cache fields for transfer function calculation
     obs_locs_cache: Vec<GeographicalPoint>,
-    t_obs_flat_cache: Option<Array3<f64>>,
+    t_obs_flat_cache: Option<Array2<f64>>,
 }
 
 impl SECS {
@@ -83,7 +83,12 @@ impl SECS {
 
         // Check if transfer matrix has already been computed in this instance
         if obs_locs != self.obs_locs_cache {
-            self.t_obs_flat_cache = Some(t_df(&obs_locs, &self.secs_locs));
+            let t = t_df(&obs_locs, &self.secs_locs);
+            self.t_obs_flat_cache = Some(
+                t.clone()
+                    .into_shape((t.len() / self.secs_locs.len(), self.secs_locs.len()))
+                    .unwrap(),
+            );
             self.obs_locs_cache = obs_locs;
         }
 
