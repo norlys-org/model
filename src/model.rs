@@ -1,4 +1,3 @@
-use nalgebra::{DMatrix, DVector};
 use ndarray::{Array, Array2, Array3};
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
@@ -6,6 +5,7 @@ use web_sys::console::assert;
 
 use crate::{
     geo::GeographicalPoint,
+    svd::{self, svd},
     t_df::{self, t_df},
 };
 
@@ -46,9 +46,9 @@ pub struct SECS {
     /// The latitude, longiutde, and radius of the divergence free (df) SEC locations.
     secs_locs: Vec<GeographicalPoint>,
     /// Storage of the scaling factors (amplitudes) for SECs for the last fit.
-    pub sec_amps: Option<DVector<f64>>,
+    // pub sec_amps: Option<DVector<f64>>,
     /// Storage of the variance of the scaling factors for SECs for the last fit.
-    pub sec_amps_var: Option<DVector<f64>>,
+    // pub sec_amps_var: Option<DVector<f64>>,
 
     // Cache fields for transfer function calculation
     obs_locs_cache: Vec<GeographicalPoint>,
@@ -59,14 +59,14 @@ impl SECS {
     pub fn new(secs_locs: Vec<GeographicalPoint>) -> Self {
         SECS {
             secs_locs,
-            sec_amps: None,
-            sec_amps_var: None,
+            // sec_amps: None,
+            // sec_amps_var: None,
             obs_locs_cache: vec![],
             t_obs_flat_cache: None,
         }
     }
 
-    pub fn fit(&mut self, obs: &[ObservationVector], epsilon_reg: f64) {
+    pub fn fit(&mut self, obs: &[ObservationVector], epsilon: f64) {
         let n_times = obs.len();
         let obs_b = Array::from_shape_vec(
             (1, obs.len() * 3),
@@ -93,6 +93,7 @@ impl SECS {
         }
 
         // SVD
+        svd(self.t_obs_flat_cache.as_ref().unwrap(), epsilon);
     }
 
     // pub fn predict(&self, pred_locs: &[GeographicalPoint]) -> Result<PredictionMatrix, String> {}

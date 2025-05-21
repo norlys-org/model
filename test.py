@@ -113,6 +113,7 @@ class SECS:
         # Filter components
         if mode == "relative":
             valid = S >= epsilon * S.max()
+            print(valid)
         elif mode == "variance":
             energy = np.cumsum(S**2)
             total = energy[-1]
@@ -192,9 +193,7 @@ class SECS:
 
         # Calculate the transfer functions, using cached values if possible
         if not np.array_equal(obs_loc, self._obs_loc):
-            print(self._calc_T(obs_loc))
             self._T_obs_flat = self._calc_T(obs_loc).reshape(-1, self.nsec)
-            print(self._T_obs_flat)
             self._obs_loc = obs_loc
 
         # Store the fit sec_amps in the object
@@ -415,7 +414,6 @@ def T_df(obs_loc: np.ndarray, sec_loc: np.ndarray) -> np.ndarray:
         # over_locs is a 2d array of booleans
         under_indices = np.where(under_locs)
         obs_r = obs_loc[under_indices[0], 2]
-        print(obs_r)
         sec_r = sec_loc[under_indices[1], 2]
         Br[under_locs], Btheta[under_locs] = _calc_T_df_under(
             obs_r, sec_r, cos_theta[under_locs]
