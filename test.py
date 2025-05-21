@@ -192,7 +192,9 @@ class SECS:
 
         # Calculate the transfer functions, using cached values if possible
         if not np.array_equal(obs_loc, self._obs_loc):
+            print(self._calc_T(obs_loc))
             self._T_obs_flat = self._calc_T(obs_loc).reshape(-1, self.nsec)
+            print(self._T_obs_flat)
             self._obs_loc = obs_loc
 
         # Store the fit sec_amps in the object
@@ -202,7 +204,6 @@ class SECS:
         if np.allclose(obs_std_flat, obs_std_flat[0]):
             # The SVD is the same for all time steps, so we can calculate it once
             # and broadcast it to all time steps avoiding the for-loop below
-            print(obs_std_flat[0], mode)
             VWU = self._compute_VWU(self._T_obs_flat, obs_std_flat[0], epsilon, mode)
             self.sec_amps[:] = (obs_B_flat / obs_std_flat) @ VWU.T
 
@@ -414,6 +415,7 @@ def T_df(obs_loc: np.ndarray, sec_loc: np.ndarray) -> np.ndarray:
         # over_locs is a 2d array of booleans
         under_indices = np.where(under_locs)
         obs_r = obs_loc[under_indices[0], 2]
+        print(obs_r)
         sec_r = sec_loc[under_indices[1], 2]
         Br[under_locs], Btheta[under_locs] = _calc_T_df_under(
             obs_r, sec_r, cos_theta[under_locs]
@@ -748,10 +750,12 @@ i = [1, 2]
 j = [3, 4]
 u = [5, 6]
 
-lat = np.linspace(45, 85)
-lon = np.linspace(-170, 35)
+# lat = np.linspace(45, 85)
+# lon = np.linspace(-170, 35)
+lat = [10]
+lon = [20]
 R_earth = 6371e3
-r = R_earth + 110000
+r = R_earth + 0
 
 lat_lon_r = np.array([[lt, ln, r] for lt in lat for ln in lon])
 secs = SECS(sec_df_loc=lat_lon_r)
