@@ -113,7 +113,6 @@ class SECS:
         # Filter components
         if mode == "relative":
             valid = S >= epsilon * S.max()
-            print(valid)
         elif mode == "variance":
             energy = np.cumsum(S**2)
             total = energy[-1]
