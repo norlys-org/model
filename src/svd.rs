@@ -1,6 +1,24 @@
 use nalgebra::{DMatrix, SVD};
 use ndarray::{Array1, Array2};
 
+/// Performs SVD-based matrix decomposition to generate the VWU transformation matrix
+///
+/// This function applies singular value decomposition to the input transfer function
+/// matrix and constructs a filtered VWU matrix by discarding small singular values
+/// based on a relative cutoff value.
+///
+/// # Parameters
+///
+/// * `t_obs_flat` - A 2D array representing the flattened transfer function data
+/// * `epsilon` - Relative cutoff value for singular value filtering (range: 0.01-0.1)
+///
+/// # Output
+///
+/// Returns a 2D array representing the computed VWU matrix, which is the product:
+/// V_filtered^T * W_inverse * U_filtered^T, where:
+/// - V_filtered^T: transposed right singular vectors (after filtering)
+/// - W_inverse: diagonal matrix containing reciprocals of retained singular values
+/// - U_filtered^T: transposed left singular vectors (after filtering)
 pub fn svd(t_obs_flat: &Array2<f64>, epsilon: f64) -> Array2<f64> {
     // Convert ndarray Array2 to nalgebra DMatrix
     let (rows, cols) = t_obs_flat.dim();
