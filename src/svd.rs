@@ -41,3 +41,71 @@ pub fn svd(t_obs_flat: &Array2<f64>, epsilon: f64) -> Array2<f64> {
     // Vh.T @ (W @ U.T)
     vh_t.dot(&w_diag.dot(&u_t))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_svd_few_points() {
+        let t_obs_flat = Array2::from_shape_vec(
+            (12, 1),
+            vec![
+                -1.740219584057594e-14,
+                -2.063846893630430e-14,
+                -7.196789740341245e-15,
+                -1.249155868086343e-14,
+                -1.695818904037060e-14,
+                -2.260086589981562e-15,
+                -9.105042385762502e-15,
+                -1.488743707273469e-14,
+                4.951651778613771e-16,
+                -6.470234386398055e-15,
+                -1.368218481923297e-14,
+                2.120640891125677e-15,
+            ],
+        )
+        .unwrap();
+
+        let expected = Array2::from_shape_vec(
+            (1, 12),
+            vec![
+                -9.844820937276402e+12,
+                -1.167565478281233e+13,
+                -4.071388861840475e+12,
+                -7.066760974717956e+12,
+                -9.593636116521627e+12,
+                -1.278582771102278e+12,
+                -5.150931108655837e+12,
+                -8.422164279654078e+12,
+                2.801262872271265e+11,
+                -3.660359849977943e+12,
+                -7.740325462951015e+12,
+                1.199695144030031e+12,
+            ],
+        )
+        .unwrap();
+
+        let vwu = svd(&t_obs_flat, 0.05);
+
+        assert_eq!(vwu.shape(), expected.shape(), "VWU have different shapes");
+
+        // relative epsilon
+        let epsilon = 1e-15;
+        vwu.iter()
+            .zip(expected.iter())
+            .enumerate()
+            .for_each(|(i, (&a, &b))| {
+                let diff = (a - b).abs();
+                assert!(
+                    diff <= a.abs().max(b.abs()) * epsilon,
+                    "T differ at index {}: {} vs {} (diff: {}, epsilon: {})",
+                    i,
+                    a,
+                    b,
+                    diff,
+                    epsilon
+                );
+            });
+    }
+}
