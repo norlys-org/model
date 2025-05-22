@@ -1,4 +1,4 @@
-use ndarray::{Array, Array2, Array3};
+use ndarray::{Array, Array1, Array2, Array3, Axis};
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 use web_sys::console::assert;
@@ -48,7 +48,7 @@ pub struct SECS {
     /// Storage of the scaling factors (amplitudes) for SECs for the last fit.
     pub sec_amps: Option<Array2<f64>>,
     /// Storage of the variance of the scaling factors for SECs for the last fit.
-    // pub sec_amps_var: Option<DVector<f64>>,
+    pub sec_amps_var: Option<Array1<f64>>,
 
     // Cache fields for transfer function calculation
     obs_locs_cache: Vec<GeographicalPoint>,
@@ -60,14 +60,13 @@ impl SECS {
         SECS {
             sec_locs,
             sec_amps: None,
-            // sec_amps_var: None,
+            sec_amps_var: None,
             obs_locs_cache: vec![],
             t_obs_flat_cache: None,
         }
     }
 
     pub fn fit(&mut self, obs: &[ObservationVector], epsilon: f64) {
-        let n_times = obs.len();
         let obs_b: Array2<f64> = Array2::from_shape_vec(
             (1, obs.len() * 3),
             obs.iter()
@@ -95,6 +94,7 @@ impl SECS {
         // SVD
         let vwu: Array2<f64> = svd(self.t_obs_flat_cache.as_ref().unwrap(), epsilon);
         self.sec_amps = Some(obs_b.dot(&vwu.t()));
+        self.sec_amps_var = Some((&vwu * &vwu).sum_axis(Axis(1)));
     }
 
     // pub fn predict(&self, pred_locs: &[GeographicalPoint]) -> Result<PredictionMatrix, String> {}
