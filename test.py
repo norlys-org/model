@@ -5,6 +5,8 @@ Calculate magnetic field transfer functions and fit a system (SECS) to observati
 
 import numpy as np
 
+np.set_printoptions(precision=15, suppress=False)
+
 
 class SECS:
     """Spherical Elementary Current System (SECS).
@@ -202,10 +204,7 @@ class SECS:
         if np.allclose(obs_std_flat, obs_std_flat[0]):
             # The SVD is the same for all time steps, so we can calculate it once
             # and broadcast it to all time steps avoiding the for-loop below
-            np.set_printoptions(precision=15, suppress=False)
-            print(self._T_obs_flat)
             VWU = self._compute_VWU(self._T_obs_flat, obs_std_flat[0], epsilon, mode)
-            print(VWU)
             self.sec_amps[:] = (obs_B_flat / obs_std_flat) @ VWU.T
 
             valid = np.isfinite(obs_std_flat[0])
@@ -744,17 +743,17 @@ def calc_bearing(latlon1: np.ndarray, latlon2: np.ndarray) -> np.ndarray:
     return alpha
 
 
-# x = [50, 60]
-# y = [40, 50]
-# i = [1, 2]
-# j = [3, 4]
-# u = [5, 6]
+x = [50, 60]
+y = [40, 50]
+i = [1, 2]
+j = [3, 4]
+u = [5, 6]
 #
-x = [50, 60, 70, 80]
-y = [40, 50, 60, 70]
-i = [1, 2, 6, 7]
-j = [3, 4, 8, 9]
-u = [5, 6, 10, 11]
+# x = [50, 60, 70, 80]
+# y = [40, 50, 60, 70]
+# i = [1, 2, 6, 7]
+# j = [3, 4, 8, 9]
+# u = [5, 6, 10, 11]
 
 # lat = np.linspace(45, 85)
 # lon = np.linspace(-170, 35)

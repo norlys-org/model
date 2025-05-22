@@ -44,9 +44,9 @@ pub struct PredictionVector {
 
 pub struct SECS {
     /// The latitude, longiutde, and radius of the divergence free (df) SEC locations.
-    secs_locs: Vec<GeographicalPoint>,
+    sec_locs: Vec<GeographicalPoint>,
     /// Storage of the scaling factors (amplitudes) for SECs for the last fit.
-    // pub sec_amps: Option<DVector<f64>>,
+    pub sec_amps: Option<Array2<f64>>,
     /// Storage of the variance of the scaling factors for SECs for the last fit.
     // pub sec_amps_var: Option<DVector<f64>>,
 
@@ -56,10 +56,10 @@ pub struct SECS {
 }
 
 impl SECS {
-    pub fn new(secs_locs: Vec<GeographicalPoint>) -> Self {
+    pub fn new(sec_locs: Vec<GeographicalPoint>) -> Self {
         SECS {
-            secs_locs,
-            // sec_amps: None,
+            sec_locs,
+            sec_amps: None,
             // sec_amps_var: None,
             obs_locs_cache: vec![],
             t_obs_flat_cache: None,
@@ -68,7 +68,7 @@ impl SECS {
 
     pub fn fit(&mut self, obs: &[ObservationVector], epsilon: f64) {
         let n_times = obs.len();
-        let obs_b = Array::from_shape_vec(
+        let obs_b: Array2<f64> = Array2::from_shape_vec(
             (1, obs.len() * 3),
             obs.iter()
                 .flat_map(|obs| vec![obs.i, obs.j, obs.k])
@@ -83,17 +83,18 @@ impl SECS {
 
         // Check if transfer matrix has already been computed in this instance
         if obs_locs != self.obs_locs_cache {
-            let t = t_df(&obs_locs, &self.secs_locs);
+            let t = t_df(&obs_locs, &self.sec_locs);
             self.t_obs_flat_cache = Some(
                 t.clone()
-                    .into_shape((t.len() / self.secs_locs.len(), self.secs_locs.len()))
+                    .into_shape((t.len() / self.sec_locs.len(), self.sec_locs.len()))
                     .unwrap(),
             );
             self.obs_locs_cache = obs_locs;
         }
 
         // SVD
-        svd(self.t_obs_flat_cache.as_ref().unwrap(), epsilon);
+        let vwu: Array2<f64> = svd(self.t_obs_flat_cache.as_ref().unwrap(), epsilon);
+        self.sec_amps = Some(obs_b.dot(&vwu.t()));
     }
 
     // pub fn predict(&self, pred_locs: &[GeographicalPoint]) -> Result<PredictionMatrix, String> {}
