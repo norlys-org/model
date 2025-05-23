@@ -280,10 +280,11 @@ class SECS:
         else:
             # Predicting magnetic fields
             if not np.array_equal(pred_loc, self._pred_loc_B):
+                print(pred_loc[0][2])
+                print(self.sec_df_loc[0][2])
                 self._T_pred_B = self._calc_T(pred_loc)
                 self._pred_loc_B = pred_loc
             T_pred = self._T_pred_B
-            print(T_pred)
 
         return np.squeeze(np.tensordot(self.sec_amps, T_pred, (1, 2)))
 
@@ -774,4 +775,4 @@ B_obs[0, :, 1] = j
 B_obs[0, :, 2] = u
 
 secs.fit(obs_loc=obs_lat_lon_r, obs_B=B_obs, epsilon=0.1)
-secs.predict(obs_lat_lon_r)
+secs.predict(np.column_stack((y, x, np.full_like(x, R_earth + 110e3))))
