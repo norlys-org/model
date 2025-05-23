@@ -1,4 +1,5 @@
-use crate::{geo::GeographicalPoint, sphere::angular_distance_and_bearing};
+use crate::geo::{GeographicalPoint, R_EARTH};
+use crate::sphere::angular_distance_and_bearing;
 use ndarray::{Array1, Array2, Array3, Zip};
 
 /// Physical constant: permeability of free space (µ0)
@@ -31,11 +32,18 @@ const MU0: f64 = 1e-7;
 ///
 /// # Arguments
 /// * `obs_locs` - A slice of `GeographicalPoint` structures representing the observation locations (e.g., ground magnetometers).
+/// * `obs_altitude` - Altitude above the Earth's surface at which observations are located in meters.
 /// * `secs_locs` - A slice of `GeographicalPoint` structures representing the locations (poles) of the hypothetical Spherical Elementary Currents.
+/// * `secs_altitude` - Altitude above the Earth's surface at which poles are located in meters.
 ///
 /// # Returns
 /// `Array3<f64>` representing the transfer matrix T, with dimensions [nobs][3][nsec].
-pub fn t_df(obs_locs: &[GeographicalPoint], secs_locs: &[GeographicalPoint]) -> Array3<f64> {
+pub fn t_df(
+    obs_locs: &[GeographicalPoint],
+    obs_altitude: f64,
+    secs_locs: &[GeographicalPoint],
+    secs_altitude: f64,
+) -> Array3<f64> {
     let nobs = obs_locs.len();
     let nsec = secs_locs.len();
 
@@ -54,12 +62,12 @@ pub fn t_df(obs_locs: &[GeographicalPoint], secs_locs: &[GeographicalPoint]) -> 
     let obs_r = Array1::from_iter(
         obs_locs
             .iter()
-            .flat_map(|obs| vec![obs.radius(); secs_locs.len()]),
+            .flat_map(|_| vec![obs_altitude + R_EARTH; secs_locs.len()]),
     );
     let sec_r = Array1::from_iter(
         secs_locs
             .iter()
-            .flat_map(|sec| vec![sec.radius(); obs_locs.len()]),
+            .flat_map(|_| vec![secs_altitude + R_EARTH; obs_locs.len()]),
     );
 
     // MARK: calc_t_df_under
@@ -104,7 +112,6 @@ mod tests {
     use approx::assert_relative_eq;
 
     use super::*;
-    use crate::geo::R_EARTH;
 
     #[test]
     fn test_t_df_few_points() {
@@ -112,14 +119,16 @@ mod tests {
             // Substract R_EARTH in order to have same results as python code as `t_df`
             // adds R_EARTH
             &[
-                GeographicalPoint::new(50.0, 20.0, 3000.0 - R_EARTH),
-                GeographicalPoint::new(51.0, 21.0, 3000.0 - R_EARTH),
+                GeographicalPoint::new(50.0, 20.0),
+                GeographicalPoint::new(51.0, 21.0),
             ],
+            3000.0 - R_EARTH,
             &[
-                GeographicalPoint::new(10.0, 30.0, 4000.0 - R_EARTH),
-                GeographicalPoint::new(11.0, 31.0, 4000.0 - R_EARTH),
-                GeographicalPoint::new(12.0, 32.0, 4000.0 - R_EARTH),
+                GeographicalPoint::new(10.0, 30.0),
+                GeographicalPoint::new(11.0, 31.0),
+                GeographicalPoint::new(12.0, 32.0),
             ],
+            4000.0 - R_EARTH,
         );
 
         // values generated from the python code
