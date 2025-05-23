@@ -9,22 +9,14 @@ pub struct GeographicalPoint {
     pub longitude: f64,
     /// The latitude in degrees
     pub latitude: f64,
-    /// Altitude from the surface of the earth in meters
-    pub altitude: f64,
 }
 
 impl GeographicalPoint {
-    pub fn new(latitude: f64, longitude: f64, altitude: f64) -> Self {
+    pub fn new(latitude: f64, longitude: f64) -> Self {
         Self {
             latitude,
             longitude,
-            altitude,
         }
-    }
-
-    /// Returns the radius from the center of the Earth in meters
-    pub fn radius(&self) -> f64 {
-        self.altitude + R_EARTH
     }
 
     /// Returns latitude in radians
@@ -91,7 +83,6 @@ pub fn geographical_grid(
     lat_steps: usize,
     lon_range: Range<f64>,
     lon_steps: usize,
-    altitude: f64,
 ) -> Vec<GeographicalPoint> {
     let latitudes = linspace(lat_range.start, lat_range.end, lat_steps);
     let longitudes = linspace(lon_range.start, lon_range.end, lon_steps);
@@ -102,7 +93,6 @@ pub fn geographical_grid(
             result.push(GeographicalPoint {
                 longitude: lon,
                 latitude: lat,
-                altitude,
             })
         }
     }
@@ -153,14 +143,11 @@ mod tests {
         let lat_steps = 3;
         let lon_range = 0.0..180.0;
         let lon_steps = 2;
-        let altitude = 100.0;
-        let result = geographical_grid(lat_range, lat_steps, lon_range, lon_steps, altitude);
+        let result = geographical_grid(lat_range, lat_steps, lon_range, lon_steps);
         assert_eq!(result.len(), 6);
         assert_relative_eq!(result[0].latitude, 0.0);
         assert_relative_eq!(result[0].longitude, 0.0);
-        assert_relative_eq!(result[0].altitude, altitude);
         assert_relative_eq!(result[5].latitude, 90.0);
         assert_relative_eq!(result[5].longitude, 180.0);
-        assert_relative_eq!(result[5].altitude, altitude);
     }
 }
