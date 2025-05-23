@@ -1,144 +1,181 @@
-/// Calculates the angular distance between two sets of lat/lon points
+use ndarray::{Array, Array2, Axis};
+
+/// Calculates both the angular distance and bearing between two sets of lat/lon points
 ///
 /// # Arguments
 /// * `coords1` - First set of points as a vector of (lat, lon) tuples in degrees
 /// * `coords2` - Second set of points as a vector of (lat, lon) tuples in degrees
 ///
 /// # Returns
-/// A matrix (Vec<Vec<f32>>) of angular distances in radians
-pub fn angular_distance(coords1: &[(f32, f32)], coords2: &[(f32, f32)]) -> Vec<Vec<f32>> {
-    let mut result = Vec::with_capacity(coords1.len());
+/// A tuple containing:
+/// - 2D array of angular distances in radians (Array2<f64>)
+/// - 2D array of bearings in radians (Array2<f64>)
+pub fn angular_distance_and_bearing(
+    coords1: &[(f64, f64)],
+    coords2: &[(f64, f64)],
+) -> (Array2<f64>, Array2<f64>) {
+    let rows = coords1.len();
+    let cols = coords2.len();
 
-    for &(lat1_deg, lon1_deg) in coords1 {
+    // Initialize output arrays
+    let mut theta = Array::zeros((rows, cols));
+    let mut alpha = Array::zeros((rows, cols));
+
+    for i in 0..rows {
+        let (lat1_deg, lon1_deg) = coords1[i];
         let lat1_rad = lat1_deg.to_radians();
         let lon1_rad = lon1_deg.to_radians();
+        let cos_lat1 = lat1_rad.cos();
+        let sin_lat1 = lat1_rad.sin();
 
-        let mut row = Vec::with_capacity(coords2.len());
-
-        for &(lat2_deg, lon2_deg) in coords2 {
+        for j in 0..cols {
+            let (lat2_deg, lon2_deg) = coords2[j];
             let lat2_rad = lat2_deg.to_radians();
             let lon2_rad = lon2_deg.to_radians();
+            let cos_lat2 = lat2_rad.cos();
+            let sin_lat2 = lat2_rad.sin();
 
             let dlon = lon2_rad - lon1_rad;
+            let cos_dlon = dlon.cos();
+            let sin_dlon = dlon.sin();
 
-            let theta = (lat1_rad.sin() * lat2_rad.sin()
-                + lat1_rad.cos() * lat2_rad.cos() * dlon.cos())
-            .acos();
+            // Calculate angular distance (theta)
+            theta[[i, j]] = (sin_lat1 * sin_lat2 + cos_lat1 * cos_lat2 * cos_dlon).acos();
 
-            row.push(theta);
+            // Calculate bearing (alpha)
+            let x = cos_lat2 * sin_dlon;
+            let y = cos_lat1 * sin_lat2 - sin_lat1 * cos_lat2 * cos_dlon;
+
+            // The formula: alpha = π/2 - arctan2(x, y)
+            alpha[[i, j]] = std::f64::consts::FRAC_PI_2 - x.atan2(y);
         }
-
-        result.push(row);
     }
 
-    result
-}
-
-/// Calculates the bearing (direction) from each point in `coords1` to each point in `coords2`
-///
-/// # Arguments
-/// * `coords1` - First set of points as a vector of (lat, lon) tuples in degrees
-/// * `coords2` - Second set of points as a vector of (lat, lon) tuples in degrees
-///
-/// # Returns
-/// A matrix (Vec<Vec<f32>>) of bearings in radians, measured clockwise from true north
-pub fn bearing(coords1: &[(f32, f32)], coords2: &[(f32, f32)]) -> Vec<Vec<f32>> {
-    let mut result = Vec::with_capacity(coords1.len());
-
-    for &(lat1_deg, lon1_deg) in coords1 {
-        let lat1_rad = (lat1_deg as f32).to_radians();
-        let lon1_rad = (lon1_deg as f32).to_radians();
-
-        let mut row = Vec::with_capacity(coords2.len());
-
-        for &(lat2_deg, lon2_deg) in coords2 {
-            let lat2_rad = (lat2_deg as f32).to_radians();
-            let lon2_rad = (lon2_deg as f32).to_radians();
-
-            let dlon = lon2_rad - lon1_rad;
-
-            let y = dlon.sin() * lat2_rad.cos();
-            let x = lat1_rad.cos() * lat2_rad.sin() - lat1_rad.sin() * lat2_rad.cos() * dlon.cos();
-
-            let alpha = y.atan2(x); // true bearing (in radians, from -π to π)
-            row.push(alpha as f32);
-        }
-
-        result.push(row);
-    }
-
-    result
+    (theta, alpha)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use core::f32::consts::PI;
+    use approx::assert_relative_eq;
+    use ndarray::Array2;
 
-    const EPSILON: f32 = 1e-10;
+    // Helper function to check if two 2D arrays are approximately equal
+    fn assert_arrays_approx_eq(actual: &Array2<f64>, expected: &Array2<f64>, epsilon: f64) {
+        assert_eq!(
+            actual.shape(),
+            expected.shape(),
+            "Arrays have different shapes"
+        );
 
-    fn approx_eq(a: f32, b: f32) -> bool {
-        (a - b).abs() < EPSILON
+        assert_relative_eq!(
+            actual.as_slice().unwrap(),
+            expected.as_slice().unwrap(),
+            max_relative = epsilon,
+            epsilon = epsilon
+        );
+    }
+
+    // Helper function to convert nested Vec to Array2
+    fn vec_to_array2(vec_data: &Vec<Vec<f64>>) -> Array2<f64> {
+        let rows = vec_data.len();
+        let cols = if rows > 0 { vec_data[0].len() } else { 0 };
+
+        let mut array = Array2::zeros((rows, cols));
+        for i in 0..rows {
+            for j in 0..cols {
+                array[[i, j]] = vec_data[i][j];
+            }
+        }
+        array
     }
 
     #[test]
-    fn test_zero_distance() {
-        let coords = vec![(0.0, 0.0)];
-        let result = angular_distance(&coords, &coords);
-        assert_eq!(result.len(), 1);
-        assert_eq!(result[0].len(), 1);
-        assert!(approx_eq(result[0][0], 0.0));
+    fn test_case_1_basic_cardinal_points() {
+        let coords1 = vec![(0.0, 0.0)];
+        let coords2 = vec![(0.0, 90.0), (90.0, 0.0)];
+
+        let expected_theta = vec_to_array2(&vec![vec![1.5708, 1.5708]]);
+        let expected_alpha = vec_to_array2(&vec![vec![0.0, 1.5708]]);
+
+        let (theta, alpha) = angular_distance_and_bearing(&coords1, &coords2);
+
+        let epsilon = 1e-4;
+        assert_arrays_approx_eq(&theta, &expected_theta, epsilon);
+        assert_arrays_approx_eq(&alpha, &expected_alpha, epsilon);
     }
 
     #[test]
-    fn test_equator_90_degrees_apart() {
-        let point1 = vec![(0.0, 0.0)];
-        let point2 = vec![(0.0, 90.0)];
-        let result = angular_distance(&point1, &point2);
-        assert_eq!(result.len(), 1);
-        assert_eq!(result[0].len(), 1);
-        assert!(approx_eq(result[0][0], PI / 2.0)); // 90 degrees = π/2 radians
+    fn test_case_2_realistic_coordinates() {
+        let coords1 = vec![(40.71, -74.0), (34.05, -118.2)];
+        let coords2 = vec![(48.85, 2.35)];
+
+        let expected_theta = vec_to_array2(&vec![vec![0.9162], vec![1.4258]]);
+        let expected_alpha = vec_to_array2(&vec![vec![0.6333], vec![0.961]]);
+
+        let (theta, alpha) = angular_distance_and_bearing(&coords1, &coords2);
+
+        let epsilon = 1e-4;
+        assert_arrays_approx_eq(&theta, &expected_theta, epsilon);
+        assert_arrays_approx_eq(&alpha, &expected_alpha, epsilon);
     }
 
     #[test]
-    fn test_multiple_points() {
-        let coords1 = vec![(0.0, 0.0), (90.0, 0.0)];
-        let coords2 = vec![(0.0, 90.0), (0.0, 0.0)];
+    fn test_case_3_antipodal_points() {
+        let coords1 = vec![(90.0, 0.0)];
+        let coords2 = vec![(-90.0, 0.0)];
 
-        let result = angular_distance(&coords1, &coords2);
+        let expected_theta = vec_to_array2(&vec![vec![3.1416]]); // π radians = 180 degrees
+        let expected_alpha = vec_to_array2(&vec![vec![-1.5708]]); // -π/2 radians = -90 degrees
 
-        assert_eq!(result.len(), 2);
-        assert_eq!(result[0].len(), 2);
-        assert_eq!(result[1].len(), 2);
+        let (theta, alpha) = angular_distance_and_bearing(&coords1, &coords2);
 
-        // First row
-        assert!(approx_eq(result[0][0], PI / 2.0)); // (0,0) to (0,90)
-        assert!(approx_eq(result[0][1], 0.0)); // (0,0) to (0,0)
-
-        // Second row
-        assert!(approx_eq(result[1][0], PI / 2.0)); // (90,0) to (0,90)
-        assert!(approx_eq(result[1][1], PI / 2.0)); // (90,0) to (0,0)
+        let epsilon = 1e-4;
+        assert_arrays_approx_eq(&theta, &expected_theta, epsilon);
+        assert_arrays_approx_eq(&alpha, &expected_alpha, epsilon);
     }
 
     #[test]
-    fn test_bearing_self() {
-        let coords = vec![(0.0, 0.0)];
-        let result = bearing(&coords, &coords);
-        assert_eq!(result.len(), 1);
-        assert_eq!(result[0].len(), 1);
-        // Bearing to self is undefined in theory, but this implementation returns 0
-        assert!(approx_eq(result[0][0] as f32, 0.0));
+    fn test_case_4_multiple_points_grid() {
+        let coords1 = vec![(10.0, 10.0), (20.0, 20.0)];
+        let coords2 = vec![(10.0, 11.0), (21.0, 20.0), (15.0, 15.0)];
+
+        let expected_theta = vec_to_array2(&vec![
+            vec![0.0172, 0.255, 0.1219],
+            vec![0.2311, 0.0175, 0.1206],
+        ]);
+        let expected_alpha = vec_to_array2(&vec![
+            vec![0.0015, 0.8728, 0.8064],
+            vec![3.9747, 1.5708, 3.9371],
+        ]);
+
+        let (theta, alpha) = angular_distance_and_bearing(&coords1, &coords2);
+
+        let epsilon = 1e-4;
+        assert_arrays_approx_eq(&theta, &expected_theta, epsilon);
+        assert_arrays_approx_eq(&alpha, &expected_alpha, epsilon);
     }
 
     #[test]
-    fn test_bearing_symmetry() {
-        let a = vec![(10.0, 20.0)];
-        let b = vec![(15.0, 25.0)];
-        let forward = bearing(&a, &b)[0][0];
-        let backward = bearing(&b, &a)[0][0];
+    fn test_case_5_edge_cases() {
+        let coords1 = vec![(45.0, 45.0), (89.5, 10.0), (0.0, 179.5)];
+        let coords2 = vec![(45.0, 45.0), (-89.5, -170.0), (0.0, -179.5)];
 
-        // The backward bearing should be roughly opposite (±π)
-        let diff = ((forward as f32 - backward as f32 + PI) % (2.0 * PI) - PI).abs();
-        assert!(diff - PI < EPSILON);
+        let expected_theta = vec_to_array2(&vec![
+            vec![0.0, 2.3633, 2.0994],
+            vec![0.7783, 3.1416, 1.5794],
+            vec![2.0893, 1.5622, 0.0175],
+        ]);
+        let expected_alpha = vec_to_array2(&vec![
+            vec![1.5708, -1.5637, 0.6237],
+            vec![-0.9549, 3.1416, 1.405],
+            vec![2.1904, -1.5692, 0.0],
+        ]);
+
+        let (theta, alpha) = angular_distance_and_bearing(&coords1, &coords2);
+
+        let epsilon = 1e-4;
+        assert_arrays_approx_eq(&theta, &expected_theta, epsilon);
+        assert_arrays_approx_eq(&alpha, &expected_alpha, epsilon);
     }
 }
