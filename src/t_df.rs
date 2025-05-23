@@ -70,16 +70,29 @@ pub fn t_df(
             .flat_map(|_| vec![secs_altitude + R_EARTH; obs_locs.len()]),
     );
 
-    // MARK: calc_t_df_under
-    let x = &obs_r / &sec_r;
+    let over = obs_altitude > secs_altitude;
+    let x: Array1<f64> = if over {
+        &sec_r / &obs_r
+    } else {
+        &obs_r / &sec_r
+    };
+
     let factor =
         1.0 / (1.0 - 2.0 * x.clone() * &cos_theta + x.mapv(|val| val.powi(2))).mapv(f64::sqrt);
 
     // Amm & Viljanen: Equation 9
-    let br: Array1<f64> = MU0 / &obs_r * (factor.clone() - 1.0);
+    let br: Array1<f64> = if over {
+        MU0 * &x / &obs_r * (factor.clone() - 1.0)
+    } else {
+        MU0 / &obs_r * (factor.clone() - 1.0)
+    };
 
     // Amm & Viljanen: Equation 10
-    let b_theta: Array1<f64> = -MU0 / &obs_r * (factor * (x - &cos_theta) + &cos_theta);
+    let b_theta: Array1<f64> = if over {
+        -MU0 / &obs_r * (factor * (x - &cos_theta) + &cos_theta)
+    } else {
+        -MU0 / &obs_r * (factor * (x - &cos_theta) + &cos_theta)
+    };
 
     let br = br.into_shape((obs_locs.len(), secs_locs.len())).unwrap();
     let b_theta = b_theta
