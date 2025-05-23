@@ -211,7 +211,6 @@ class SECS:
             VWU_masked = VWU[:, valid]
             std_masked = obs_std_flat[0, valid]
             self.sec_amps_var[:] = np.sum((VWU_masked * std_masked) ** 2, axis=1)
-            print(self.sec_amps / self.sec_amps_var)
 
         else:
             prev_std = None
@@ -284,6 +283,7 @@ class SECS:
                 self._T_pred_B = self._calc_T(pred_loc)
                 self._pred_loc_B = pred_loc
             T_pred = self._T_pred_B
+            print(T_pred)
 
         return np.squeeze(np.tensordot(self.sec_amps, T_pred, (1, 2)))
 
@@ -774,3 +774,4 @@ B_obs[0, :, 1] = j
 B_obs[0, :, 2] = u
 
 secs.fit(obs_loc=obs_lat_lon_r, obs_B=B_obs, epsilon=0.1)
+secs.predict(obs_lat_lon_r)
