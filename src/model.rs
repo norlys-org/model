@@ -1,4 +1,4 @@
-use ndarray::{Array2, Array3};
+use ndarray::{Array2, Array3, Axis};
 use serde::{Deserialize, Serialize};
 
 use crate::{geo::GeographicalPoint, svd::svd, t_df::t_df};
@@ -97,7 +97,7 @@ impl SECS {
         self.sec_amps = Some(obs_b.dot(&vwu.t()));
     }
 
-    pub fn predict(&mut self, pred_locs: &[GeographicalPoint], pred_altitude: f64) {
+    pub fn predict(&mut self, pred_locs: &[GeographicalPoint], pred_altitude: f64) -> Array2<f64> {
         // check if transfer matrix was already computed for these locations
         if pred_locs != self.pred_locs_cache {
             self.t_pred_cache = Some(t_df(
@@ -109,7 +109,10 @@ impl SECS {
             self.pred_locs_cache = pred_locs.to_vec();
         }
 
-        println!("{:?}", self.t_pred_cache);
+        let amps = &self.sec_amps.as_ref().unwrap().index_axis(Axis(1), 0);
+        let t_pred = &self.t_pred_cache.as_ref().unwrap().index_axis(Axis(2), 0);
+
+        amps * t_pred
     }
 }
 
@@ -171,17 +174,63 @@ mod tests {
                     j: 4.0,
                     k: 6.0,
                 },
+                ObservationVector {
+                    lon: 70.0,
+                    lat: 60.0,
+                    i: 6.0,
+                    j: 8.0,
+                    k: 10.0,
+                },
+                ObservationVector {
+                    lon: 80.0,
+                    lat: 70.0,
+                    i: 7.0,
+                    j: 9.0,
+                    k: 11.0,
+                },
             ],
             0.0,
             0.05,
         );
 
-        secs.predict(
+        let expected: Array2<f64> = Array2::from_shape_vec(
+            (4, 3),
+            vec![
+                -2.972198556047663,
+                -3.524936055971202,
+                2.16259440142763,
+                -1.929534415038157,
+                -2.619481700089664,
+                0.705885416966898,
+                -1.300786048298171,
+                -2.126884161397399,
+                -0.107335205234338,
+                -0.872939849570736,
+                -1.845949256955627,
+                -0.58715751866735,
+            ],
+        )
+        .unwrap();
+
+        let pred = secs.predict(
             &[
-                GeographicalPoint::new(50.0, 40.0),
-                GeographicalPoint::new(60.0, 50.0),
+                GeographicalPoint::new(40.0, 50.0),
+                GeographicalPoint::new(50.0, 60.0),
+                GeographicalPoint::new(60.0, 70.0),
+                GeographicalPoint::new(70.0, 80.0),
             ],
             110e3,
+        );
+
+        assert_eq!(
+            pred.shape(),
+            expected.shape(),
+            "Prediction have different shapes"
+        );
+        assert_relative_eq!(
+            pred.as_slice().unwrap(),
+            expected.as_slice().unwrap(),
+            max_relative = 1e-15
         );
     }
 }
