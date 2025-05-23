@@ -1,4 +1,4 @@
-use ndarray::Array2;
+use ndarray::{Array2, Array3};
 use serde::{Deserialize, Serialize};
 
 use crate::{geo::GeographicalPoint, svd::svd, t_df::t_df};
@@ -45,6 +45,9 @@ pub struct SECS {
     // Cache fields for transfer function calculation
     obs_locs_cache: Vec<GeographicalPoint>,
     t_obs_flat_cache: Option<Array2<f64>>,
+    /// The latitude, longiutde, and radius of the prediction locations.
+    pred_locs_cache: Vec<GeographicalPoint>,
+    t_pred_cache: Option<Array3<f64>>,
 }
 
 impl SECS {
@@ -54,6 +57,8 @@ impl SECS {
             sec_amps: None,
             obs_locs_cache: vec![],
             t_obs_flat_cache: None,
+            pred_locs_cache: vec![],
+            t_pred_cache: None,
         }
     }
 
@@ -87,7 +92,15 @@ impl SECS {
         self.sec_amps = Some(obs_b.dot(&vwu.t()));
     }
 
-    // pub fn predict(&self, pred_locs: &[GeographicalPoint]) -> Result<PredictionMatrix, String> {}
+    pub fn predict(&mut self, pred_locs: &[GeographicalPoint]) {
+        // check if transfer matrix was already computed for these locations
+        if pred_locs != self.pred_locs_cache {
+            self.t_pred_cache = Some(t_df(pred_locs, &self.sec_locs));
+            self.pred_locs_cache = pred_locs.to_vec();
+        }
+
+        println!("{:?}", self.t_pred_cache);
+    }
 }
 
 #[cfg(test)]
@@ -127,5 +140,37 @@ mod tests {
             sec_amps_expected,
             max_relative = 1e-15
         );
+    }
+
+    #[test]
+    fn test_predict_few_points() {
+        let mut secs = SECS::new(vec![GeographicalPoint::new(10.0, 20.0, 0.0)]);
+
+        secs.fit(
+            &[
+                ObservationVector {
+                    lon: 50.0,
+                    lat: 40.0,
+                    i: 1.0,
+                    j: 3.0,
+                    k: 5.0,
+                    alt: 0.0,
+                },
+                ObservationVector {
+                    lon: 60.0,
+                    lat: 50.0,
+                    i: 2.0,
+                    j: 4.0,
+                    k: 6.0,
+                    alt: 0.0,
+                },
+            ],
+            0.05,
+        );
+
+        secs.predict(&[
+            GeographicalPoint::new(50.0, 40.0, 0.0),
+            GeographicalPoint::new(60.0, 50.0, 0.0),
+        ]);
     }
 }
