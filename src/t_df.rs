@@ -78,14 +78,14 @@ pub fn t_df(
     };
 
     let factor: Array1<f64> =
-        1.0 / (1.0 - 2.0 * x.clone() * &cos_theta + x.mapv(|val| val.powi(2))).mapv(f64::sqrt);
+        1.0 / (1.0 - 2.0 * &x * &cos_theta + x.mapv(|val| val.powi(2))).mapv(f64::sqrt);
 
     let br: Array1<f64> = if over {
         // Amm & Viljanen: Equation A.7
-        MU0 * &x / &obs_r * (factor.clone() - 1.0)
+        MU0 * &x / &obs_r * (&factor - 1.0)
     } else {
         // Amm & Viljanen: Equation 9
-        MU0 / &obs_r * (factor.clone() - 1.0)
+        MU0 / &obs_r * (&factor - 1.0)
     };
 
     let b_theta: Array1<f64> = if over {
