@@ -477,6 +477,7 @@ def _calc_T_df_over(
             - 1
         )
     )
+    print(Btheta)
 
     return Br, Btheta
 
@@ -774,13 +775,13 @@ B_obs[0, :, 0] = i
 B_obs[0, :, 1] = j
 B_obs[0, :, 2] = u
 
-secs.fit(obs_loc=obs_lat_lon_r, obs_B=B_obs, epsilon=0.1)
-secs.predict(np.column_stack((y, x, np.full_like(x, R_earth + 110e3))))
+# secs.fit(obs_loc=obs_lat_lon_r, obs_B=B_obs, epsilon=0.1)
+# secs.predict(np.column_stack((y, x, np.full_like(x, R_earth + 110e3))))
 
 print("T_DF")
 print(
     T_df(
-        np.array([50, 20, 4000], [51, 21, 4000]),
-        np.array([10, 30, 3000], [11, 31, 3000], [12, 32, 3000]),
+        np.array([[50, 20, 4000], [51, 21, 4000]]),
+        np.array([[10, 30, 3000], [11, 31, 3000], [12, 32, 3000]]),
     )
 )
