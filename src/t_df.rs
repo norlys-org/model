@@ -80,17 +80,23 @@ pub fn t_df(
     let factor =
         1.0 / (1.0 - 2.0 * x.clone() * &cos_theta + x.mapv(|val| val.powi(2))).mapv(f64::sqrt);
 
-    // Amm & Viljanen: Equation 9
     let br: Array1<f64> = if over {
+        // Amm & Viljanen: Equation A.7
         MU0 * &x / &obs_r * (factor.clone() - 1.0)
     } else {
+        // Amm & Viljanen: Equation 9
         MU0 / &obs_r * (factor.clone() - 1.0)
     };
 
-    // Amm & Viljanen: Equation 10
     let b_theta: Array1<f64> = if over {
-        -MU0 / &obs_r * (factor * (x - &cos_theta) + &cos_theta)
+        // Amm & Viljanen: Equation A.8
+        (-MU0 / &obs_r * (&obs_r - &sec_r * &cos_theta)
+            / (&obs_r.mapv(|v| v.powi(2)) - &obs_r.mapv(|v| v * 2.0) * &sec_r * &cos_theta
+                + &sec_r.mapv(|v| v.powi(2)))
+                .mapv(f64::sqrt))
+        .mapv(|v| v - 1.0)
     } else {
+        // Amm & Viljanen: Equation 10
         -MU0 / &obs_r * (factor * (x - &cos_theta) + &cos_theta)
     };
 
@@ -127,7 +133,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_t_df_few_points() {
+    fn test_t_df_few_points_under() {
         let t: Array3<f64> = t_df(
             // Substract R_EARTH in order to have same results as python code as `t_df`
             // adds R_EARTH
@@ -142,6 +148,58 @@ mod tests {
                 GeographicalPoint::new(12.0, 32.0),
             ],
             4000.0 - R_EARTH,
+        );
+
+        // values generated from the python code
+        let expected: Array3<f64> = Array3::from_shape_vec(
+            (2, 3, 3),
+            vec![
+                -3.67250861e-11,
+                -3.67476077e-11,
+                -3.67074095e-11,
+                9.94787927e-12,
+                1.11826106e-11,
+                1.24566687e-11,
+                -1.76265553e-11,
+                -1.84618364e-11,
+                -1.92994257e-11,
+                -3.66568665e-11,
+                -3.67415083e-11,
+                -3.67687370e-11,
+                8.73331388e-12,
+                9.92220548e-12,
+                1.11521060e-11,
+                -1.68114853e-11,
+                -1.76472830e-11,
+                -1.84884113e-11,
+            ],
+        )
+        .unwrap();
+
+        assert_eq!(t.shape(), expected.shape(), "T have different shapes");
+        assert_relative_eq!(
+            t.as_slice().unwrap(),
+            expected.as_slice().unwrap(),
+            max_relative = 1e-15
+        );
+    }
+
+    #[test]
+    fn test_t_df_few_points_over() {
+        let t: Array3<f64> = t_df(
+            // Substract R_EARTH in order to have same results as python code as `t_df`
+            // adds R_EARTH
+            &[
+                GeographicalPoint::new(50.0, 20.0),
+                GeographicalPoint::new(51.0, 21.0),
+            ],
+            4000.0 - R_EARTH,
+            &[
+                GeographicalPoint::new(10.0, 30.0),
+                GeographicalPoint::new(11.0, 31.0),
+                GeographicalPoint::new(12.0, 32.0),
+            ],
+            3000.0 - R_EARTH,
         );
 
         // values generated from the python code
