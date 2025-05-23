@@ -77,7 +77,7 @@ pub fn t_df(
         &obs_r / &sec_r
     };
 
-    let factor =
+    let factor: Array1<f64> =
         1.0 / (1.0 - 2.0 * x.clone() * &cos_theta + x.mapv(|val| val.powi(2))).mapv(f64::sqrt);
 
     let br: Array1<f64> = if over {
@@ -90,11 +90,12 @@ pub fn t_df(
 
     let b_theta: Array1<f64> = if over {
         // Amm & Viljanen: Equation A.8
-        (-MU0 / &obs_r * (&obs_r - &sec_r * &cos_theta)
-            / (&obs_r.mapv(|v| v.powi(2)) - &obs_r.mapv(|v| v * 2.0) * &sec_r * &cos_theta
-                + &sec_r.mapv(|v| v.powi(2)))
-                .mapv(f64::sqrt))
-        .mapv(|v| v - 1.0)
+        -MU0 / &obs_r
+            * ((&obs_r - &sec_r * &cos_theta)
+                / (&obs_r.mapv(|v| v.powi(2)) - &obs_r.mapv(|v| v * 2.0) * &sec_r * &cos_theta
+                    + &sec_r.mapv(|v| v.powi(2)))
+                    .mapv(f64::sqrt))
+            .mapv(|v| v - 1.0)
     } else {
         // Amm & Viljanen: Equation 10
         -MU0 / &obs_r * (factor * (x - &cos_theta) + &cos_theta)
@@ -206,24 +207,24 @@ mod tests {
         let expected: Array3<f64> = Array3::from_shape_vec(
             (2, 3, 3),
             vec![
-                -3.67250861e-11,
-                -3.67476077e-11,
-                -3.67074095e-11,
-                9.94787927e-12,
-                1.11826106e-11,
-                1.24566687e-11,
-                -1.76265553e-11,
-                -1.84618364e-11,
-                -1.92994257e-11,
-                -3.66568665e-11,
-                -3.67415083e-11,
-                -3.67687370e-11,
-                8.73331388e-12,
-                9.92220548e-12,
-                1.11521060e-11,
-                -1.68114853e-11,
-                -1.76472830e-11,
-                -1.84884113e-11,
+                1.248881305890098e-11,
+                1.257667569294579e-11,
+                1.264169224772104e-11,
+                -3.382897573340390e-12,
+                -3.827189728374329e-12,
+                -4.289961456907339e-12,
+                -9.914937352303397e-12,
+                -1.038478295394393e-11,
+                -1.085592698421099e-11,
+                1.238600079569024e-11,
+                1.249640680745045e-11,
+                1.258643444730852e-11,
+                -2.950902327063451e-12,
+                -3.374709473974890e-12,
+                -3.817516262669339e-12,
+                -9.456460477747721e-12,
+                -9.926596671910809e-12,
+                -1.039973133651685e-11,
             ],
         )
         .unwrap();
