@@ -280,12 +280,15 @@ class SECS:
         else:
             # Predicting magnetic fields
             if not np.array_equal(pred_loc, self._pred_loc_B):
-                print(pred_loc[0][2])
-                print(self.sec_df_loc[0][2])
                 self._T_pred_B = self._calc_T(pred_loc)
                 self._pred_loc_B = pred_loc
             T_pred = self._T_pred_B
+            # print(T_pred)
 
+        print(self.sec_amps)
+        print(T_pred)
+        print(np.tensordot(self.sec_amps, T_pred, (1, 2)))
+        print(np.squeeze(np.tensordot(self.sec_amps, T_pred, (1, 2))))
         return np.squeeze(np.tensordot(self.sec_amps, T_pred, (1, 2)))
 
     def predict_B(self, pred_loc: np.ndarray) -> np.ndarray:
@@ -477,7 +480,6 @@ def _calc_T_df_over(
             - 1
         )
     )
-    print(Btheta)
 
     return Br, Btheta
 
@@ -753,11 +755,11 @@ i = [1, 2]
 j = [3, 4]
 u = [5, 6]
 #
-# x = [50, 60, 70, 80]
-# y = [40, 50, 60, 70]
-# i = [1, 2, 6, 7]
-# j = [3, 4, 8, 9]
-# u = [5, 6, 10, 11]
+x = [50, 60, 70, 80]
+y = [40, 50, 60, 70]
+i = [1, 2, 6, 7]
+j = [3, 4, 8, 9]
+u = [5, 6, 10, 11]
 
 # lat = np.linspace(45, 85)
 # lon = np.linspace(-170, 35)
@@ -775,13 +777,5 @@ B_obs[0, :, 0] = i
 B_obs[0, :, 1] = j
 B_obs[0, :, 2] = u
 
-# secs.fit(obs_loc=obs_lat_lon_r, obs_B=B_obs, epsilon=0.1)
-# secs.predict(np.column_stack((y, x, np.full_like(x, R_earth + 110e3))))
-
-print("T_DF")
-print(
-    T_df(
-        np.array([[50, 20, 4000], [51, 21, 4000]]),
-        np.array([[10, 30, 3000], [11, 31, 3000], [12, 32, 3000]]),
-    )
-)
+secs.fit(obs_loc=obs_lat_lon_r, obs_B=B_obs, epsilon=0.1)
+pred = secs.predict(np.column_stack((y, x, np.full_like(x, R_earth + 110e3))))
