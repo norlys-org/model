@@ -206,12 +206,13 @@ class SECS:
             # and broadcast it to all time steps avoiding the for-loop below
             VWU = self._compute_VWU(self._T_obs_flat, obs_std_flat[0], epsilon, mode)
             self.sec_amps[:] = (obs_B_flat / obs_std_flat) @ VWU.T
-            print(self.sec_amps)
 
             valid = np.isfinite(obs_std_flat[0])
             VWU_masked = VWU[:, valid]
             std_masked = obs_std_flat[0, valid]
             self.sec_amps_var[:] = np.sum((VWU_masked * std_masked) ** 2, axis=1)
+            print(self.sec_amps / self.sec_amps_var)
+
         else:
             prev_std = None
             VWU = None
