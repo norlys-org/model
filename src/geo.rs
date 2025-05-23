@@ -1,13 +1,33 @@
 use std::ops::Range;
 
-#[derive(Debug, Clone, Copy)]
+// Earth radius in meters
+pub const R_EARTH: f64 = 6371e3;
+
+#[derive(PartialEq, Debug, Clone, Copy)]
 pub struct GeographicalPoint {
-    /// The longitude in degrees.
-    pub longitude: f32,
-    /// The latitude in degrees.
-    pub latitude: f32,
-    /// Altitude from the surface of the earth
-    pub altitude: f32,
+    /// The longitude in degrees
+    pub longitude: f64,
+    /// The latitude in degrees
+    pub latitude: f64,
+}
+
+impl GeographicalPoint {
+    pub fn new(latitude: f64, longitude: f64) -> Self {
+        Self {
+            latitude,
+            longitude,
+        }
+    }
+
+    /// Returns latitude in radians
+    pub fn lat_rad(&self) -> f64 {
+        self.latitude.to_radians()
+    }
+
+    /// Returns longitude in radians
+    pub fn lon_rad(&self) -> f64 {
+        self.longitude.to_radians()
+    }
 }
 
 /// Return evenly spaced numbers over a specified interval.
@@ -21,7 +41,7 @@ pub struct GeographicalPoint {
 /// * `start` - The starting value of the sequence.
 /// * `end` - The ending value of the sequence.
 /// * `num` - The number of samples to generate.
-fn linspace(start: f32, end: f32, num: usize) -> Vec<f32> {
+fn linspace(start: f64, end: f64, num: usize) -> Vec<f64> {
     let mut result = Vec::with_capacity(num);
 
     if end <= start {
@@ -37,9 +57,9 @@ fn linspace(start: f32, end: f32, num: usize) -> Vec<f32> {
         return result;
     }
 
-    let step = (end - start) / ((num - 1) as f32);
+    let step = (end - start) / ((num - 1) as f64);
     for i in 0..num {
-        result.push(start + (i as f32) * step);
+        result.push(start + (i as f64) * step);
     }
 
     result
@@ -59,11 +79,10 @@ fn linspace(start: f32, end: f32, num: usize) -> Vec<f32> {
 ///
 /// A vector of `GeographicalPoint` instances.
 pub fn geographical_grid(
-    lat_range: Range<f32>,
+    lat_range: Range<f64>,
     lat_steps: usize,
-    lon_range: Range<f32>,
+    lon_range: Range<f64>,
     lon_steps: usize,
-    altitude: f32,
 ) -> Vec<GeographicalPoint> {
     let latitudes = linspace(lat_range.start, lat_range.end, lat_steps);
     let longitudes = linspace(lon_range.start, lon_range.end, lon_steps);
@@ -74,7 +93,6 @@ pub fn geographical_grid(
             result.push(GeographicalPoint {
                 longitude: lon,
                 latitude: lat,
-                altitude,
             })
         }
     }
@@ -85,26 +103,8 @@ pub fn geographical_grid(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use approx::assert_relative_eq;
 
-    #[macro_export]
-    macro_rules! assert_relative_eq {
-    ($a:expr, $b:expr) => {
-        assert_relative_eq!($a, $b, 1e-6);
-    };
-    ($a:expr, $b:expr, $epsilon:expr) => {
-        {
-            let a_val = $a;
-            let b_val = $b;
-            let eps = $epsilon;
-            let diff = if a_val > b_val { a_val - b_val } else { b_val - a_val };
-            assert!(
-                diff <= eps,
-                "assertion failed: `(left ≈ right)` (left: `{:?}`, right: `{:?}`, expected diff: `{:?}`, actual diff: `{:?}`)",
-                a_val, b_val, eps, diff
-            );
-        }
-    };
-}
     #[test]
     fn test_linspace_basic() {
         let result = linspace(0.0, 1.0, 5);
@@ -143,14 +143,11 @@ mod tests {
         let lat_steps = 3;
         let lon_range = 0.0..180.0;
         let lon_steps = 2;
-        let altitude = 100.0;
-        let result = geographical_grid(lat_range, lat_steps, lon_range, lon_steps, altitude);
+        let result = geographical_grid(lat_range, lat_steps, lon_range, lon_steps);
         assert_eq!(result.len(), 6);
         assert_relative_eq!(result[0].latitude, 0.0);
         assert_relative_eq!(result[0].longitude, 0.0);
-        assert_relative_eq!(result[0].altitude, altitude);
         assert_relative_eq!(result[5].latitude, 90.0);
         assert_relative_eq!(result[5].longitude, 180.0);
-        assert_relative_eq!(result[5].altitude, altitude);
     }
 }
