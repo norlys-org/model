@@ -62,6 +62,8 @@ pub fn svd(t_obs_flat: &Array2<f64>, epsilon: f64) -> Array2<f64> {
 
 #[cfg(test)]
 mod tests {
+    use approx::assert_relative_eq;
+
     use super::*;
 
     #[test]
@@ -85,7 +87,7 @@ mod tests {
         )
         .unwrap();
 
-        let expected = Array2::from_shape_vec(
+        let expected: Array2<f64> = Array2::from_shape_vec(
             (1, 12),
             vec![
                 -9.844820937276402e+12,
@@ -107,23 +109,10 @@ mod tests {
         let vwu = svd(&t_obs_flat, 0.05);
 
         assert_eq!(vwu.shape(), expected.shape(), "VWU have different shapes");
-
-        // relative epsilon
-        let epsilon = 1e-15;
-        vwu.iter()
-            .zip(expected.iter())
-            .enumerate()
-            .for_each(|(i, (&a, &b))| {
-                let diff = (a - b).abs();
-                assert!(
-                    diff <= a.abs().max(b.abs()) * epsilon,
-                    "T differ at index {}: {} vs {} (diff: {}, epsilon: {})",
-                    i,
-                    a,
-                    b,
-                    diff,
-                    epsilon
-                );
-            });
+        assert_relative_eq!(
+            vwu.as_slice().unwrap(),
+            expected.as_slice().unwrap(),
+            max_relative = 1e-15
+        );
     }
 }

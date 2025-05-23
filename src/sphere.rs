@@ -68,9 +68,12 @@ mod tests {
             "Arrays have different shapes"
         );
 
-        for (a, e) in actual.iter().zip(expected.iter()) {
-            assert_relative_eq!(a, e, max_relative = epsilon, epsilon = epsilon);
-        }
+        assert_relative_eq!(
+            actual.as_slice().unwrap(),
+            expected.as_slice().unwrap(),
+            max_relative = epsilon,
+            epsilon = epsilon
+        );
     }
 
     // Helper function to convert nested Vec to Array2

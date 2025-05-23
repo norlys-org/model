@@ -46,9 +46,9 @@ pub struct SECS {
     /// The latitude, longiutde, and radius of the divergence free (df) SEC locations.
     sec_locs: Vec<GeographicalPoint>,
     /// Storage of the scaling factors (amplitudes) for SECs for the last fit.
-    pub sec_amps: Option<Array2<f64>>,
+    sec_amps: Option<Array2<f64>>,
     /// Storage of the variance of the scaling factors for SECs for the last fit.
-    pub sec_amps_var: Option<Array1<f64>>,
+    sec_amps_var: Option<Array1<f64>>,
 
     // Cache fields for transfer function calculation
     obs_locs_cache: Vec<GeographicalPoint>,
@@ -107,6 +107,7 @@ mod tests {
     #[test]
     fn test_fit() {
         let mut secs = SECS::new(vec![GeographicalPoint::new(10.0, 20.0, 0.0)]);
+
         secs.fit(
             &[
                 ObservationVector {
@@ -128,5 +129,49 @@ mod tests {
             ],
             0.05,
         );
+
+        let sec_amps_expected: f64 = -1.803280385158305e+14;
+
+        // values generated from the python code
+        let expected = Array3::from_shape_vec(
+            (2, 3, 3),
+            vec![
+                -3.67250861e-11,
+                -3.67476077e-11,
+                -3.67074095e-11,
+                9.94787927e-12,
+                1.11826106e-11,
+                1.24566687e-11,
+                -1.76265553e-11,
+                -1.84618364e-11,
+                -1.92994257e-11,
+                -3.66568665e-11,
+                -3.67415083e-11,
+                -3.67687370e-11,
+                8.73331388e-12,
+                9.92220548e-12,
+                1.11521060e-11,
+                -1.68114853e-11,
+                -1.76472830e-11,
+                -1.84884113e-11,
+            ],
+        )
+        .unwrap();
+
+        // assert_eq!(t.shape(), expected.shape(), "T have different shapes");
+        //
+        // let epsilon = 1e-15;
+        // for (i, (&a, &b)) in t.iter().zip(expected.iter()).enumerate() {
+        //     assert_abs_diff_eq!(
+        //         a,
+        //         b,
+        //         epsilon = 1e-15,
+        //         "T differ at index {}: {} vs {}",
+        //         i,
+        //         a,
+        //         b
+        //     );
+        // }
+        println!("{:?}", secs.sec_amps);
     }
 }
