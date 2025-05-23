@@ -101,20 +101,18 @@ pub fn t_df(obs_locs: &[GeographicalPoint], secs_locs: &[GeographicalPoint]) -> 
 
 #[cfg(test)]
 mod tests {
+    use approx::assert_relative_eq;
+
     use super::*;
     use crate::geo::R_EARTH;
 
     #[test]
     fn test_t_df_few_points() {
-        let t = t_df(
+        let t: Array3<f64> = t_df(
+            // Substract R_EARTH in order to have same results as python code as `t_df`
+            // adds R_EARTH
             &[
-                GeographicalPoint::new(
-                    50.0,
-                    20.0,
-                    // Substract R_EARTH in order to have same results as python code as `t_df`
-                    // adds R_EARTH
-                    3000.0 - R_EARTH,
-                ),
+                GeographicalPoint::new(50.0, 20.0, 3000.0 - R_EARTH),
                 GeographicalPoint::new(51.0, 21.0, 3000.0 - R_EARTH),
             ],
             &[
@@ -125,7 +123,7 @@ mod tests {
         );
 
         // values generated from the python code
-        let expected = Array3::from_shape_vec(
+        let expected: Array3<f64> = Array3::from_shape_vec(
             (2, 3, 3),
             vec![
                 -3.67250861e-11,
@@ -151,22 +149,10 @@ mod tests {
         .unwrap();
 
         assert_eq!(t.shape(), expected.shape(), "T have different shapes");
-
-        let epsilon = 1e-15;
-        t.iter()
-            .zip(expected.iter())
-            .enumerate()
-            .for_each(|(i, (&a, &b))| {
-                let diff = (a - b).abs();
-                assert!(
-                    diff <= epsilon,
-                    "T differ at index {}: {} vs {} (diff: {}, epsilon: {})",
-                    i,
-                    a,
-                    b,
-                    diff,
-                    epsilon
-                );
-            });
+        assert_relative_eq!(
+            t.as_slice().unwrap(),
+            expected.as_slice().unwrap(),
+            max_relative = 1e-15
+        );
     }
 }
