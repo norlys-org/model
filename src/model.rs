@@ -1,13 +1,7 @@
-use ndarray::{Array, Array1, Array2, Array3, Axis};
+use ndarray::Array2;
 use serde::{Deserialize, Serialize};
-use wasm_bindgen::prelude::*;
-use web_sys::console::assert;
 
-use crate::{
-    geo::GeographicalPoint,
-    svd::{self, svd},
-    t_df::{self, t_df},
-};
+use crate::{geo::GeographicalPoint, svd::svd, t_df::t_df};
 
 // #[wasm_bindgen]
 #[derive(Serialize, Deserialize, Debug, Clone, Copy)]
@@ -47,8 +41,6 @@ pub struct SECS {
     sec_locs: Vec<GeographicalPoint>,
     /// Storage of the scaling factors (amplitudes) for SECs for the last fit.
     sec_amps: Option<Array2<f64>>,
-    /// Storage of the variance of the scaling factors for SECs for the last fit.
-    sec_amps_var: Option<Array1<f64>>,
 
     // Cache fields for transfer function calculation
     obs_locs_cache: Vec<GeographicalPoint>,
@@ -60,7 +52,6 @@ impl SECS {
         SECS {
             sec_locs,
             sec_amps: None,
-            sec_amps_var: None,
             obs_locs_cache: vec![],
             t_obs_flat_cache: None,
         }
@@ -94,7 +85,6 @@ impl SECS {
         // SVD
         let vwu: Array2<f64> = svd(self.t_obs_flat_cache.as_ref().unwrap(), epsilon);
         self.sec_amps = Some(obs_b.dot(&vwu.t()));
-        self.sec_amps_var = Some((&vwu * &vwu).sum_axis(Axis(1)));
     }
 
     // pub fn predict(&self, pred_locs: &[GeographicalPoint]) -> Result<PredictionMatrix, String> {}
@@ -103,9 +93,10 @@ impl SECS {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use approx::assert_relative_eq;
 
     #[test]
-    fn test_fit() {
+    fn test_fit_few_points() {
         let mut secs = SECS::new(vec![GeographicalPoint::new(10.0, 20.0, 0.0)]);
 
         secs.fit(
@@ -131,47 +122,10 @@ mod tests {
         );
 
         let sec_amps_expected: f64 = -1.803280385158305e+14;
-
-        // values generated from the python code
-        let expected = Array3::from_shape_vec(
-            (2, 3, 3),
-            vec![
-                -3.67250861e-11,
-                -3.67476077e-11,
-                -3.67074095e-11,
-                9.94787927e-12,
-                1.11826106e-11,
-                1.24566687e-11,
-                -1.76265553e-11,
-                -1.84618364e-11,
-                -1.92994257e-11,
-                -3.66568665e-11,
-                -3.67415083e-11,
-                -3.67687370e-11,
-                8.73331388e-12,
-                9.92220548e-12,
-                1.11521060e-11,
-                -1.68114853e-11,
-                -1.76472830e-11,
-                -1.84884113e-11,
-            ],
-        )
-        .unwrap();
-
-        // assert_eq!(t.shape(), expected.shape(), "T have different shapes");
-        //
-        // let epsilon = 1e-15;
-        // for (i, (&a, &b)) in t.iter().zip(expected.iter()).enumerate() {
-        //     assert_abs_diff_eq!(
-        //         a,
-        //         b,
-        //         epsilon = 1e-15,
-        //         "T differ at index {}: {} vs {}",
-        //         i,
-        //         a,
-        //         b
-        //     );
-        // }
-        println!("{:?}", secs.sec_amps);
+        assert_relative_eq!(
+            secs.sec_amps.as_ref().unwrap()[[0, 0]],
+            sec_amps_expected,
+            max_relative = 1e-15
+        );
     }
 }
