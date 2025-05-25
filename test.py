@@ -285,10 +285,6 @@ class SECS:
             T_pred = self._T_pred_B
             # print(T_pred)
 
-        print(self.sec_amps)
-        print(T_pred)
-        print(np.tensordot(self.sec_amps, T_pred, (1, 2)))
-        print(np.squeeze(np.tensordot(self.sec_amps, T_pred, (1, 2))))
         return np.squeeze(np.tensordot(self.sec_amps, T_pred, (1, 2)))
 
     def predict_B(self, pred_loc: np.ndarray) -> np.ndarray:

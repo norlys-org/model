@@ -48,11 +48,8 @@ pub fn t_df(
     let nsec = secs_locs.len();
 
     // Convert location data for calculations
-    let obs_lat_lon: Vec<(f64, f64)> = obs_locs.iter().map(|p| (p.latitude, p.longitude)).collect();
-    let secs_lat_lon: Vec<(f64, f64)> = secs_locs
-        .iter()
-        .map(|p| (p.latitude, p.longitude))
-        .collect();
+    let obs_lat_lon: Vec<(f64, f64)> = obs_locs.iter().map(|p| (p.lat, p.lon)).collect();
+    let secs_lat_lon: Vec<(f64, f64)> = secs_locs.iter().map(|p| (p.lat, p.lon)).collect();
 
     let (theta, alpha) = angular_distance_and_bearing(&obs_lat_lon, &secs_lat_lon);
 
