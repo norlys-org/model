@@ -2,7 +2,6 @@ use ndarray::{Array2, Array3, Axis};
 use serde::{Deserialize, Serialize};
 
 use crate::{geo::GeographicalPoint, svd::svd, t_df::t_df};
-use approx::{AbsDiffEq, RelativeEq};
 
 // #[wasm_bindgen]
 #[derive(Serialize, Deserialize, Debug, Clone, Copy)]
