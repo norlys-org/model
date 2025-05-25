@@ -47,14 +47,7 @@ pub fn t_df(
     let nobs = obs_locs.len();
     let nsec = secs_locs.len();
 
-    // Convert location data for calculations
-    let obs_lat_lon: Vec<(f64, f64)> = obs_locs.iter().map(|p| (p.latitude, p.longitude)).collect();
-    let secs_lat_lon: Vec<(f64, f64)> = secs_locs
-        .iter()
-        .map(|p| (p.latitude, p.longitude))
-        .collect();
-
-    let (theta, alpha) = angular_distance_and_bearing(&obs_lat_lon, &secs_lat_lon);
+    let (theta, alpha) = angular_distance_and_bearing(&obs_locs, &secs_locs);
 
     let sin_theta = theta.mapv(|x| x.sin());
     let cos_theta = theta.mapv(|x| x.cos()).into_shape((nobs * nsec,)).unwrap(); // cos + flatten
