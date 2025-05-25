@@ -6,27 +6,27 @@ pub const R_EARTH: f64 = 6371e3;
 #[derive(PartialEq, Debug, Clone, Copy)]
 pub struct GeographicalPoint {
     /// The longitude in degrees
-    pub longitude: f64,
+    pub lon: f64,
     /// The latitude in degrees
-    pub latitude: f64,
+    pub lat: f64,
 }
 
 impl GeographicalPoint {
     pub fn new(latitude: f64, longitude: f64) -> Self {
         Self {
-            latitude,
-            longitude,
+            lat: latitude,
+            lon: longitude,
         }
     }
 
     /// Returns latitude in radians
     pub fn lat_rad(&self) -> f64 {
-        self.latitude.to_radians()
+        self.lat.to_radians()
     }
 
     /// Returns longitude in radians
     pub fn lon_rad(&self) -> f64 {
-        self.longitude.to_radians()
+        self.lon.to_radians()
     }
 }
 
@@ -90,10 +90,7 @@ pub fn geographical_grid(
 
     for lat in latitudes {
         for &lon in &longitudes {
-            result.push(GeographicalPoint {
-                longitude: lon,
-                latitude: lat,
-            })
+            result.push(GeographicalPoint { lon, lat })
         }
     }
 
@@ -145,9 +142,9 @@ mod tests {
         let lon_steps = 2;
         let result = geographical_grid(lat_range, lat_steps, lon_range, lon_steps);
         assert_eq!(result.len(), 6);
-        assert_relative_eq!(result[0].latitude, 0.0);
-        assert_relative_eq!(result[0].longitude, 0.0);
-        assert_relative_eq!(result[5].latitude, 90.0);
-        assert_relative_eq!(result[5].longitude, 180.0);
+        assert_relative_eq!(result[0].lat, 0.0);
+        assert_relative_eq!(result[0].lon, 0.0);
+        assert_relative_eq!(result[5].lat, 90.0);
+        assert_relative_eq!(result[5].lon, 180.0);
     }
 }

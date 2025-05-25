@@ -97,7 +97,11 @@ impl SECS {
         self.sec_amps = Some(obs_b.dot(&vwu.t()));
     }
 
-    pub fn predict(&mut self, pred_locs: &[GeographicalPoint], pred_altitude: f64) -> Array2<f64> {
+    pub fn predict(
+        &mut self,
+        pred_locs: &[GeographicalPoint],
+        pred_altitude: f64,
+    ) -> Vec<PredictionVector> {
         // check if transfer matrix was already computed for these locations
         if pred_locs != self.pred_locs_cache {
             self.t_pred_cache = Some(t_df(
@@ -111,8 +115,19 @@ impl SECS {
 
         let amps = &self.sec_amps.as_ref().unwrap().index_axis(Axis(1), 0);
         let t_pred = &self.t_pred_cache.as_ref().unwrap().index_axis(Axis(2), 0);
+        let pred = amps * t_pred;
 
-        amps * t_pred
+        pred_locs
+            .iter()
+            .enumerate()
+            .map(|(i, loc)| PredictionVector {
+                lon: loc.lon,
+                lat: loc.lat,
+                i: pred[[i, 0]],
+                j: pred[[i, 1]],
+                k: pred[[i, 2]],
+            })
+            .collect()
     }
 }
 
@@ -193,25 +208,36 @@ mod tests {
             0.05,
         );
 
-        let expected: Array2<f64> = Array2::from_shape_vec(
-            (4, 3),
-            vec![
-                -2.972198556047663,
-                -3.524936055971202,
-                2.16259440142763,
-                -1.929534415038157,
-                -2.619481700089664,
-                0.705885416966898,
-                -1.300786048298171,
-                -2.126884161397399,
-                -0.107335205234338,
-                -0.872939849570736,
-                -1.845949256955627,
-                -0.58715751866735,
-            ],
-        )
-        .unwrap();
-
+        let expected: Vec<PredictionVector> = vec![
+            PredictionVector {
+                lon: 50.0,
+                lat: 40.0,
+                i: -2.9721985560476623,
+                j: -3.524936055971201,
+                k: 2.1625944014276293,
+            },
+            PredictionVector {
+                lon: 60.0,
+                lat: 50.0,
+                i: -1.9295344150381564,
+                j: -2.619481700089664,
+                k: 0.7058854169668979,
+            },
+            PredictionVector {
+                lon: 70.0,
+                lat: 60.0,
+                i: -1.3007860482981708,
+                j: -2.126884161397398,
+                k: -0.1073352052343382,
+            },
+            PredictionVector {
+                lon: 80.0,
+                lat: 70.0,
+                i: -0.8729398495707357,
+                j: -1.8459492569556268,
+                k: -0.5871575186673494,
+            },
+        ];
         let pred = secs.predict(
             &[
                 GeographicalPoint::new(40.0, 50.0),
@@ -222,15 +248,12 @@ mod tests {
             110e3,
         );
 
-        assert_eq!(
-            pred.shape(),
-            expected.shape(),
-            "Prediction have different shapes"
-        );
-        assert_relative_eq!(
-            pred.as_slice().unwrap(),
-            expected.as_slice().unwrap(),
-            max_relative = 1e-15
-        );
+        for (actual, expected) in pred.iter().zip(expected.iter()) {
+            assert_relative_eq!(actual.lon, expected.lon, max_relative = 1e-15);
+            assert_relative_eq!(actual.lat, expected.lat, max_relative = 1e-15);
+            assert_relative_eq!(actual.i, expected.i, max_relative = 1e-15);
+            assert_relative_eq!(actual.j, expected.j, max_relative = 1e-15);
+            assert_relative_eq!(actual.k, expected.k, max_relative = 1e-15);
+        }
     }
 }
