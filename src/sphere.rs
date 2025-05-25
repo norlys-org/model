@@ -1,5 +1,7 @@
 use ndarray::{Array, Array2, Axis};
 
+use crate::geo::GeographicalPoint;
+
 /// Calculates both the angular distance and bearing between two sets of lat/lon points
 ///
 /// # Arguments
@@ -11,8 +13,8 @@ use ndarray::{Array, Array2, Axis};
 /// - 2D array of angular distances in radians (Array2<f64>)
 /// - 2D array of bearings in radians (Array2<f64>)
 pub fn angular_distance_and_bearing(
-    coords1: &[(f64, f64)],
-    coords2: &[(f64, f64)],
+    coords1: &[GeographicalPoint],
+    coords2: &[GeographicalPoint],
 ) -> (Array2<f64>, Array2<f64>) {
     let rows = coords1.len();
     let cols = coords2.len();
@@ -22,16 +24,14 @@ pub fn angular_distance_and_bearing(
     let mut alpha = Array::zeros((rows, cols));
 
     for i in 0..rows {
-        let (lat1_deg, lon1_deg) = coords1[i];
-        let lat1_rad = lat1_deg.to_radians();
-        let lon1_rad = lon1_deg.to_radians();
+        let lat1_rad = coords1[i].lat_rad();
+        let lon1_rad = coords1[i].lon_rad();
         let cos_lat1 = lat1_rad.cos();
         let sin_lat1 = lat1_rad.sin();
 
         for j in 0..cols {
-            let (lat2_deg, lon2_deg) = coords2[j];
-            let lat2_rad = lat2_deg.to_radians();
-            let lon2_rad = lon2_deg.to_radians();
+            let lat2_rad = coords2[j].lat_rad();
+            let lon2_rad = coords2[j].lon_rad();
             let cos_lat2 = lat2_rad.cos();
             let sin_lat2 = lat2_rad.sin();
 
@@ -92,8 +92,11 @@ mod tests {
 
     #[test]
     fn test_case_1_basic_cardinal_points() {
-        let coords1 = vec![(0.0, 0.0)];
-        let coords2 = vec![(0.0, 90.0), (90.0, 0.0)];
+        let coords1 = vec![GeographicalPoint::new(0.0, 0.0)];
+        let coords2 = vec![
+            GeographicalPoint::new(0.0, 90.0),
+            GeographicalPoint::new(90.0, 0.0),
+        ];
 
         let expected_theta = vec_to_array2(&vec![vec![1.5708, 1.5708]]);
         let expected_alpha = vec_to_array2(&vec![vec![0.0, 1.5708]]);
@@ -107,8 +110,11 @@ mod tests {
 
     #[test]
     fn test_case_2_realistic_coordinates() {
-        let coords1 = vec![(40.71, -74.0), (34.05, -118.2)];
-        let coords2 = vec![(48.85, 2.35)];
+        let coords1 = vec![
+            GeographicalPoint::new(40.71, -74.0),
+            GeographicalPoint::new(34.05, -118.2),
+        ];
+        let coords2 = vec![GeographicalPoint::new(48.85, 2.35)];
 
         let expected_theta = vec_to_array2(&vec![vec![0.9162], vec![1.4258]]);
         let expected_alpha = vec_to_array2(&vec![vec![0.6333], vec![0.961]]);
@@ -122,8 +128,8 @@ mod tests {
 
     #[test]
     fn test_case_3_antipodal_points() {
-        let coords1 = vec![(90.0, 0.0)];
-        let coords2 = vec![(-90.0, 0.0)];
+        let coords1 = vec![GeographicalPoint::new(90.0, 0.0)];
+        let coords2 = vec![GeographicalPoint::new(-90.0, 0.0)];
 
         let expected_theta = vec_to_array2(&vec![vec![3.1416]]); // π radians = 180 degrees
         let expected_alpha = vec_to_array2(&vec![vec![-1.5708]]); // -π/2 radians = -90 degrees
@@ -137,8 +143,15 @@ mod tests {
 
     #[test]
     fn test_case_4_multiple_points_grid() {
-        let coords1 = vec![(10.0, 10.0), (20.0, 20.0)];
-        let coords2 = vec![(10.0, 11.0), (21.0, 20.0), (15.0, 15.0)];
+        let coords1 = vec![
+            GeographicalPoint::new(10.0, 10.0),
+            GeographicalPoint::new(20.0, 20.0),
+        ];
+        let coords2 = vec![
+            GeographicalPoint::new(10.0, 11.0),
+            GeographicalPoint::new(21.0, 20.0),
+            GeographicalPoint::new(15.0, 15.0),
+        ];
 
         let expected_theta = vec_to_array2(&vec![
             vec![0.0172, 0.255, 0.1219],
@@ -158,8 +171,16 @@ mod tests {
 
     #[test]
     fn test_case_5_edge_cases() {
-        let coords1 = vec![(45.0, 45.0), (89.5, 10.0), (0.0, 179.5)];
-        let coords2 = vec![(45.0, 45.0), (-89.5, -170.0), (0.0, -179.5)];
+        let coords1 = vec![
+            GeographicalPoint::new(45.0, 45.0),
+            GeographicalPoint::new(89.5, 10.0),
+            GeographicalPoint::new(0.0, 179.5),
+        ];
+        let coords2 = vec![
+            GeographicalPoint::new(45.0, 45.0),
+            GeographicalPoint::new(-89.5, -170.0),
+            GeographicalPoint::new(0.0, -179.5),
+        ];
 
         let expected_theta = vec_to_array2(&vec![
             vec![0.0, 2.3633, 2.0994],
