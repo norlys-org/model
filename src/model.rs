@@ -1,10 +1,12 @@
 use ndarray::{Array2, Array3, Axis};
 use serde::{Deserialize, Serialize};
 
+use candid::CandidType;
+
 use crate::{geo::GeographicalPoint, svd::svd, t_df::t_df};
 
 // #[wasm_bindgen]
-#[derive(Serialize, Deserialize, Debug, Clone, Copy)]
+#[derive(CandidType, Serialize, Deserialize, Debug, Clone, Copy)]
 pub struct ObservationVector {
     /// The longitude in degrees.
     pub lon: f64,
@@ -19,7 +21,7 @@ pub struct ObservationVector {
 }
 
 // #[wasm_bindgen]
-#[derive(Serialize, Deserialize, Debug, Clone, Copy)]
+#[derive(CandidType, Serialize, Deserialize, Debug, Clone, Copy)]
 pub struct PredictionVector {
     /// The longitude in degrees.
     pub lon: f64,

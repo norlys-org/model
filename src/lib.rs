@@ -1,8 +1,18 @@
+use model::{ObservationVector, PredictionVector};
+
 mod geo;
 mod model;
 mod sphere;
 mod svd;
 mod t_df;
+
+#[ic_cdk::query]
+pub fn infer(obs: Vec<ObservationVector>) -> Vec<PredictionVector> {
+    vec![]
+}
+
+ic_cdk::export_candid!();
+
 // pub mod helpers;
 // mod matrix;
 // mod overlays;
