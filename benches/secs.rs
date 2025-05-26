@@ -19,12 +19,12 @@ fn bench_secs_interpolate(b: &mut Bencher) {
     b.iter(|| {
         let out = secs_interpolate(
             obs.clone(),
-            45.0f64..85.0f64,
+            45.0f32..85.0f32,
             37,
-            -180.0f64..179.0f64,
+            -180.0f32..179.0f32,
             130,
             110e3,
-            0.0f64,
+            0.0f32,
         );
         test::black_box(out);
     })

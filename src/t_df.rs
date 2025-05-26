@@ -3,7 +3,7 @@ use crate::sphere::angular_distance_and_bearing;
 use ndarray::{Array1, Array2, Array3, Zip};
 
 /// Physical constant: permeability of free space (µ0)
-const MU0: f64 = 1e-7;
+const MU0: f32 = 1e-7;
 
 /// Calculates the "Transfer Matrix" (T) for Divergence-Free Spherical Elementary Current Systems (SECS).
 ///
@@ -37,13 +37,13 @@ const MU0: f64 = 1e-7;
 /// * `secs_altitude` - Altitude above the Earth's surface at which poles are located in meters.
 ///
 /// # Returns
-/// `Array3<f64>` representing the transfer matrix T, with dimensions [nobs][3][nsec].
+/// `Array3<f32>` representing the transfer matrix T, with dimensions [nobs][3][nsec].
 pub fn t_df(
     obs_locs: &[GeographicalPoint],
-    obs_altitude: f64,
+    obs_altitude: f32,
     secs_locs: &[GeographicalPoint],
-    secs_altitude: f64,
-) -> Array3<f64> {
+    secs_altitude: f32,
+) -> Array3<f32> {
     let nobs = obs_locs.len();
     let nsec = secs_locs.len();
 
@@ -64,16 +64,16 @@ pub fn t_df(
     );
 
     let over = obs_altitude > secs_altitude;
-    let x: Array1<f64> = if over {
+    let x: Array1<f32> = if over {
         &sec_r / &obs_r
     } else {
         &obs_r / &sec_r
     };
 
-    let factor: Array1<f64> =
-        1.0 / (1.0 - 2.0 * &x * &cos_theta + x.mapv(|val| val.powi(2))).mapv(f64::sqrt);
+    let factor: Array1<f32> =
+        1.0 / (1.0 - 2.0 * &x * &cos_theta + x.mapv(|val| val.powi(2))).mapv(f32::sqrt);
 
-    let br: Array1<f64> = if over {
+    let br: Array1<f32> = if over {
         // Amm & Viljanen: Equation A.7
         MU0 * &x / &obs_r * (&factor - 1.0)
     } else {
@@ -81,13 +81,13 @@ pub fn t_df(
         MU0 / &obs_r * (&factor - 1.0)
     };
 
-    let b_theta: Array1<f64> = if over {
+    let b_theta: Array1<f32> = if over {
         // Amm & Viljanen: Equation A.8
         -MU0 / &obs_r
             * ((&obs_r - &sec_r * &cos_theta)
                 / (&obs_r.mapv(|v| v.powi(2)) - &obs_r.mapv(|v| v * 2.0) * &sec_r * &cos_theta
                     + &sec_r.mapv(|v| v.powi(2)))
-                    .mapv(f64::sqrt))
+                    .mapv(f32::sqrt))
             .mapv(|v| v - 1.0)
     } else {
         // Amm & Viljanen: Equation 10
@@ -99,7 +99,7 @@ pub fn t_df(
         .into_shape((obs_locs.len(), secs_locs.len()))
         .unwrap();
 
-    let mut b_theta_divided = Array2::<f64>::zeros(sin_theta.dim());
+    let mut b_theta_divided = Array2::<f32>::zeros(sin_theta.dim());
     Zip::from(&mut b_theta_divided)
         .and(&b_theta)
         .and(&sin_theta)
@@ -107,7 +107,7 @@ pub fn t_df(
             *result_val = if b == 0.0 { 0.0 } else { a / b };
         });
 
-    let mut t = Array3::<f64>::zeros((obs_locs.len(), 3, secs_locs.len()));
+    let mut t = Array3::<f32>::zeros((obs_locs.len(), 3, secs_locs.len()));
 
     for i in 0..nobs {
         for j in 0..nsec {
@@ -128,7 +128,7 @@ mod tests {
 
     #[test]
     fn test_t_df_few_points_under() {
-        let t: Array3<f64> = t_df(
+        let t: Array3<f32> = t_df(
             // Substract R_EARTH in order to have same results as python code as `t_df`
             // adds R_EARTH
             &[
@@ -145,7 +145,7 @@ mod tests {
         );
 
         // values generated from the python code
-        let expected: Array3<f64> = Array3::from_shape_vec(
+        let expected: Array3<f32> = Array3::from_shape_vec(
             (2, 3, 3),
             vec![
                 -3.67250861e-11,
@@ -180,7 +180,7 @@ mod tests {
 
     #[test]
     fn test_t_df_few_points_over() {
-        let t: Array3<f64> = t_df(
+        let t: Array3<f32> = t_df(
             // Substract R_EARTH in order to have same results as python code as `t_df`
             // adds R_EARTH
             &[
@@ -197,7 +197,7 @@ mod tests {
         );
 
         // values generated from the python code
-        let expected: Array3<f64> = Array3::from_shape_vec(
+        let expected: Array3<f32> = Array3::from_shape_vec(
             (2, 3, 3),
             vec![
                 1.248881305890098e-11,
