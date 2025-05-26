@@ -4,3 +4,5 @@ target/
 result
 pkg/
 */__pycache__
+.env
+.dfx/

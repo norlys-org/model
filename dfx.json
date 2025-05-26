@@ -1,8 +1,8 @@
 {
   "canisters": {
-    "norlys-model": {
+    "model": {
       "candid": "src/model.did",
-      "package": "norlys-model",
+      "package": "model",
       "type": "rust"
     }
   },
