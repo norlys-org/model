@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::f64::consts::PI;
+use std::f32::consts::PI;
 use wasm_bindgen::prelude::*;
 
 use crate::secs::R_EARTH;
@@ -7,9 +7,9 @@ use crate::secs::R_EARTH;
 #[wasm_bindgen]
 #[derive(Serialize, Deserialize, Debug, Clone, Copy)]
 pub struct ScoreVector {
-    pub lat: f64,
-    pub lon: f64,
-    pub score: f64,
+    pub lat: f32,
+    pub lon: f32,
+    pub score: f32,
 }
 
 /// Given the value of the i component of a predicted vector, ponderate to give
@@ -20,36 +20,36 @@ pub struct ScoreVector {
 /// 100 3
 /// 200 4
 /// 800 10
-pub fn ponderate_i(i: f64) -> f64 {
+pub fn ponderate_i(i: f32) -> f32 {
     let numerator = -0.05732817 - 22.81964;
     let denominator = 1.0 + (i / 1055.17).powf(0.8849212);
     let result = 22.81964 + numerator / denominator;
 
-    f64::min(10.0, result)
+    f32::min(10.0, result)
 }
 
 /// Ponderate the derivative of the `i` component of the vector
-pub fn ponderate_didt(didt: f64) -> f64 {
-    if didt < 10f64 {
-        0f64
+pub fn ponderate_didt(didt: f32) -> f32 {
+    if didt < 10f32 {
+        0f32
     } else {
-        didt / 10f64
+        didt / 10f32
     }
 }
 
 /// Approximate the distance between two points on a sphere given in degrees
-fn approx_distance(lat1: f64, lon1: f64, lat2: f64, lon2: f64) -> f64 {
-    let to_rad = |angle: f64| -> f64 { angle * PI };
+fn approx_distance(lat1: f32, lon1: f32, lat2: f32, lon2: f32) -> f32 {
+    let to_rad = |angle: f32| -> f32 { angle * PI };
     let lat1_rad = to_rad(lat1);
     let lat2_rad = to_rad(lat2);
 
     let delta_lat = lat1_rad - lat2_rad;
     let delta_lon = to_rad(lon2 - lon1);
 
-    let x = delta_lon * f64::cos((lat1_rad + lat2_rad) / 2f64);
+    let x = delta_lon * f32::cos((lat1_rad + lat2_rad) / 2f32);
     let y = delta_lat;
 
-    R_EARTH * f64::sqrt(x * x + y * y)
+    R_EARTH * f32::sqrt(x * x + y * y)
 }
 
 /// Given a distance in km (usually distance from geomagnetic pole) return a weight
@@ -59,7 +59,7 @@ fn approx_distance(lat1: f64, lon1: f64, lat2: f64, lon2: f64) -> f64 {
 /// 2700 1
 /// 3300 0.5
 /// 4000 0.2
-fn auroral_zone_weight(d: f64) -> f64 {
+fn auroral_zone_weight(d: f32) -> f32 {
     if (0.0..=2200.0).contains(&d) {
         -2.0790e-11 * d.powi(3) - 7.6000e-67 * d.powi(2) + 5.5517e-4 * d + 0.0
     } else if (2200.0..=2700.0).contains(&d) {
@@ -74,18 +74,18 @@ fn auroral_zone_weight(d: f64) -> f64 {
 }
 
 /// Given a ScoreVector ponderate the score depending on its vicinity to the auroral oval
-pub fn apply_auroral_zone_overlay(lon: f64, lat: f64, score: f64) -> f64 {
-    let geomag_n_pole: (f64, f64) = (-72.6_f64, 80.9_f64);
+pub fn apply_auroral_zone_overlay(lon: f32, lat: f32, score: f32) -> f32 {
+    let geomag_n_pole: (f32, f32) = (-72.6_f32, 80.9_f32);
 
     let d = approx_distance(lat, lon, geomag_n_pole.0, geomag_n_pole.1);
     let w = auroral_zone_weight(d);
 
-    // score: f64::max(vec.score * w, ponderate_didt())
+    // score: f32::max(vec.score * w, ponderate_didt())
     score * w
 }
 
 /// Encodes the score and the derivative flag into a single byte, see specification document
-pub fn encode_score(val: f64, flag: bool) -> u8 {
+pub fn encode_score(val: f32, flag: bool) -> u8 {
     let clamped = val.clamp(0.0, 10.0);
     let rounded = (clamped * 10.0).round() as u8;
     assert!(rounded <= 100);

@@ -1,4 +1,5 @@
-use model::{ObservationVector, PredictionVector};
+use geo::geographical_grid;
+use model::{ObservationVector, PredictionVector, SECS};
 
 mod geo;
 mod model;
@@ -8,10 +9,52 @@ mod t_df;
 
 #[ic_cdk::query]
 pub fn infer(obs: Vec<ObservationVector>) -> Vec<PredictionVector> {
+    let obs_grid = geographical_grid(45.0..85.0, 37, -170.0..35.0, 130);
+    let pred_grid = geographical_grid(45.0..85.0, 37, -180.0..179.0, 130);
+
+    let mut secs = SECS::new(obs_grid, 0.0);
+    secs.fit(&obs, 0.0, 0.05);
+    secs.predict(&pred_grid, 110e3);
     vec![]
 }
 
 ic_cdk::export_candid!();
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use approx::assert_relative_eq;
+    use std::fs;
+
+    #[test]
+    fn test_infer() {
+        // let secs: SECS = secs_cache::secs;
+
+        let obs_grid = geographical_grid(45.0..85.0, 37, -170.0..35.0, 130);
+        let pred_grid = geographical_grid(45.0..85.0, 37, -180.0..179.0, 130);
+
+        let mut secs = SECS::new(obs_grid, 0.0);
+
+        let obs = vec![ObservationVector {
+            lon: 1.0,
+            lat: 1.0,
+            i: 1.0,
+            j: 1.0,
+            k: 1.0,
+        }];
+
+        secs.fit(&obs, 0.0, 0.05);
+        let pred = secs.predict(&pred_grid, 110e3);
+        println!("{:?}", pred.iter().take(10));
+
+        secs.obs_locs_cache = vec![];
+        secs.t_obs_flat_cache = None;
+        secs.sec_amps = None;
+
+        let debug_output = format!("{:#?}", secs);
+        fs::write("secs_cache.txt", debug_output).unwrap();
+    }
+}
 
 // pub mod helpers;
 // mod matrix;
@@ -37,7 +80,7 @@ ic_cdk::export_candid!();
 //     secs.fit(&observations, 0.05);
 //     let pred = secs.predict(&grid).unwrap();
 //
-//     // let pred_score: Vec<f64> = pred
+//     // let pred_score: Vec<f32> = pred
 //     //     .into_iter()
 //     //     .map(|v| {
 //     //         // encode_score(

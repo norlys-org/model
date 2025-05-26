@@ -1,18 +1,18 @@
 use std::ops::Range;
 
 // Earth radius in meters
-pub const R_EARTH: f64 = 6371e3;
+pub const R_EARTH: f32 = 6371e3;
 
 #[derive(PartialEq, Debug, Clone, Copy)]
 pub struct GeographicalPoint {
     /// The longitude in degrees
-    pub lon: f64,
+    pub lon: f32,
     /// The latitude in degrees
-    pub lat: f64,
+    pub lat: f32,
 }
 
 impl GeographicalPoint {
-    pub fn new(latitude: f64, longitude: f64) -> Self {
+    pub fn new(latitude: f32, longitude: f32) -> Self {
         Self {
             lat: latitude,
             lon: longitude,
@@ -20,12 +20,12 @@ impl GeographicalPoint {
     }
 
     /// Returns latitude in radians
-    pub fn lat_rad(&self) -> f64 {
+    pub fn lat_rad(&self) -> f32 {
         self.lat.to_radians()
     }
 
     /// Returns longitude in radians
-    pub fn lon_rad(&self) -> f64 {
+    pub fn lon_rad(&self) -> f32 {
         self.lon.to_radians()
     }
 }
@@ -41,7 +41,7 @@ impl GeographicalPoint {
 /// * `start` - The starting value of the sequence.
 /// * `end` - The ending value of the sequence.
 /// * `num` - The number of samples to generate.
-fn linspace(start: f64, end: f64, num: usize) -> Vec<f64> {
+fn linspace(start: f32, end: f32, num: usize) -> Vec<f32> {
     let mut result = Vec::with_capacity(num);
 
     if end <= start {
@@ -57,9 +57,9 @@ fn linspace(start: f64, end: f64, num: usize) -> Vec<f64> {
         return result;
     }
 
-    let step = (end - start) / ((num - 1) as f64);
+    let step = (end - start) / ((num - 1) as f32);
     for i in 0..num {
-        result.push(start + (i as f64) * step);
+        result.push(start + (i as f32) * step);
     }
 
     result
@@ -79,9 +79,9 @@ fn linspace(start: f64, end: f64, num: usize) -> Vec<f64> {
 ///
 /// A vector of `GeographicalPoint` instances.
 pub fn geographical_grid(
-    lat_range: Range<f64>,
+    lat_range: Range<f32>,
     lat_steps: usize,
-    lon_range: Range<f64>,
+    lon_range: Range<f32>,
     lon_steps: usize,
 ) -> Vec<GeographicalPoint> {
     let latitudes = linspace(lat_range.start, lat_range.end, lat_steps);

@@ -9,50 +9,51 @@ use crate::{geo::GeographicalPoint, svd::svd, t_df::t_df};
 #[derive(CandidType, Serialize, Deserialize, Debug, Clone, Copy)]
 pub struct ObservationVector {
     /// The longitude in degrees.
-    pub lon: f64,
+    pub lon: f32,
     /// The latitude in degrees.
-    pub lat: f64,
+    pub lat: f32,
     // i vector (usually x magnetometer component) in nano teslas
-    pub i: f64,
+    pub i: f32,
     // j vector (usually y magnetometer component) in nano teslas
-    pub j: f64,
+    pub j: f32,
     // k vector (usually k magnetometer component) in nano teslas
-    pub k: f64,
+    pub k: f32,
 }
 
 // #[wasm_bindgen]
 #[derive(CandidType, Serialize, Deserialize, Debug, Clone, Copy)]
 pub struct PredictionVector {
     /// The longitude in degrees.
-    pub lon: f64,
+    pub lon: f32,
     /// The latitude in degrees.
-    pub lat: f64,
+    pub lat: f32,
     // i vector (usually x magnetometer component) in nano teslas
-    pub i: f64,
+    pub i: f32,
     // j vector (usually y magnetometer component) in nano teslas
-    pub j: f64,
+    pub j: f32,
     // k vector (usually k magnetometer component) in nano teslas
-    pub k: f64,
+    pub k: f32,
 }
 
+#[derive(Debug)]
 pub struct SECS {
     /// The latitude and longiutde of the divergence free (df) SEC locations.
     sec_locs: Vec<GeographicalPoint>,
     /// The altitude in meters above the surface of the earth at which poles are located
-    sec_locs_altitude: f64,
+    sec_locs_altitude: f32,
     /// Storage of the scaling factors (amplitudes) for SECs for the last fit.
-    sec_amps: Option<Array2<f64>>,
+    pub sec_amps: Option<Array2<f32>>,
 
     // Cache fields for transfer function calculation
-    obs_locs_cache: Vec<GeographicalPoint>,
-    t_obs_flat_cache: Option<Array2<f64>>,
+    pub obs_locs_cache: Vec<GeographicalPoint>,
+    pub t_obs_flat_cache: Option<Array2<f32>>,
     /// The latitude, longiutde, and radius of the prediction locations.
     pred_locs_cache: Vec<GeographicalPoint>,
-    t_pred_cache: Option<Array3<f64>>,
+    t_pred_cache: Option<Array3<f32>>,
 }
 
 impl SECS {
-    pub fn new(sec_locs: Vec<GeographicalPoint>, sec_locs_altitude: f64) -> Self {
+    pub fn new(sec_locs: Vec<GeographicalPoint>, sec_locs_altitude: f32) -> Self {
         SECS {
             sec_locs,
             sec_locs_altitude,
@@ -64,8 +65,8 @@ impl SECS {
         }
     }
 
-    pub fn fit(&mut self, obs: &[ObservationVector], obs_altitude: f64, epsilon: f64) {
-        let obs_b: Array2<f64> = Array2::from_shape_vec(
+    pub fn fit(&mut self, obs: &[ObservationVector], obs_altitude: f32, epsilon: f32) {
+        let obs_b: Array2<f32> = Array2::from_shape_vec(
             (1, obs.len() * 3),
             obs.iter()
                 .flat_map(|obs| vec![obs.i, obs.j, obs.k])
@@ -95,14 +96,14 @@ impl SECS {
         }
 
         // SVD
-        let vwu: Array2<f64> = svd(self.t_obs_flat_cache.as_ref().unwrap(), epsilon);
+        let vwu: Array2<f32> = svd(self.t_obs_flat_cache.as_ref().unwrap(), epsilon);
         self.sec_amps = Some(obs_b.dot(&vwu.t()));
     }
 
     pub fn predict(
         &mut self,
         pred_locs: &[GeographicalPoint],
-        pred_altitude: f64,
+        pred_altitude: f32,
     ) -> Vec<PredictionVector> {
         // check if transfer matrix was already computed for these locations
         if pred_locs != self.pred_locs_cache {
@@ -163,7 +164,7 @@ mod tests {
             0.05,
         );
 
-        let sec_amps_expected: f64 = -1.803280385158305e+14;
+        let sec_amps_expected: f32 = -1.803280385158305e+14;
         assert_relative_eq!(
             secs.sec_amps.as_ref().unwrap()[[0, 0]],
             sec_amps_expected,

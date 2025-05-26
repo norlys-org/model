@@ -1,15 +1,15 @@
 type ObservationVector = record {
-  i : float64;
-  j : float64;
-  k : float64;
-  lat : float64;
-  lon : float64;
+  i : float32;
+  j : float32;
+  k : float32;
+  lat : float32;
+  lon : float32;
 };
 type PredictionVector = record {
-  i : float64;
-  j : float64;
-  k : float64;
-  lat : float64;
-  lon : float64;
+  i : float32;
+  j : float32;
+  k : float32;
+  lat : float32;
+  lon : float32;
 };
 service : { infer : (vec ObservationVector) -> (vec PredictionVector) query }
