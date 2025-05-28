@@ -17,8 +17,10 @@ const MAX_VALUE_SIZE: u32 = 100;
 
 #[derive(CandidType, Deserialize, Clone)]
 pub struct StoredSECS {
-    pub t_obs_flat_cache: Array2<f32>,
-    pub t_pred_cache: Array2<f32>,
+    // Using vectors instead of Array2 as ndarray does not implement CandidType
+    // will need to reconvert them afterwards
+    pub t_obs_flat_cache: Vec<f32>,
+    pub t_pred_cache: Vec<f32>,
 }
 
 impl Storable for StoredSECS {
