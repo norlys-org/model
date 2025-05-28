@@ -16,8 +16,9 @@ crate-type = ["cdylib", "rlib"]
 # console_error_panic_hook = "0.1.7"
 # web-sys = { version = "0.3", features = ["console"] }
 approx = "0.5.1"
-ndarray = "0.16.1"
+ndarray = { version = "0.16.1", features = ["serde"] }
 nalgebra = "0.33.2"
 ic-cdk = "0.17.2"
 candid = "0.10"
 serde = "1.0.219"
+ic-stable-structures = "0.6.8"

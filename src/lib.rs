@@ -1,5 +1,11 @@
 use geo::geographical_grid;
 use model::{ObservationVector, PredictionVector, SECS};
+use ndarray::{Array, Array2};
+
+use candid::{CandidType, Decode, Deserialize, Encode};
+use ic_stable_structures::memory_manager::{MemoryId, MemoryManager, VirtualMemory};
+use ic_stable_structures::{storable::Bound, DefaultMemoryImpl, StableBTreeMap, Storable};
+use std::{borrow::Cow, cell::RefCell};
 
 mod geo;
 mod model;
@@ -7,8 +13,31 @@ mod sphere;
 mod svd;
 mod t_df;
 
+const MAX_VALUE_SIZE: u32 = 100;
+
+#[derive(CandidType, Deserialize, Clone)]
+pub struct StoredSECS {
+    pub t_obs_flat_cache: Array2<f32>,
+    pub t_pred_cache: Array2<f32>,
+}
+
+impl Storable for StoredSECS {
+    fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
+        Cow::Owned(Encode!(self).unwrap())
+    }
+
+    fn from_bytes(bytes: std::borrow::Cow<[u8]>) -> Self {
+        Decode!(bytes.as_ref(), Self).unwrap()
+    }
+
+    const BOUND: Bound = Bound::Bounded {
+        max_size: MAX_VALUE_SIZE,
+        is_fixed_size: false,
+    };
+}
+
 #[ic_cdk::query]
-pub fn infer(obs: Vec<ObservationVector>) -> Vec<PredictionVector> {
+pub fn fit(obs: Vec<ObservationVector>) -> Vec<PredictionVector> {
     let obs_grid = geographical_grid(45.0..85.0, 37, -170.0..35.0, 130);
     let pred_grid = geographical_grid(45.0..85.0, 37, -180.0..179.0, 130);
 
