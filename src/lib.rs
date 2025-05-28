@@ -13,9 +13,10 @@ mod sphere;
 mod svd;
 mod t_df;
 
-const MAX_VALUE_SIZE: u32 = 100;
+type Memory = VirtualMemory<DefaultMemoryImpl>;
+const MAX_VALUE_SIZE: u32 = 100000;
 
-#[derive(CandidType, Deserialize, Clone)]
+#[derive(CandidType, Deserialize, Clone, Debug)]
 pub struct StoredSECS {
     // Using vectors instead of Array2 as ndarray does not implement CandidType
     // will need to reconvert them afterwards
@@ -38,15 +39,44 @@ impl Storable for StoredSECS {
     };
 }
 
-#[ic_cdk::query]
-pub fn fit(obs: Vec<ObservationVector>) -> Vec<PredictionVector> {
+thread_local! {
+    static MEMORY_MANAGER: RefCell<MemoryManager<DefaultMemoryImpl>> =
+        RefCell::new(MemoryManager::init(DefaultMemoryImpl::default()));
+
+    static MAP: RefCell<StableBTreeMap<u64, StoredSECS, Memory>> = RefCell::new(
+        StableBTreeMap::init(
+            MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(0))),
+        )
+    );
+}
+
+#[ic_cdk::update]
+pub fn fit(obs: Vec<ObservationVector>) {
     let obs_grid = geographical_grid(45.0..85.0, 37, -170.0..35.0, 130);
-    let pred_grid = geographical_grid(45.0..85.0, 37, -180.0..179.0, 130);
 
     let mut secs = SECS::new(obs_grid, 0.0);
     secs.fit(&obs, 0.0, 0.05);
-    secs.predict(&pred_grid, 110e3);
+
+    MAP.with(|p| {
+        p.borrow_mut().insert(
+            0,
+            StoredSECS {
+                t_obs_flat_cache: secs.t_obs_flat_cache.unwrap().into_raw_vec(),
+                t_pred_cache: vec![],
+            },
+        )
+    });
+}
+
+#[ic_cdk::query]
+pub fn predict() -> Vec<PredictionVector> {
+    ic_cdk::print(format!("{:?}", MAP.with(|p| p.borrow().get(&0))));
     vec![]
+    // let obs_grid = geographical_grid(45.0..85.0, 37, -170.0..35.0, 130);
+    // let pred_grid = geographical_grid(45.0..85.0, 37, -180.0..179.0, 130);
+    //
+    // let mut secs = SECS::new(obs_grid, 0.0);
+    // secs.predict(&pred_grid, 110e3)
 }
 
 ic_cdk::export_candid!();
