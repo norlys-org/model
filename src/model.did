@@ -13,6 +13,7 @@ type PredictionVector = record {
   lon : float32;
 };
 service : {
+  clear_storage : () -> ();
   fit : (vec ObservationVector) -> ();
   predict : () -> (vec PredictionVector) query;
 }

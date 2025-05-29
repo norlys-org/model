@@ -50,7 +50,7 @@ impl Storable for StoredSECS {
 
 impl SECS {
     /// Loads SECS from stable memory
-    pub fn load_secs() -> Self {
+    pub fn load() -> Self {
         let stored_secs: StoredSECS = MAP
             .with(|p| p.borrow().get(&STORED_SECS_ID))
             .unwrap_or_default();
@@ -127,9 +127,17 @@ pub fn fit(obs: Vec<ObservationVector>) {
     secs.store();
 }
 
+#[ic_cdk::update]
+pub fn clear_storage() {
+    MAP.with(|p| {
+        let mut map = p.borrow_mut();
+        map.remove(&0);
+    });
+}
+
 #[ic_cdk::query]
 pub fn predict() -> Vec<PredictionVector> {
-    ic_cdk::print(format!("{:?}", MAP.with(|p| p.borrow().get(&0))));
+    ic_cdk::print(format!("{:?}", SECS::load()));
     vec![]
     // let obs_grid = geographical_grid(45.0..85.0, 37, -170.0..35.0, 130);
     // let pred_grid = geographical_grid(45.0..85.0, 37, -180.0..179.0, 130);
