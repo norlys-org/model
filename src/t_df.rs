@@ -46,74 +46,57 @@ pub fn t_df(
 ) -> Array3<f32> {
     let nobs = obs_locs.len();
     let nsec = secs_locs.len();
+    let mut t = Array3::<f32>::zeros((nobs, 3, nsec));
 
     let (theta, alpha) = angular_distance_and_bearing(&obs_locs, &secs_locs);
 
-    let sin_theta = theta.mapv(|x| x.sin());
-    let cos_theta = theta.mapv(|x| x.cos()).into_shape((nobs * nsec,)).unwrap(); // cos + flatten
-
-    let obs_r = Array1::from_iter(
-        obs_locs
-            .iter()
-            .flat_map(|_| vec![obs_altitude + R_EARTH; secs_locs.len()]),
-    );
-    let sec_r = Array1::from_iter(
-        secs_locs
-            .iter()
-            .flat_map(|_| vec![secs_altitude + R_EARTH; obs_locs.len()]),
-    );
-
+    // Pre-compute constants
+    let obs_r = obs_altitude + R_EARTH;
+    let sec_r = secs_altitude + R_EARTH;
     let over = obs_altitude > secs_altitude;
-    let x: Array1<f32> = if over {
-        &sec_r / &obs_r
-    } else {
-        &obs_r / &sec_r
-    };
+    let mu0_over_obs_r = MU0 / obs_r;
 
-    let factor: Array1<f32> =
-        1.0 / (1.0 - 2.0 * &x * &cos_theta + x.mapv(|val| val.powi(2))).mapv(f32::sqrt);
-
-    let br: Array1<f32> = if over {
-        // Amm & Viljanen: Equation A.7
-        MU0 * &x / &obs_r * (&factor - 1.0)
-    } else {
-        // Amm & Viljanen: Equation 9
-        MU0 / &obs_r * (&factor - 1.0)
-    };
-
-    let b_theta: Array1<f32> = if over {
-        // Amm & Viljanen: Equation A.8
-        -MU0 / &obs_r
-            * ((&obs_r - &sec_r * &cos_theta)
-                / (&obs_r.mapv(|v| v.powi(2)) - &obs_r.mapv(|v| v * 2.0) * &sec_r * &cos_theta
-                    + &sec_r.mapv(|v| v.powi(2)))
-                    .mapv(f32::sqrt))
-            .mapv(|v| v - 1.0)
-    } else {
-        // Amm & Viljanen: Equation 10
-        -MU0 / &obs_r * (factor * (x - &cos_theta) + &cos_theta)
-    };
-
-    let br = br.into_shape((obs_locs.len(), secs_locs.len())).unwrap();
-    let b_theta = b_theta
-        .into_shape((obs_locs.len(), secs_locs.len()))
-        .unwrap();
-
-    let mut b_theta_divided = Array2::<f32>::zeros(sin_theta.dim());
-    Zip::from(&mut b_theta_divided)
-        .and(&b_theta)
-        .and(&sin_theta)
-        .for_each(|result_val, &a, &b| {
-            *result_val = if b == 0.0 { 0.0 } else { a / b };
-        });
-
-    let mut t = Array3::<f32>::zeros((obs_locs.len(), 3, secs_locs.len()));
-
+    // Process each observation-SEC pair directly without intermediate arrays
     for i in 0..nobs {
         for j in 0..nsec {
-            t[[i, 0, j]] = -b_theta_divided[[i, j]] * alpha[[i, j]].sin();
-            t[[i, 1, j]] = -b_theta_divided[[i, j]] * alpha[[i, j]].cos();
-            t[[i, 2, j]] = -br[[i, j]];
+            let cos_theta_val = theta[[i, j]].cos();
+            let sin_theta_val = theta[[i, j]].sin();
+
+            // Skip computation if sin_theta is zero (avoids division by zero later)
+            if sin_theta_val == 0.0 {
+                continue;
+            }
+
+            let x = if over { sec_r / obs_r } else { obs_r / sec_r };
+
+            let discriminant = 1.0 - 2.0 * x * cos_theta_val + x * x;
+            let factor = discriminant.sqrt().recip();
+
+            let br = if over {
+                // Amm & Viljanen: Equation A.7
+                mu0_over_obs_r * x * (factor - 1.0)
+            } else {
+                // Amm & Viljanen: Equation 9
+                mu0_over_obs_r * (factor - 1.0)
+            };
+
+            let b_theta = if over {
+                // Amm & Viljanen: Equation A.8
+                let numerator = obs_r - sec_r * cos_theta_val;
+                let denom_sqrt =
+                    (obs_r * obs_r - 2.0 * obs_r * sec_r * cos_theta_val + sec_r * sec_r).sqrt();
+                -mu0_over_obs_r * (numerator / denom_sqrt - 1.0)
+            } else {
+                // Amm & Viljanen: Equation 10
+                -mu0_over_obs_r * (factor * (x - cos_theta_val) + cos_theta_val)
+            };
+
+            let b_theta_over_sin = b_theta / sin_theta_val;
+            let alpha_val = alpha[[i, j]];
+
+            t[[i, 0, j]] = -b_theta_over_sin * alpha_val.sin();
+            t[[i, 1, j]] = -b_theta_over_sin * alpha_val.cos();
+            t[[i, 2, j]] = -br;
         }
     }
 
