@@ -1,6 +1,6 @@
 use geo::{geographical_grid, GeographicalPoint};
 use model::{ObservationVector, PredictionVector, SECS};
-use ndarray::{arr2, array, Array, Array2};
+use ndarray::{arr2, array, Array, Array2, Array3};
 
 use candid::{CandidType, Decode, Deserialize, Encode};
 use ic_stable_structures::memory_manager::{MemoryId, MemoryManager, VirtualMemory};
@@ -17,20 +17,6 @@ type Memory = VirtualMemory<DefaultMemoryImpl>;
 const MAX_VALUE_SIZE: u32 = 100000;
 const STORED_SECS_ID: u64 = 1;
 
-macro_rules! update_if_different {
-    ($stored:expr, $self:expr, $field:ident) => {
-        if $self.$field != $stored.$field {
-            $stored.$field = $self.$field;
-        }
-    };
-    ($stored:expr, $self:expr, $field:ident, $transform:expr) => {
-        let new_value = $transform;
-        if new_value != $stored.$field {
-            $stored.$field = new_value;
-        }
-    };
-}
-
 #[derive(CandidType, Deserialize, Clone, Debug, Default)]
 pub struct StoredSECS {
     sec_locs: Vec<GeographicalPoint>,
@@ -38,10 +24,13 @@ pub struct StoredSECS {
 
     pub obs_locs_cache: Vec<GeographicalPoint>,
     pub pred_locs_cache: Vec<GeographicalPoint>,
-    // Using vectors instead of Array2 as ndarray does not implement CandidType
+    // Using vectors instead of Array2/3 as ndarray does not implement CandidType
     // will need to reconvert them afterwards
     pub t_obs_flat_cache: Vec<f32>,
+    pub t_obs_flat_shape: Vec<usize>,
+
     pub t_pred_cache: Vec<f32>,
+    pub t_pred_shape: Vec<usize>,
 }
 
 impl Storable for StoredSECS {
@@ -60,31 +49,61 @@ impl Storable for StoredSECS {
 }
 
 impl SECS {
-    /// Store into IC stable storage the current cached values as StoredSECS
-    /// update individual attributes if new values are recorded in `self`
-    pub fn store(self) {
-        let mut stored_secs: StoredSECS = MAP
+    /// Loads SECS from stable memory
+    pub fn load_secs() -> Self {
+        let stored_secs: StoredSECS = MAP
             .with(|p| p.borrow().get(&STORED_SECS_ID))
             .unwrap_or_default();
 
-        update_if_different!(stored_secs, self, sec_locs);
-        update_if_different!(stored_secs, self, sec_locs_altitude);
-        update_if_different!(stored_secs, self, obs_locs_cache);
-        update_if_different!(stored_secs, self, pred_locs_cache);
-        update_if_different!(
-            stored_secs,
-            self,
-            t_obs_flat_cache,
-            self.t_obs_flat_cache.unwrap_or_default().into_raw_vec()
-        );
-        update_if_different!(
-            stored_secs,
-            self,
-            t_pred_cache,
-            self.t_pred_cache.unwrap_or_default().into_raw_vec()
-        );
+        SECS {
+            sec_locs: stored_secs.sec_locs,
+            sec_locs_altitude: stored_secs.sec_locs_altitude,
+            sec_amps: None,
+            obs_locs_cache: stored_secs.obs_locs_cache,
+            t_obs_flat_cache: Array2::from_shape_vec(
+                [
+                    stored_secs.t_obs_flat_shape[0],
+                    stored_secs.t_obs_flat_shape[1],
+                ],
+                stored_secs.t_obs_flat_cache,
+            )
+            .ok(),
+            pred_locs_cache: stored_secs.pred_locs_cache,
+            t_pred_cache: Array3::from_shape_vec(
+                [
+                    stored_secs.t_pred_shape[0],
+                    stored_secs.t_pred_shape[1],
+                    stored_secs.t_pred_shape[2],
+                ],
+                stored_secs.t_pred_cache,
+            )
+            .ok(),
+        }
+    }
 
-        MAP.with(|p| p.borrow_mut().insert(STORED_SECS_ID, stored_secs));
+    /// Converts self to StoredSECS and store it in stable memory
+    pub fn store(self) {
+        let t_obs: Array2<f32> = self.t_obs_flat_cache.unwrap_or_default();
+        let t_pred: Array3<f32> = self.t_pred_cache.unwrap_or_default();
+
+        MAP.with(|p| {
+            p.borrow_mut().insert(
+                STORED_SECS_ID,
+                StoredSECS {
+                    sec_locs: self.sec_locs,
+                    sec_locs_altitude: self.sec_locs_altitude,
+
+                    obs_locs_cache: self.obs_locs_cache,
+                    pred_locs_cache: self.pred_locs_cache,
+
+                    t_obs_flat_shape: t_obs.shape().to_vec(),
+                    t_obs_flat_cache: t_obs.into_raw_vec(),
+
+                    t_pred_shape: t_pred.shape().to_vec(),
+                    t_pred_cache: t_pred.into_raw_vec(),
+                },
+            )
+        });
     }
 }
 
