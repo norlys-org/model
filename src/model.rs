@@ -38,9 +38,9 @@ pub struct PredictionVector {
 #[derive(Debug)]
 pub struct SECS {
     /// The latitude and longiutde of the divergence free (df) SEC locations.
-    sec_locs: Vec<GeographicalPoint>,
+    pub sec_locs: Vec<GeographicalPoint>,
     /// The altitude in meters above the surface of the earth at which poles are located
-    sec_locs_altitude: f32,
+    pub sec_locs_altitude: f32,
     /// Storage of the scaling factors (amplitudes) for SECs for the last fit.
     pub sec_amps: Option<Array2<f32>>,
 
@@ -48,8 +48,8 @@ pub struct SECS {
     pub obs_locs_cache: Vec<GeographicalPoint>,
     pub t_obs_flat_cache: Option<Array2<f32>>,
     /// The latitude, longiutde, and radius of the prediction locations.
-    pred_locs_cache: Vec<GeographicalPoint>,
-    t_pred_cache: Option<Array3<f32>>,
+    pub pred_locs_cache: Vec<GeographicalPoint>,
+    pub t_pred_cache: Option<Array3<f32>>,
 }
 
 impl SECS {

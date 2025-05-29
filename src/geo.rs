@@ -1,9 +1,10 @@
+use candid::{CandidType, Decode, Deserialize, Encode};
 use std::ops::Range;
 
 // Earth radius in meters
 pub const R_EARTH: f32 = 6371e3;
 
-#[derive(PartialEq, Debug, Clone, Copy)]
+#[derive(CandidType, Deserialize, PartialEq, Debug, Clone, Copy)]
 pub struct GeographicalPoint {
     /// The longitude in degrees
     pub lon: f32,
