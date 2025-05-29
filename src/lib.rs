@@ -1,6 +1,6 @@
 use geo::{geographical_grid, GeographicalPoint};
 use model::{ObservationVector, PredictionVector, SECS};
-use ndarray::{arr2, array, Array, Array2, Array3};
+use ndarray::{Array2, Array3};
 
 use candid::{CandidType, Decode, Deserialize, Encode};
 use ic_stable_structures::memory_manager::{MemoryId, MemoryManager, VirtualMemory};
@@ -14,13 +14,16 @@ mod svd;
 mod t_df;
 
 type Memory = VirtualMemory<DefaultMemoryImpl>;
-const MAX_VALUE_SIZE: u32 = 100000;
+const MAX_VALUE_SIZE: u32 = 500_000_000;
 const STORED_SECS_ID: u64 = 1;
 
 #[derive(CandidType, Deserialize, Clone, Debug, Default)]
 pub struct StoredSECS {
     sec_locs: Vec<GeographicalPoint>,
     sec_locs_altitude: f32,
+
+    sec_amps: Vec<f32>,
+    sec_amps_shape: Vec<usize>,
 
     pub obs_locs_cache: Vec<GeographicalPoint>,
     pub pred_locs_cache: Vec<GeographicalPoint>,
@@ -58,7 +61,13 @@ impl SECS {
         SECS {
             sec_locs: stored_secs.sec_locs,
             sec_locs_altitude: stored_secs.sec_locs_altitude,
-            sec_amps: None,
+
+            sec_amps: Array2::from_shape_vec(
+                [stored_secs.sec_amps_shape[0], stored_secs.sec_amps_shape[1]],
+                stored_secs.sec_amps,
+            )
+            .ok(),
+
             obs_locs_cache: stored_secs.obs_locs_cache,
             t_obs_flat_cache: Array2::from_shape_vec(
                 [
@@ -68,6 +77,7 @@ impl SECS {
                 stored_secs.t_obs_flat_cache,
             )
             .ok(),
+
             pred_locs_cache: stored_secs.pred_locs_cache,
             t_pred_cache: Array3::from_shape_vec(
                 [
@@ -85,6 +95,7 @@ impl SECS {
     pub fn store(self) {
         let t_obs: Array2<f32> = self.t_obs_flat_cache.unwrap_or_default();
         let t_pred: Array3<f32> = self.t_pred_cache.unwrap_or_default();
+        let amps: Array2<f32> = self.sec_amps.unwrap_or_default();
 
         MAP.with(|p| {
             p.borrow_mut().insert(
@@ -92,6 +103,9 @@ impl SECS {
                 StoredSECS {
                     sec_locs: self.sec_locs,
                     sec_locs_altitude: self.sec_locs_altitude,
+
+                    sec_amps_shape: amps.shape().to_vec(),
+                    sec_amps: amps.into_raw_vec(),
 
                     obs_locs_cache: self.obs_locs_cache,
                     pred_locs_cache: self.pred_locs_cache,
@@ -119,10 +133,13 @@ thread_local! {
 }
 
 #[ic_cdk::update]
-pub fn fit(obs: Vec<ObservationVector>) {
-    let obs_grid = geographical_grid(45.0..85.0, 37, -170.0..35.0, 130);
+pub fn fit_obs(obs: Vec<ObservationVector>) {
+    let mut secs: SECS = if MAP.with(|p| p.borrow().get(&0).is_some()) {
+        SECS::load()
+    } else {
+        SECS::new(geographical_grid(45.0..85.0, 37, -170.0..35.0, 74), 0.0)
+    };
 
-    let mut secs = SECS::new(obs_grid, 0.0);
     secs.fit(&obs, 0.0, 0.05);
     secs.store();
 }
@@ -131,22 +148,61 @@ pub fn fit(obs: Vec<ObservationVector>) {
 pub fn clear_storage() {
     MAP.with(|p| {
         let mut map = p.borrow_mut();
-        map.remove(&0);
+        map.remove(&STORED_SECS_ID);
     });
 }
 
-#[ic_cdk::query]
-pub fn predict() -> Vec<PredictionVector> {
-    ic_cdk::print(format!("{:?}", SECS::load()));
-    vec![]
-    // let obs_grid = geographical_grid(45.0..85.0, 37, -170.0..35.0, 130);
-    // let pred_grid = geographical_grid(45.0..85.0, 37, -180.0..179.0, 130);
-    //
-    // let mut secs = SECS::new(obs_grid, 0.0);
-    // secs.predict(&pred_grid, 110e3)
+#[ic_cdk::update]
+pub fn fit_pred() {
+    let pred_grid = geographical_grid(45.0..85.0, 37, -180.0..179.0, 130);
+    let mut secs = SECS::load();
+    secs.calc_t_pred(&pred_grid, 110e3);
+    secs.store();
 }
 
+#[ic_cdk::update]
+pub fn predict() -> Vec<PredictionVector> {
+    let mut secs = SECS::load();
+    secs.predict()
+}
+
+// #[wasm_bindgen]
+// pub fn wasm_infer(js_obs: JsValue) -> Result<JsValue, JsValue> {
+//     console_error_panic_hook::set_once();
+//     let observations: Vec<ObservationVector> =
+//         serde_wasm_bindgen::from_value(js_obs).expect("Failed to deserialize observations");
+//
+//     let obs_grid = geographical_grid(45.0..85.0, 37, -170.0..35.0, 130);
+//
+//     let mut secs = SECS::new(obs_grid, 0.0);
+//     secs.fit(&observations, 0.0, 0.05);
+//
+//     let pred_grid = geographical_grid(45.0..85.0, 37, -180.0..179.0, 130);
+//     secs.calc_t_pred(&pred_grid, 110e3);
+//     let pred = secs.predict(&pred_grid, 110e3);
+//
+//     Ok(serde_wasm_bindgen::to_value(&pred)?)
+// }
+
 ic_cdk::export_candid!();
+
+#[cfg(feature = "canbench-rs")]
+mod benches {
+    use super::*;
+    use canbench_rs::bench;
+
+    #[bench]
+    fn calc_t() {
+        fit_obs(vec![ObservationVector {
+            lon: 1.0,
+            lat: 1.0,
+            i: 1.0,
+            j: 1.0,
+            k: 1.0,
+        }]);
+        fit_pred();
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -172,7 +228,8 @@ mod tests {
         }];
 
         secs.fit(&obs, 0.0, 0.05);
-        let pred = secs.predict(&pred_grid, 110e3);
+        secs.calc_t_pred(&pred_grid, 110e3);
+        let pred = secs.predict();
         println!("{:?}", pred.iter().take(10));
 
         secs.obs_locs_cache = vec![];
@@ -184,44 +241,6 @@ mod tests {
     }
 }
 
-// pub mod helpers;
-// mod matrix;
-// mod overlays;
-// pub mod secs;
-// mod svd;
-
-// use grid::geographical_grid;
-// use secs::{ObservationMatrix, SECS};
-// // use secs::{ObservationMatrix, ObservationVector, SECS};
-// use wasm_bindgen::{prelude::wasm_bindgen, JsValue};
-// use web_sys::console;
-
-// #[wasm_bindgen]
-// pub fn infer(js_obs: JsValue) -> Result<JsValue, JsValue> {
-//     console_error_panic_hook::set_once();
-//     let observations: ObservationMatrix =
-//         serde_wasm_bindgen::from_value(js_obs).expect("Failed to deserialize observations");
-//
-//     let grid = geographical_grid(45.0..85.0, 37, -180.0..179.0, 130, 110.0);
-//
-//     let mut secs = SECS::new(grid.clone());
-//     secs.fit(&observations, 0.05);
-//     let pred = secs.predict(&grid).unwrap();
-//
-//     // let pred_score: Vec<f32> = pred
-//     //     .into_iter()
-//     //     .map(|v| {
-//     //         // encode_score(
-//     //         // apply_auroral_zone_overlay(v.lon, v.lat, ponderate_i(v.i))
-//     //         v.i
-//     //         //     false, // TODO: Leave to false as of now derivative is not computed
-//     //         // )
-//     //     })
-//     //     .collect();
-//
-//     Ok(serde_wasm_bindgen::to_value(&pred)?)
-// }
-//
 // #[cfg(test)]
 // mod tests {
 //     use crate::secs::{ObservationVector, SECS};

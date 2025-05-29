@@ -100,11 +100,7 @@ impl SECS {
         self.sec_amps = Some(obs_b.dot(&vwu.t()));
     }
 
-    pub fn predict(
-        &mut self,
-        pred_locs: &[GeographicalPoint],
-        pred_altitude: f32,
-    ) -> Vec<PredictionVector> {
+    pub fn calc_t_pred(&mut self, pred_locs: &[GeographicalPoint], pred_altitude: f32) {
         // check if transfer matrix was already computed for these locations
         if pred_locs != self.pred_locs_cache {
             self.t_pred_cache = Some(t_df(
@@ -115,12 +111,14 @@ impl SECS {
             ));
             self.pred_locs_cache = pred_locs.to_vec();
         }
+    }
 
+    pub fn predict(&mut self) -> Vec<PredictionVector> {
         let amps = &self.sec_amps.as_ref().unwrap().index_axis(Axis(1), 0);
         let t_pred = &self.t_pred_cache.as_ref().unwrap().index_axis(Axis(2), 0);
         let pred = amps * t_pred;
 
-        pred_locs
+        self.pred_locs_cache
             .iter()
             .enumerate()
             .map(|(i, loc)| PredictionVector {

@@ -14,6 +14,7 @@ type PredictionVector = record {
 };
 service : {
   clear_storage : () -> ();
-  fit : (vec ObservationVector) -> ();
-  predict : () -> (vec PredictionVector) query;
+  fit_obs : (vec ObservationVector) -> ();
+  fit_pred : () -> ();
+  predict : () -> (vec PredictionVector);
 }
