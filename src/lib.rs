@@ -36,27 +36,10 @@ pub struct StoredSECS {
     pub t_pred_shape: Vec<usize>,
 }
 
-impl Storable for StoredSECS {
-    fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
-        Cow::Owned(Encode!(self).unwrap())
-    }
-
-    fn from_bytes(bytes: std::borrow::Cow<[u8]>) -> Self {
-        Decode!(bytes.as_ref(), Self).unwrap()
-    }
-
-    const BOUND: Bound = Bound::Bounded {
-        max_size: MAX_VALUE_SIZE,
-        is_fixed_size: false,
-    };
-}
-
 impl SECS {
     /// Loads SECS from stable memory
     pub fn load() -> Self {
-        let stored_secs: StoredSECS = MAP
-            .with(|p| p.borrow().get(&STORED_SECS_ID))
-            .unwrap_or_default();
+        let stored_secs: StoredSECS = STORED_SECS.with(|p| p.borrow().clone()).unwrap_or_default();
 
         SECS {
             sec_locs: stored_secs.sec_locs,
@@ -97,44 +80,34 @@ impl SECS {
         let t_pred: Array3<f32> = self.t_pred_cache.unwrap_or_default();
         let amps: Array2<f32> = self.sec_amps.unwrap_or_default();
 
-        MAP.with(|p| {
-            p.borrow_mut().insert(
-                STORED_SECS_ID,
-                StoredSECS {
-                    sec_locs: self.sec_locs,
-                    sec_locs_altitude: self.sec_locs_altitude,
+        STORED_SECS.with(|p| {
+            *p.borrow_mut() = Some(StoredSECS {
+                sec_locs: self.sec_locs,
+                sec_locs_altitude: self.sec_locs_altitude,
 
-                    sec_amps_shape: amps.shape().to_vec(),
-                    sec_amps: amps.into_raw_vec(),
+                sec_amps_shape: amps.shape().to_vec(),
+                sec_amps: amps.into_raw_vec(),
 
-                    obs_locs_cache: self.obs_locs_cache,
-                    pred_locs_cache: self.pred_locs_cache,
+                obs_locs_cache: self.obs_locs_cache,
+                pred_locs_cache: self.pred_locs_cache,
 
-                    t_obs_flat_shape: t_obs.shape().to_vec(),
-                    t_obs_flat_cache: t_obs.into_raw_vec(),
+                t_obs_flat_shape: t_obs.shape().to_vec(),
+                t_obs_flat_cache: t_obs.into_raw_vec(),
 
-                    t_pred_shape: t_pred.shape().to_vec(),
-                    t_pred_cache: t_pred.into_raw_vec(),
-                },
-            )
+                t_pred_shape: t_pred.shape().to_vec(),
+                t_pred_cache: t_pred.into_raw_vec(),
+            });
         });
     }
 }
 
 thread_local! {
-    static MEMORY_MANAGER: RefCell<MemoryManager<DefaultMemoryImpl>> =
-        RefCell::new(MemoryManager::init(DefaultMemoryImpl::default()));
-
-    static MAP: RefCell<StableBTreeMap<u64, StoredSECS, Memory>> = RefCell::new(
-        StableBTreeMap::init(
-            MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(0))),
-        )
-    );
+    static STORED_SECS: RefCell<Option<StoredSECS>> = RefCell::new(None);
 }
 
 #[ic_cdk::update]
 pub fn fit_obs(obs: Vec<ObservationVector>) {
-    let mut secs: SECS = if MAP.with(|p| p.borrow().get(&0).is_some()) {
+    let mut secs: SECS = if STORED_SECS.with(|storage| storage.borrow().is_some()) {
         SECS::load()
     } else {
         SECS::new(geographical_grid(45.0..85.0, 37, -170.0..35.0, 74), 0.0)
@@ -142,14 +115,6 @@ pub fn fit_obs(obs: Vec<ObservationVector>) {
 
     secs.fit(&obs, 0.0, 0.05);
     secs.store();
-}
-
-#[ic_cdk::update]
-pub fn clear_storage() {
-    MAP.with(|p| {
-        let mut map = p.borrow_mut();
-        map.remove(&STORED_SECS_ID);
-    });
 }
 
 #[ic_cdk::update]
