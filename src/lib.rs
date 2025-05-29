@@ -1,6 +1,6 @@
-use geo::geographical_grid;
+use geo::{geographical_grid, GeographicalPoint};
 use model::{ObservationVector, PredictionVector, SECS};
-use ndarray::{Array, Array2};
+use ndarray::{arr2, array, Array, Array2};
 
 use candid::{CandidType, Decode, Deserialize, Encode};
 use ic_stable_structures::memory_manager::{MemoryId, MemoryManager, VirtualMemory};
@@ -15,9 +15,29 @@ mod t_df;
 
 type Memory = VirtualMemory<DefaultMemoryImpl>;
 const MAX_VALUE_SIZE: u32 = 100000;
+const STORED_SECS_ID: u64 = 1;
 
-#[derive(CandidType, Deserialize, Clone, Debug)]
+macro_rules! update_if_different {
+    ($stored:expr, $self:expr, $field:ident) => {
+        if $self.$field != $stored.$field {
+            $stored.$field = $self.$field;
+        }
+    };
+    ($stored:expr, $self:expr, $field:ident, $transform:expr) => {
+        let new_value = $transform;
+        if new_value != $stored.$field {
+            $stored.$field = new_value;
+        }
+    };
+}
+
+#[derive(CandidType, Deserialize, Clone, Debug, Default)]
 pub struct StoredSECS {
+    sec_locs: Vec<GeographicalPoint>,
+    sec_locs_altitude: f32,
+
+    pub obs_locs_cache: Vec<GeographicalPoint>,
+    pub pred_locs_cache: Vec<GeographicalPoint>,
     // Using vectors instead of Array2 as ndarray does not implement CandidType
     // will need to reconvert them afterwards
     pub t_obs_flat_cache: Vec<f32>,
@@ -39,6 +59,35 @@ impl Storable for StoredSECS {
     };
 }
 
+impl SECS {
+    /// Store into IC stable storage the current cached values as StoredSECS
+    /// update individual attributes if new values are recorded in `self`
+    pub fn store(self) {
+        let mut stored_secs: StoredSECS = MAP
+            .with(|p| p.borrow().get(&STORED_SECS_ID))
+            .unwrap_or_default();
+
+        update_if_different!(stored_secs, self, sec_locs);
+        update_if_different!(stored_secs, self, sec_locs_altitude);
+        update_if_different!(stored_secs, self, obs_locs_cache);
+        update_if_different!(stored_secs, self, pred_locs_cache);
+        update_if_different!(
+            stored_secs,
+            self,
+            t_obs_flat_cache,
+            self.t_obs_flat_cache.unwrap_or_default().into_raw_vec()
+        );
+        update_if_different!(
+            stored_secs,
+            self,
+            t_pred_cache,
+            self.t_pred_cache.unwrap_or_default().into_raw_vec()
+        );
+
+        MAP.with(|p| p.borrow_mut().insert(STORED_SECS_ID, stored_secs));
+    }
+}
+
 thread_local! {
     static MEMORY_MANAGER: RefCell<MemoryManager<DefaultMemoryImpl>> =
         RefCell::new(MemoryManager::init(DefaultMemoryImpl::default()));
@@ -56,16 +105,7 @@ pub fn fit(obs: Vec<ObservationVector>) {
 
     let mut secs = SECS::new(obs_grid, 0.0);
     secs.fit(&obs, 0.0, 0.05);
-
-    MAP.with(|p| {
-        p.borrow_mut().insert(
-            0,
-            StoredSECS {
-                t_obs_flat_cache: secs.t_obs_flat_cache.unwrap().into_raw_vec(),
-                t_pred_cache: vec![],
-            },
-        )
-    });
+    secs.store();
 }
 
 #[ic_cdk::query]
