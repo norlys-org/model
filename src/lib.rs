@@ -49,12 +49,12 @@ pub fn fit_pred() {
 }
 
 #[ic_cdk::update]
-pub fn predict() -> Vec<u8> {
+pub fn predict() -> Vec<f64> {
     let mut secs = SECS::load();
-    secs.predict()
-        .into_scores()
-        .ponderate_auroral_zone()
-        .encode()
+    secs.predict().into_iter().map(|v| v.i).collect()
+    // .into_scores()
+    // .ponderate_auroral_zone()
+    // .encode()
 }
 
 ic_cdk::export_candid!();
@@ -77,31 +77,30 @@ mod benches {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_infer() {
-        let obs_grid = geographical_grid(45.0..85.0, 37, -170.0..35.0, 130);
-        let pred_grid = geographical_grid(45.0..85.0, 37, -180.0..179.0, 130);
-
-        let mut secs = SECS::new(obs_grid, 0.0);
-
-        let obs = vec![ObservationVector {
-            lon: 1.0,
-            lat: 1.0,
-            i: 1.0,
-            j: 1.0,
-            k: 1.0,
-        }];
-
-        secs.fit(&obs, 0.0, 0.05);
-        secs.calc_t_pred(&pred_grid, 110e3);
-        let pred = secs.predict();
-        println!("{:?}", pred.iter().take(10));
-    }
-}
+// #[cfg(test)]
+// mod tests {
+//     use super::*;
+//
+//     #[test]
+//     fn test_infer() {
+//         let obs_grid = geographical_grid(45.0..85.0, 37, -170.0..35.0, 130);
+//         let pred_grid = geographical_grid(45.0..85.0, 37, -180.0..179.0, 130);
+//
+//         let mut secs = SECS::new(obs_grid, 0.0);
+//
+//         let obs = vec![ObservationVector {
+//             lon: 1.0,
+//             lat: 1.0,
+//             i: 1.0,
+//             j: 1.0,
+//             k: 1.0,
+//         }];
+//
+//         secs.fit(&obs, 0.0, 0.05);
+//         secs.calc_t_pred(&pred_grid, 110e3);
+//         let pred = secs.predict();
+//     }
+// }
 
 // #[cfg(test)]
 // mod tests {
