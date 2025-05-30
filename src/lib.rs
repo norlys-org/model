@@ -1,108 +1,31 @@
-use geo::{geographical_grid, GeographicalPoint};
+use geo::geographical_grid;
 use model::{ObservationVector, PredictionVector, SECS};
-use ndarray::{Array2, Array3};
+use overlays::{IntoScores, ScoreVector};
 
-use candid::{CandidType, Decode, Deserialize, Encode};
-use ic_stable_structures::memory_manager::{MemoryId, MemoryManager, VirtualMemory};
-use ic_stable_structures::{storable::Bound, DefaultMemoryImpl, StableBTreeMap, Storable};
-use std::{borrow::Cow, cell::RefCell};
+use std::cell::RefCell;
 
 mod geo;
 mod model;
+mod overlays;
 mod sphere;
 mod svd;
 mod t_df;
 
-type Memory = VirtualMemory<DefaultMemoryImpl>;
-const MAX_VALUE_SIZE: u32 = 500_000_000;
-const STORED_SECS_ID: u64 = 1;
-
-#[derive(CandidType, Deserialize, Clone, Debug, Default)]
-pub struct StoredSECS {
-    sec_locs: Vec<GeographicalPoint>,
-    sec_locs_altitude: f32,
-
-    sec_amps: Vec<f32>,
-    sec_amps_shape: Vec<usize>,
-
-    pub obs_locs_cache: Vec<GeographicalPoint>,
-    pub pred_locs_cache: Vec<GeographicalPoint>,
-    // Using vectors instead of Array2/3 as ndarray does not implement CandidType
-    // will need to reconvert them afterwards
-    pub t_obs_flat_cache: Vec<f32>,
-    pub t_obs_flat_shape: Vec<usize>,
-
-    pub t_pred_cache: Vec<f32>,
-    pub t_pred_shape: Vec<usize>,
+// storage in heap memory since it is not sensitive and can suffer from a refresh on install
+thread_local! {
+    static STORED_SECS: RefCell<Option<SECS>> = RefCell::new(None);
 }
 
 impl SECS {
-    /// Loads SECS from stable memory
     pub fn load() -> Self {
-        let stored_secs: StoredSECS = STORED_SECS.with(|p| p.borrow().clone()).unwrap_or_default();
-
-        SECS {
-            sec_locs: stored_secs.sec_locs,
-            sec_locs_altitude: stored_secs.sec_locs_altitude,
-
-            sec_amps: Array2::from_shape_vec(
-                [stored_secs.sec_amps_shape[0], stored_secs.sec_amps_shape[1]],
-                stored_secs.sec_amps,
-            )
-            .ok(),
-
-            obs_locs_cache: stored_secs.obs_locs_cache,
-            t_obs_flat_cache: Array2::from_shape_vec(
-                [
-                    stored_secs.t_obs_flat_shape[0],
-                    stored_secs.t_obs_flat_shape[1],
-                ],
-                stored_secs.t_obs_flat_cache,
-            )
-            .ok(),
-
-            pred_locs_cache: stored_secs.pred_locs_cache,
-            t_pred_cache: Array3::from_shape_vec(
-                [
-                    stored_secs.t_pred_shape[0],
-                    stored_secs.t_pred_shape[1],
-                    stored_secs.t_pred_shape[2],
-                ],
-                stored_secs.t_pred_cache,
-            )
-            .ok(),
-        }
+        STORED_SECS.with(|p| p.borrow().clone()).unwrap_or_default()
     }
 
-    /// Converts self to StoredSECS and store it in stable memory
     pub fn store(self) {
-        let t_obs: Array2<f32> = self.t_obs_flat_cache.unwrap_or_default();
-        let t_pred: Array3<f32> = self.t_pred_cache.unwrap_or_default();
-        let amps: Array2<f32> = self.sec_amps.unwrap_or_default();
-
         STORED_SECS.with(|p| {
-            *p.borrow_mut() = Some(StoredSECS {
-                sec_locs: self.sec_locs,
-                sec_locs_altitude: self.sec_locs_altitude,
-
-                sec_amps_shape: amps.shape().to_vec(),
-                sec_amps: amps.into_raw_vec(),
-
-                obs_locs_cache: self.obs_locs_cache,
-                pred_locs_cache: self.pred_locs_cache,
-
-                t_obs_flat_shape: t_obs.shape().to_vec(),
-                t_obs_flat_cache: t_obs.into_raw_vec(),
-
-                t_pred_shape: t_pred.shape().to_vec(),
-                t_pred_cache: t_pred.into_raw_vec(),
-            });
+            *p.borrow_mut() = Some(self);
         });
     }
-}
-
-thread_local! {
-    static STORED_SECS: RefCell<Option<StoredSECS>> = RefCell::new(None);
 }
 
 #[ic_cdk::update]
@@ -125,29 +48,11 @@ pub fn fit_pred() {
     secs.store();
 }
 
-#[ic_cdk::update]
-pub fn predict() -> Vec<PredictionVector> {
+// #[ic_cdk::update]
+pub fn predict() -> Vec<ScoreVector> {
     let mut secs = SECS::load();
-    secs.predict()
+    secs.predict().into_scores()
 }
-
-// #[wasm_bindgen]
-// pub fn wasm_infer(js_obs: JsValue) -> Result<JsValue, JsValue> {
-//     console_error_panic_hook::set_once();
-//     let observations: Vec<ObservationVector> =
-//         serde_wasm_bindgen::from_value(js_obs).expect("Failed to deserialize observations");
-//
-//     let obs_grid = geographical_grid(45.0..85.0, 37, -170.0..35.0, 130);
-//
-//     let mut secs = SECS::new(obs_grid, 0.0);
-//     secs.fit(&observations, 0.0, 0.05);
-//
-//     let pred_grid = geographical_grid(45.0..85.0, 37, -180.0..179.0, 130);
-//     secs.calc_t_pred(&pred_grid, 110e3);
-//     let pred = secs.predict(&pred_grid, 110e3);
-//
-//     Ok(serde_wasm_bindgen::to_value(&pred)?)
-// }
 
 ic_cdk::export_candid!();
 
