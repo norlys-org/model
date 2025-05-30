@@ -1,6 +1,6 @@
 use geo::geographical_grid;
-use model::{ObservationVector, PredictionVector, SECS};
-use overlays::{IntoScores, ScoreVector};
+use model::{ObservationVector, SECS};
+use overlays::{IntoScores, Overlays, ScoreVector};
 
 use std::cell::RefCell;
 
@@ -48,10 +48,10 @@ pub fn fit_pred() {
     secs.store();
 }
 
-// #[ic_cdk::update]
+#[ic_cdk::update]
 pub fn predict() -> Vec<ScoreVector> {
     let mut secs = SECS::load();
-    secs.predict().into_scores()
+    secs.predict().into_scores().ponderate_auroral_zone()
 }
 
 ic_cdk::export_candid!();
@@ -77,13 +77,9 @@ mod benches {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use approx::assert_relative_eq;
-    use std::fs;
 
     #[test]
     fn test_infer() {
-        // let secs: SECS = secs_cache::secs;
-
         let obs_grid = geographical_grid(45.0..85.0, 37, -170.0..35.0, 130);
         let pred_grid = geographical_grid(45.0..85.0, 37, -180.0..179.0, 130);
 
@@ -101,13 +97,6 @@ mod tests {
         secs.calc_t_pred(&pred_grid, 110e3);
         let pred = secs.predict();
         println!("{:?}", pred.iter().take(10));
-
-        secs.obs_locs_cache = vec![];
-        secs.t_obs_flat_cache = None;
-        secs.sec_amps = None;
-
-        let debug_output = format!("{:#?}", secs);
-        fs::write("secs_cache.txt", debug_output).unwrap();
     }
 }
 
