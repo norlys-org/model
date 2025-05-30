@@ -35,7 +35,7 @@ pub struct PredictionVector {
     pub k: f32,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Default)]
 pub struct SECS {
     /// The latitude and longiutde of the divergence free (df) SEC locations.
     pub sec_locs: Vec<GeographicalPoint>,

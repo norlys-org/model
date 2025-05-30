@@ -1,10 +1,8 @@
 use serde::{Deserialize, Serialize};
 use std::f32::consts::PI;
-use wasm_bindgen::prelude::*;
 
-use crate::secs::R_EARTH;
+use crate::{geo::R_EARTH, model::PredictionVector};
 
-#[wasm_bindgen]
 #[derive(Serialize, Deserialize, Debug, Clone, Copy)]
 pub struct ScoreVector {
     pub lat: f32,
@@ -20,7 +18,7 @@ pub struct ScoreVector {
 /// 100 3
 /// 200 4
 /// 800 10
-pub fn ponderate_i(i: f32) -> f32 {
+fn ponderate_i(i: f32) -> f32 {
     let numerator = -0.05732817 - 22.81964;
     let denominator = 1.0 + (i / 1055.17).powf(0.8849212);
     let result = 22.81964 + numerator / denominator;
@@ -28,12 +26,19 @@ pub fn ponderate_i(i: f32) -> f32 {
     f32::min(10.0, result)
 }
 
-/// Ponderate the derivative of the `i` component of the vector
-pub fn ponderate_didt(didt: f32) -> f32 {
-    if didt < 10f32 {
-        0f32
-    } else {
-        didt / 10f32
+pub trait IntoScores {
+    fn into_scores(self) -> Vec<ScoreVector>;
+}
+
+impl IntoScores for Vec<PredictionVector> {
+    fn into_scores(self) -> Vec<ScoreVector> {
+        self.into_iter()
+            .map(|pv| ScoreVector {
+                lat: pv.lat,
+                lon: pv.lon,
+                score: ponderate_i(pv.i),
+            })
+            .collect()
     }
 }
 
@@ -74,7 +79,7 @@ fn auroral_zone_weight(d: f32) -> f32 {
 }
 
 /// Given a ScoreVector ponderate the score depending on its vicinity to the auroral oval
-pub fn apply_auroral_zone_overlay(lon: f32, lat: f32, score: f32) -> f32 {
+pub fn ponderate_auroral_zone(lon: f32, lat: f32, score: f32) -> f32 {
     let geomag_n_pole: (f32, f32) = (-72.6_f32, 80.9_f32);
 
     let d = approx_distance(lat, lon, geomag_n_pole.0, geomag_n_pole.1);
@@ -92,3 +97,35 @@ pub fn encode_score(val: f32, flag: bool) -> u8 {
     let flag_bit = if flag { 1 << 7 } else { 0 };
     flag_bit | (rounded & 0b0111_1111)
 }
+
+pub trait Overlays {
+    fn ponderate_auroral_zone(self) -> Self;
+    fn encode(self) -> Vec<u8>;
+}
+
+impl Overlays for Vec<ScoreVector> {
+    fn ponderate_auroral_zone(self) -> Self {
+        self.into_iter()
+            .map(|v| ScoreVector {
+                lat: v.lat,
+                lon: v.lon,
+                score: ponderate_auroral_zone(v.lon, v.lat, v.score),
+            })
+            .collect()
+    }
+
+    fn encode(self) -> Vec<u8> {
+        self.into_iter()
+            .map(|v| encode_score(v.score, false))
+            .collect()
+    }
+}
+
+///// Ponderate the derivative of the `i` component of the vector
+//pub fn ponderate_didt(didt: f32) -> f32 {
+//    if didt < 10f32 {
+//        0f32
+//    } else {
+//        didt / 10f32
+//    }
+//}
