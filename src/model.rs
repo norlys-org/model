@@ -9,30 +9,30 @@ use crate::{geo::GeographicalPoint, svd::svd, t_df::t_df};
 #[derive(CandidType, Serialize, Deserialize, Debug, Clone, Copy)]
 pub struct ObservationVector {
     /// The longitude in degrees.
-    pub lon: f32,
+    pub lon: f64,
     /// The latitude in degrees.
-    pub lat: f32,
+    pub lat: f64,
     // i vector (usually x magnetometer component) in nano teslas
-    pub i: f32,
+    pub i: f64,
     // j vector (usually y magnetometer component) in nano teslas
-    pub j: f32,
+    pub j: f64,
     // k vector (usually k magnetometer component) in nano teslas
-    pub k: f32,
+    pub k: f64,
 }
 
 // #[wasm_bindgen]
 #[derive(CandidType, Serialize, Deserialize, Debug, Clone, Copy)]
 pub struct PredictionVector {
     /// The longitude in degrees.
-    pub lon: f32,
+    pub lon: f64,
     /// The latitude in degrees.
-    pub lat: f32,
+    pub lat: f64,
     // i vector (usually x magnetometer component) in nano teslas
-    pub i: f32,
+    pub i: f64,
     // j vector (usually y magnetometer component) in nano teslas
-    pub j: f32,
+    pub j: f64,
     // k vector (usually k magnetometer component) in nano teslas
-    pub k: f32,
+    pub k: f64,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -40,20 +40,20 @@ pub struct SECS {
     /// The latitude and longiutde of the divergence free (df) SEC locations.
     pub sec_locs: Vec<GeographicalPoint>,
     /// The altitude in meters above the surface of the earth at which poles are located
-    pub sec_locs_altitude: f32,
+    pub sec_locs_altitude: f64,
     /// Storage of the scaling factors (amplitudes) for SECs for the last fit.
-    pub sec_amps: Option<Array2<f32>>,
+    pub sec_amps: Option<Array2<f64>>,
 
     // Cache fields for transfer function calculation
     pub obs_locs_cache: Vec<GeographicalPoint>,
-    pub t_obs_flat_cache: Option<Array2<f32>>,
+    pub t_obs_flat_cache: Option<Array2<f64>>,
     /// The latitude, longiutde, and radius of the prediction locations.
     pub pred_locs_cache: Vec<GeographicalPoint>,
-    pub t_pred_cache: Option<Array3<f32>>,
+    pub t_pred_cache: Option<Array3<f64>>,
 }
 
 impl SECS {
-    pub fn new(sec_locs: Vec<GeographicalPoint>, sec_locs_altitude: f32) -> Self {
+    pub fn new(sec_locs: Vec<GeographicalPoint>, sec_locs_altitude: f64) -> Self {
         SECS {
             sec_locs,
             sec_locs_altitude,
@@ -65,8 +65,8 @@ impl SECS {
         }
     }
 
-    pub fn fit(&mut self, obs: &[ObservationVector], obs_altitude: f32, epsilon: f32) {
-        let obs_b: Array2<f32> = Array2::from_shape_vec(
+    pub fn fit(&mut self, obs: &[ObservationVector], obs_altitude: f64, epsilon: f64) {
+        let obs_b: Array2<f64> = Array2::from_shape_vec(
             (1, obs.len() * 3),
             obs.iter()
                 .flat_map(|obs| vec![obs.i, obs.j, obs.k])
@@ -96,11 +96,11 @@ impl SECS {
         }
 
         // SVD
-        let vwu: Array2<f32> = svd(self.t_obs_flat_cache.as_ref().unwrap(), epsilon);
+        let vwu: Array2<f64> = svd(self.t_obs_flat_cache.as_ref().unwrap(), epsilon);
         self.sec_amps = Some(obs_b.dot(&vwu.t()));
     }
 
-    pub fn calc_t_pred(&mut self, pred_locs: &[GeographicalPoint], pred_altitude: f32) {
+    pub fn calc_t_pred(&mut self, pred_locs: &[GeographicalPoint], pred_altitude: f64) {
         // check if transfer matrix was already computed for these locations
         if pred_locs != self.pred_locs_cache {
             self.t_pred_cache = Some(t_df(
@@ -162,7 +162,7 @@ mod tests {
             0.05,
         );
 
-        let sec_amps_expected: f32 = -1.803280385158305e+14;
+        let sec_amps_expected: f64 = -1.803280385158305e+14;
         assert_relative_eq!(
             secs.sec_amps.as_ref().unwrap()[[0, 0]],
             sec_amps_expected,
@@ -239,7 +239,7 @@ mod tests {
                 k: -0.5871575186673494,
             },
         ];
-        let pred = secs.predict(
+        secs.calc_t_pred(
             &[
                 GeographicalPoint::new(40.0, 50.0),
                 GeographicalPoint::new(50.0, 60.0),
@@ -248,6 +248,7 @@ mod tests {
             ],
             110e3,
         );
+        let pred = secs.predict();
 
         for (actual, expected) in pred.iter().zip(expected.iter()) {
             assert_relative_eq!(actual.lon, expected.lon, max_relative = 1e-15);

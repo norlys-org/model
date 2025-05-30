@@ -5,15 +5,8 @@ type ObservationVector = record {
   lat : float32;
   lon : float32;
 };
-type PredictionVector = record {
-  i : float32;
-  j : float32;
-  k : float32;
-  lat : float32;
-  lon : float32;
-};
 service : {
   fit_obs : (vec ObservationVector) -> ();
   fit_pred : () -> ();
-  predict : () -> (vec PredictionVector);
+  predict : () -> (vec float32);
 }

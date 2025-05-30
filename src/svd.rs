@@ -19,10 +19,10 @@ use ndarray::{Array1, Array2};
 /// - V_filtered^T: transposed right singular vectors (after filtering)
 /// - W_inverse: diagonal matrix containing reciprocals of retained singular values
 /// - U_filtered^T: transposed left singular vectors (after filtering)
-pub fn svd(t_obs_flat: &Array2<f32>, epsilon: f32) -> Array2<f32> {
+pub fn svd(t_obs_flat: &Array2<f64>, epsilon: f64) -> Array2<f64> {
     // Convert ndarray Array2 to nalgebra DMatrix
     let (rows, cols) = t_obs_flat.dim();
-    let flat_data: Vec<f32> = t_obs_flat.iter().cloned().collect();
+    let flat_data: Vec<f64> = t_obs_flat.iter().cloned().collect();
     let matrix = DMatrix::from_vec(rows, cols, flat_data);
 
     let svd = SVD::new(matrix, true, true);
@@ -87,7 +87,7 @@ mod tests {
         )
         .unwrap();
 
-        let expected: Array2<f32> = Array2::from_shape_vec(
+        let expected: Array2<f64> = Array2::from_shape_vec(
             (1, 12),
             vec![
                 -9.844820937276402e+12,
