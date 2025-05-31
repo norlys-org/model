@@ -77,30 +77,65 @@ mod benches {
     }
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//
-//     #[test]
-//     fn test_infer() {
-//         let obs_grid = geographical_grid(45.0..85.0, 37, -170.0..35.0, 130);
-//         let pred_grid = geographical_grid(45.0..85.0, 37, -180.0..179.0, 130);
-//
-//         let mut secs = SECS::new(obs_grid, 0.0);
-//
-//         let obs = vec![ObservationVector {
-//             lon: 1.0,
-//             lat: 1.0,
-//             i: 1.0,
-//             j: 1.0,
-//             k: 1.0,
-//         }];
-//
-//         secs.fit(&obs, 0.0, 0.05);
-//         secs.calc_t_pred(&pred_grid, 110e3);
-//         let pred = secs.predict();
-//     }
-// }
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::geo::GeographicalPoint;
+
+    #[test]
+    fn test_infer() {
+        let obs_grid = vec![
+            GeographicalPoint::new(50.0, 40.0),
+            GeographicalPoint::new(60.0, 50.0),
+        ];
+
+        let pred_grid = vec![
+            GeographicalPoint::new(40.0, 50.0),
+            GeographicalPoint::new(50.0, 60.0),
+            GeographicalPoint::new(60.0, 70.0),
+            GeographicalPoint::new(70.0, 80.0),
+        ];
+
+        let mut secs = SECS::new(obs_grid, 0.0);
+
+        let obs = vec![
+            ObservationVector {
+                lon: 50.0,
+                lat: 40.0,
+                i: 100.0,
+                j: 300.0,
+                k: 5.0,
+            },
+            ObservationVector {
+                lon: 60.0,
+                lat: 50.0,
+                i: 200.0,
+                j: 400.0,
+                k: 6.0,
+            },
+            ObservationVector {
+                lon: 70.0,
+                lat: 60.0,
+                i: 600.0,
+                j: 800.0,
+                k: 10.0,
+            },
+            ObservationVector {
+                lon: 80.0,
+                lat: 70.0,
+                i: 700.0,
+                j: 900.0,
+                k: 11.0,
+            },
+        ];
+
+        secs.fit(&obs, 0.0, 0.05);
+        secs.calc_t_pred(&pred_grid, 110e3);
+        let pred = secs.predict();
+        let bx: Vec<f64> = pred.into_iter().map(|v| v.i).collect();
+        println!("{:?}", bx);
+    }
+}
 
 // #[cfg(test)]
 // mod tests {

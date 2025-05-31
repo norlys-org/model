@@ -55,7 +55,14 @@ pub struct SECS {
 impl SECS {
     pub fn new(sec_locs: Vec<GeographicalPoint>, sec_locs_altitude: f64) -> Self {
         SECS {
-            sec_locs,
+            sec_locs: sec_locs
+                .iter()
+                .flat_map(|i| {
+                    sec_locs
+                        .iter()
+                        .map(move |j| GeographicalPoint::new(i.lat, j.lon))
+                })
+                .collect(),
             sec_locs_altitude,
             sec_amps: None,
             obs_locs_cache: vec![],
@@ -92,6 +99,8 @@ impl SECS {
                     .into_shape((t.len() / self.sec_locs.len(), self.sec_locs.len()))
                     .unwrap(),
             );
+
+            println!("{:?}", self.t_obs_flat_cache);
             self.obs_locs_cache = obs_locs;
         }
 
