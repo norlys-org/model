@@ -40,6 +40,7 @@ class SECS:
             sec_df_loc = np.empty((0, 3))
         # Convert to array if not already and
         # add an empty dimension if only one SEC location is passed in
+        print(sec_df_loc)
         self.sec_df_loc = np.atleast_2d(sec_df_loc)
         if self.sec_df_loc.shape[-1] != 3:
             raise ValueError("SEC DF locations must have 3 columns (lat, lon, r)")
@@ -187,6 +188,7 @@ class SECS:
         if obs_std is None:
             obs_std = np.ones_like(obs_B)
 
+
         ntimes = len(obs_B)
         # Flatten the components to do the math with shape (ntimes, nvariables)
         obs_B_flat = obs_B.reshape(ntimes, -1)
@@ -195,6 +197,8 @@ class SECS:
         # Calculate the transfer functions, using cached values if possible
         if not np.array_equal(obs_loc, self._obs_loc):
             self._T_obs_flat = self._calc_T(obs_loc).reshape(-1, self.nsec)
+            print(self._T_obs_flat)
+            # print(self.sec_df_loc)
             self._obs_loc = obs_loc
 
         # Store the fit sec_amps in the object
@@ -230,6 +234,7 @@ class SECS:
                 VWU_masked = VWU[:, valid]
                 std_masked = obs_std_flat[i, valid]
                 self.sec_amps_var[i] = np.sum((VWU_masked * std_masked) ** 2, axis=1)
+
         return self
 
     def fit_unit_currents(self) -> "SECS":
@@ -283,7 +288,6 @@ class SECS:
                 self._T_pred_B = self._calc_T(pred_loc)
                 self._pred_loc_B = pred_loc
             T_pred = self._T_pred_B
-            # print(T_pred)
 
         return np.squeeze(np.tensordot(self.sec_amps, T_pred, (1, 2)))
 
@@ -747,20 +751,20 @@ def calc_bearing(latlon1: np.ndarray, latlon2: np.ndarray) -> np.ndarray:
 
 x = [50, 60]
 y = [40, 50]
-i = [1, 2]
-j = [3, 4]
-u = [5, 6]
-#
+i = [100, 200]
+j = [300, 400]
+u = [500, 600]
+
 x = [50, 60, 70, 80]
 y = [40, 50, 60, 70]
-i = [1, 2, 6, 7]
-j = [3, 4, 8, 9]
+i = [100, 200, 600, 700]
+j = [300, 400, 800, 900]
 u = [5, 6, 10, 11]
 
 # lat = np.linspace(45, 85)
 # lon = np.linspace(-170, 35)
-lat = [10]
-lon = [20]
+lat = [50, 60]
+lon = [40, 50]
 R_earth = 6371e3
 r = R_earth + 0
 
@@ -775,3 +779,4 @@ B_obs[0, :, 2] = u
 
 secs.fit(obs_loc=obs_lat_lon_r, obs_B=B_obs, epsilon=0.1)
 pred = secs.predict(np.column_stack((y, x, np.full_like(x, R_earth + 110e3))))
+print(pred[:, 0])
