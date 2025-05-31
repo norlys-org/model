@@ -19,49 +19,34 @@ pub fn angular_distance_and_bearing(
     let rows = coords1.len();
     let cols = coords2.len();
 
+    // Initialize output arrays
     let mut theta = Array::zeros((rows, cols));
     let mut alpha = Array::zeros((rows, cols));
 
-    // pre-compute trig
-    let coords1_trig: Vec<(f64, f64, f64, f64)> = coords1
-        .iter()
-        .map(|point| {
-            let lat_rad = point.lat_rad();
-            let lon_rad = point.lon_rad();
-            (lat_rad.cos(), lat_rad.sin(), lon_rad.cos(), lon_rad.sin())
-        })
-        .collect();
-
-    let coords2_trig: Vec<(f64, f64, f64, f64)> = coords2
-        .iter()
-        .map(|point| {
-            let lat_rad = point.lat_rad();
-            let lon_rad = point.lon_rad();
-            (lat_rad.cos(), lat_rad.sin(), lon_rad.cos(), lon_rad.sin())
-        })
-        .collect();
-
     for i in 0..rows {
-        let (cos_lat1, sin_lat1, cos_lon1, sin_lon1) = coords1_trig[i];
+        let lat1_rad = coords1[i].lat_rad();
+        let lon1_rad = coords1[i].lon_rad();
+        let cos_lat1 = lat1_rad.cos();
+        let sin_lat1 = lat1_rad.sin();
 
         for j in 0..cols {
-            let (cos_lat2, sin_lat2, cos_lon2, sin_lon2) = coords2_trig[j];
+            let lat2_rad = coords2[j].lat_rad();
+            let lon2_rad = coords2[j].lon_rad();
+            let cos_lat2 = lat2_rad.cos();
+            let sin_lat2 = lat2_rad.sin();
 
-            // longitude difference
-            // cos(lon2 - lon1) = cos_lon2 * cos_lon1 + sin_lon2 * sin_lon1
-            // sin(lon2 - lon1) = sin_lon2 * cos_lon1 - cos_lon2 * sin_lon1
-            let cos_dlon = cos_lon2 * cos_lon1 + sin_lon2 * sin_lon1;
-            let sin_dlon = sin_lon2 * cos_lon1 - cos_lon2 * sin_lon1;
+            let dlon = lon2_rad - lon1_rad;
+            let cos_dlon = dlon.cos();
+            let sin_dlon = dlon.sin();
 
-            // angular distance (theta)
-            let cos_theta = sin_lat1 * sin_lat2 + cos_lat1 * cos_lat2 * cos_dlon;
-            theta[[i, j]] = cos_theta.clamp(-1.0, 1.0).acos(); // Clamp to avoid NaN from floating point errors
+            // Calculate angular distance (theta)
+            theta[[i, j]] = (sin_lat1 * sin_lat2 + cos_lat1 * cos_lat2 * cos_dlon).acos();
 
-            // bearing (alpha)
+            // Calculate bearing (alpha)
             let x = cos_lat2 * sin_dlon;
             let y = cos_lat1 * sin_lat2 - sin_lat1 * cos_lat2 * cos_dlon;
 
-            // pi/2 - arctan2(x, y)
+            // The formula: alpha = π/2 - arctan2(x, y)
             alpha[[i, j]] = std::f64::consts::FRAC_PI_2 - x.atan2(y);
         }
     }
