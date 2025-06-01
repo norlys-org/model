@@ -40,7 +40,6 @@ class SECS:
             sec_df_loc = np.empty((0, 3))
         # Convert to array if not already and
         # add an empty dimension if only one SEC location is passed in
-        print(sec_df_loc)
         self.sec_df_loc = np.atleast_2d(sec_df_loc)
         if self.sec_df_loc.shape[-1] != 3:
             raise ValueError("SEC DF locations must have 3 columns (lat, lon, r)")
@@ -110,8 +109,10 @@ class SECS:
         # Weight the design matrix
         weighted_T = T_obs_flat / std_flat[:, np.newaxis]
 
+
         # SVD
         U, S, Vh = np.linalg.svd(weighted_T, full_matrices=False)
+        print(U.T)
 
         # Filter components
         if mode == "relative":
@@ -197,8 +198,6 @@ class SECS:
         # Calculate the transfer functions, using cached values if possible
         if not np.array_equal(obs_loc, self._obs_loc):
             self._T_obs_flat = self._calc_T(obs_loc).reshape(-1, self.nsec)
-            print(self._T_obs_flat)
-            # print(self.sec_df_loc)
             self._obs_loc = obs_loc
 
         # Store the fit sec_amps in the object
@@ -779,4 +778,4 @@ B_obs[0, :, 2] = u
 
 secs.fit(obs_loc=obs_lat_lon_r, obs_B=B_obs, epsilon=0.1)
 pred = secs.predict(np.column_stack((y, x, np.full_like(x, R_earth + 110e3))))
-print(pred[:, 0])
+# print(pred[:, 0])
