@@ -99,14 +99,16 @@ impl SECS {
                     .into_shape((t.len() / self.sec_locs.len(), self.sec_locs.len()))
                     .unwrap(),
             );
+            println!("{:?}", t.len() / self.sec_locs.len());
 
-            println!("{:?}", self.t_obs_flat_cache);
             self.obs_locs_cache = obs_locs;
         }
 
         // SVD
         let vwu: Array2<f64> = svd(self.t_obs_flat_cache.as_ref().unwrap(), epsilon);
+        // println!("{:?}", vwu);
         self.sec_amps = Some(obs_b.dot(&vwu.t()));
+        // println!("{:?}", self.sec_amps);
     }
 
     pub fn calc_t_pred(&mut self, pred_locs: &[GeographicalPoint], pred_altitude: f64) {
