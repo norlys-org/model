@@ -1,5 +1,6 @@
 use geo::geographical_grid;
 use model::{ObservationVector, SECS};
+use overlays::{IntoScores, Overlays};
 
 use std::cell::RefCell;
 
@@ -54,12 +55,12 @@ pub fn fit_pred() {
 }
 
 #[ic_cdk::update]
-pub fn predict() -> Vec<f64> {
-    let mut secs = SECS::load();
-    secs.predict().into_iter().map(|v| v.i).collect()
-    // .into_scores()
-    // .ponderate_auroral_zone()
-    // .encode()
+pub fn predict() -> Vec<u8> {
+    let secs = SECS::load();
+    secs.predict()
+        .into_scores()
+        .ponderate_auroral_zone()
+        .encode()
 }
 
 ic_cdk::export_candid!();
