@@ -1,4 +1,5 @@
 use ndarray::{Array2, Array3, Axis};
+use ndarray_einsum::tensordot;
 use serde::{Deserialize, Serialize};
 
 use candid::CandidType;
@@ -99,16 +100,13 @@ impl SECS {
                     .into_shape((t.len() / self.sec_locs.len(), self.sec_locs.len()))
                     .unwrap(),
             );
-            println!("{:?}", t.len() / self.sec_locs.len());
 
             self.obs_locs_cache = obs_locs;
         }
 
         // SVD
         let vwu: Array2<f64> = svd(self.t_obs_flat_cache.as_ref().unwrap(), epsilon);
-        // println!("{:?}", vwu);
         self.sec_amps = Some(obs_b.dot(&vwu.t()));
-        // println!("{:?}", self.sec_amps);
     }
 
     pub fn calc_t_pred(&mut self, pred_locs: &[GeographicalPoint], pred_altitude: f64) {
@@ -124,10 +122,18 @@ impl SECS {
         }
     }
 
-    pub fn predict(&mut self) -> Vec<PredictionVector> {
-        let amps = &self.sec_amps.as_ref().unwrap().index_axis(Axis(1), 0);
-        let t_pred = &self.t_pred_cache.as_ref().unwrap().index_axis(Axis(2), 0);
-        let pred = amps * t_pred;
+    pub fn predict(&self) -> Vec<PredictionVector> {
+        let amps: &Array2<f64> = self.sec_amps.as_ref().unwrap();
+        let t_pred: &Array3<f64> = self.t_pred_cache.as_ref().unwrap();
+
+        assert_eq!(
+            amps.shape()[1],
+            t_pred.shape()[2],
+            "Dimension K mismatch for contraction"
+        );
+
+        let temp = tensordot(amps, t_pred, &[Axis(1)], &[Axis(2)]);
+        let pred = temp.index_axis(Axis(0), 0);
 
         self.pred_locs_cache
             .iter()
