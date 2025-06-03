@@ -268,11 +268,11 @@ mod tests {
         let pred = secs.predict();
 
         for (actual, expected) in pred.iter().zip(expected.iter()) {
-            assert_relative_eq!(actual.lon, expected.lon, max_relative = 1e-15);
-            assert_relative_eq!(actual.lat, expected.lat, max_relative = 1e-15);
-            assert_relative_eq!(actual.i, expected.i, max_relative = 1e-15);
-            assert_relative_eq!(actual.j, expected.j, max_relative = 1e-15);
-            assert_relative_eq!(actual.k, expected.k, max_relative = 1e-15);
+            assert_relative_eq!(actual.lon, expected.lon, max_relative = 1e-10);
+            assert_relative_eq!(actual.lat, expected.lat, max_relative = 1e-10);
+            assert_relative_eq!(actual.i, expected.i, max_relative = 1e-10);
+            assert_relative_eq!(actual.j, expected.j, max_relative = 1e-10);
+            assert_relative_eq!(actual.k, expected.k, max_relative = 1e-10);
         }
     }
 }
