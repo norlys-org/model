@@ -25,6 +25,12 @@ impl SECS {
             *p.borrow_mut() = Some(self);
         });
     }
+
+    pub fn clear() {
+        STORED_SECS.with(|p| {
+            *p.borrow_mut() = None;
+        });
+    }
 }
 
 #[ic_cdk::update]
@@ -83,10 +89,34 @@ mod tests {
     use super::*;
     use crate::{geo::GeographicalPoint, model::PredictionVector};
 
+    // #[test]
+    // fn test_large_infer() {
+    //     let mut secs = SECS::new(geographical_grid(45.0..85.0, 37, -170.0..35.0, 74), 0.0);
+    //     secs.fit(
+    //         &[ObservationVector {
+    //             lon: 10.0,
+    //             lat: 69.0,
+    //             i: 500.0,
+    //             j: 100.0,
+    //             k: 100.0,
+    //         }],
+    //         0.0,
+    //         0.05,
+    //     );
+    //
+    //     let pred_grid = geographical_grid(45.0..85.0, 37, -180.0..179.0, 130);
+    //     secs.calc_t_pred(&pred_grid, 110e3);
+    //     let pred = secs.predict();
+    //
+    //     println!("{:?}", pred);
+    // }
+
     #[test]
     fn test_infer() {
         let obs_grid = vec![
             GeographicalPoint::new(50.0, 40.0),
+            GeographicalPoint::new(50.0, 50.0),
+            GeographicalPoint::new(60.0, 40.0),
             GeographicalPoint::new(60.0, 50.0),
         ];
 
