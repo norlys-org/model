@@ -109,10 +109,8 @@ class SECS:
         # Weight the design matrix
         weighted_T = T_obs_flat / std_flat[:, np.newaxis]
 
-
         # SVD
         U, S, Vh = np.linalg.svd(weighted_T, full_matrices=False)
-        print(U.T)
 
         # Filter components
         if mode == "relative":
@@ -188,7 +186,6 @@ class SECS:
         # Assume unit standard error of all measurements
         if obs_std is None:
             obs_std = np.ones_like(obs_B)
-
 
         ntimes = len(obs_B)
         # Flatten the components to do the math with shape (ntimes, nvariables)
@@ -778,4 +775,4 @@ B_obs[0, :, 2] = u
 
 secs.fit(obs_loc=obs_lat_lon_r, obs_B=B_obs, epsilon=0.1)
 pred = secs.predict(np.column_stack((y, x, np.full_like(x, R_earth + 110e3))))
-# print(pred[:, 0])
+print(pred)
