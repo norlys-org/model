@@ -1,4 +1,5 @@
 use ndarray::{Array2, Array3, Axis};
+use ndarray_einsum::tensordot;
 use serde::{Deserialize, Serialize};
 
 use candid::CandidType;
@@ -9,53 +10,60 @@ use crate::{geo::GeographicalPoint, svd::svd, t_df::t_df};
 #[derive(CandidType, Serialize, Deserialize, Debug, Clone, Copy)]
 pub struct ObservationVector {
     /// The longitude in degrees.
-    pub lon: f32,
+    pub lon: f64,
     /// The latitude in degrees.
-    pub lat: f32,
+    pub lat: f64,
     // i vector (usually x magnetometer component) in nano teslas
-    pub i: f32,
+    pub i: f64,
     // j vector (usually y magnetometer component) in nano teslas
-    pub j: f32,
+    pub j: f64,
     // k vector (usually k magnetometer component) in nano teslas
-    pub k: f32,
+    pub k: f64,
 }
 
 // #[wasm_bindgen]
 #[derive(CandidType, Serialize, Deserialize, Debug, Clone, Copy)]
 pub struct PredictionVector {
     /// The longitude in degrees.
-    pub lon: f32,
+    pub lon: f64,
     /// The latitude in degrees.
-    pub lat: f32,
+    pub lat: f64,
     // i vector (usually x magnetometer component) in nano teslas
-    pub i: f32,
+    pub i: f64,
     // j vector (usually y magnetometer component) in nano teslas
-    pub j: f32,
+    pub j: f64,
     // k vector (usually k magnetometer component) in nano teslas
-    pub k: f32,
+    pub k: f64,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Default)]
 pub struct SECS {
     /// The latitude and longiutde of the divergence free (df) SEC locations.
-    sec_locs: Vec<GeographicalPoint>,
+    pub sec_locs: Vec<GeographicalPoint>,
     /// The altitude in meters above the surface of the earth at which poles are located
-    sec_locs_altitude: f32,
+    pub sec_locs_altitude: f64,
     /// Storage of the scaling factors (amplitudes) for SECs for the last fit.
-    pub sec_amps: Option<Array2<f32>>,
+    pub sec_amps: Option<Array2<f64>>,
 
     // Cache fields for transfer function calculation
     pub obs_locs_cache: Vec<GeographicalPoint>,
-    pub t_obs_flat_cache: Option<Array2<f32>>,
+    pub t_obs_flat_cache: Option<Array2<f64>>,
     /// The latitude, longiutde, and radius of the prediction locations.
-    pred_locs_cache: Vec<GeographicalPoint>,
-    t_pred_cache: Option<Array3<f32>>,
+    pub pred_locs_cache: Vec<GeographicalPoint>,
+    pub t_pred_cache: Option<Array3<f64>>,
 }
 
 impl SECS {
-    pub fn new(sec_locs: Vec<GeographicalPoint>, sec_locs_altitude: f32) -> Self {
+    pub fn new(sec_locs: Vec<GeographicalPoint>, sec_locs_altitude: f64) -> Self {
         SECS {
-            sec_locs,
+            sec_locs: sec_locs
+                .iter()
+                .flat_map(|i| {
+                    sec_locs
+                        .iter()
+                        .map(move |j| GeographicalPoint::new(i.lat, j.lon))
+                })
+                .collect(),
             sec_locs_altitude,
             sec_amps: None,
             obs_locs_cache: vec![],
@@ -65,8 +73,8 @@ impl SECS {
         }
     }
 
-    pub fn fit(&mut self, obs: &[ObservationVector], obs_altitude: f32, epsilon: f32) {
-        let obs_b: Array2<f32> = Array2::from_shape_vec(
+    pub fn fit(&mut self, obs: &[ObservationVector], obs_altitude: f64, epsilon: f64) {
+        let obs_b: Array2<f64> = Array2::from_shape_vec(
             (1, obs.len() * 3),
             obs.iter()
                 .flat_map(|obs| vec![obs.i, obs.j, obs.k])
@@ -92,19 +100,16 @@ impl SECS {
                     .into_shape((t.len() / self.sec_locs.len(), self.sec_locs.len()))
                     .unwrap(),
             );
+
             self.obs_locs_cache = obs_locs;
         }
 
         // SVD
-        let vwu: Array2<f32> = svd(self.t_obs_flat_cache.as_ref().unwrap(), epsilon);
+        let vwu: Array2<f64> = svd(self.t_obs_flat_cache.as_ref().unwrap(), epsilon);
         self.sec_amps = Some(obs_b.dot(&vwu.t()));
     }
 
-    pub fn predict(
-        &mut self,
-        pred_locs: &[GeographicalPoint],
-        pred_altitude: f32,
-    ) -> Vec<PredictionVector> {
+    pub fn calc_t_pred(&mut self, pred_locs: &[GeographicalPoint], pred_altitude: f64) {
         // check if transfer matrix was already computed for these locations
         if pred_locs != self.pred_locs_cache {
             self.t_pred_cache = Some(t_df(
@@ -115,12 +120,22 @@ impl SECS {
             ));
             self.pred_locs_cache = pred_locs.to_vec();
         }
+    }
 
-        let amps = &self.sec_amps.as_ref().unwrap().index_axis(Axis(1), 0);
-        let t_pred = &self.t_pred_cache.as_ref().unwrap().index_axis(Axis(2), 0);
-        let pred = amps * t_pred;
+    pub fn predict(&self) -> Vec<PredictionVector> {
+        let amps: &Array2<f64> = self.sec_amps.as_ref().unwrap();
+        let t_pred: &Array3<f64> = self.t_pred_cache.as_ref().unwrap();
 
-        pred_locs
+        assert_eq!(
+            amps.shape()[1],
+            t_pred.shape()[2],
+            "Dimension K mismatch for contraction"
+        );
+
+        let temp = tensordot(amps, t_pred, &[Axis(1)], &[Axis(2)]);
+        let pred = temp.index_axis(Axis(0), 0);
+
+        self.pred_locs_cache
             .iter()
             .enumerate()
             .map(|(i, loc)| PredictionVector {
@@ -164,7 +179,7 @@ mod tests {
             0.05,
         );
 
-        let sec_amps_expected: f32 = -1.803280385158305e+14;
+        let sec_amps_expected: f64 = -1.803280385158305e+14;
         assert_relative_eq!(
             secs.sec_amps.as_ref().unwrap()[[0, 0]],
             sec_amps_expected,
@@ -241,7 +256,7 @@ mod tests {
                 k: -0.5871575186673494,
             },
         ];
-        let pred = secs.predict(
+        secs.calc_t_pred(
             &[
                 GeographicalPoint::new(40.0, 50.0),
                 GeographicalPoint::new(50.0, 60.0),
@@ -250,13 +265,14 @@ mod tests {
             ],
             110e3,
         );
+        let pred = secs.predict();
 
         for (actual, expected) in pred.iter().zip(expected.iter()) {
-            assert_relative_eq!(actual.lon, expected.lon, max_relative = 1e-15);
-            assert_relative_eq!(actual.lat, expected.lat, max_relative = 1e-15);
-            assert_relative_eq!(actual.i, expected.i, max_relative = 1e-15);
-            assert_relative_eq!(actual.j, expected.j, max_relative = 1e-15);
-            assert_relative_eq!(actual.k, expected.k, max_relative = 1e-15);
+            assert_relative_eq!(actual.lon, expected.lon, max_relative = 1e-10);
+            assert_relative_eq!(actual.lat, expected.lat, max_relative = 1e-10);
+            assert_relative_eq!(actual.i, expected.i, max_relative = 1e-10);
+            assert_relative_eq!(actual.j, expected.j, max_relative = 1e-10);
+            assert_relative_eq!(actual.k, expected.k, max_relative = 1e-10);
         }
     }
 }

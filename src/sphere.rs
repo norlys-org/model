@@ -10,12 +10,12 @@ use crate::geo::GeographicalPoint;
 ///
 /// # Returns
 /// A tuple containing:
-/// - 2D array of angular distances in radians (Array2<f32>)
-/// - 2D array of bearings in radians (Array2<f32>)
+/// - 2D array of angular distances in radians (Array2<f64>)
+/// - 2D array of bearings in radians (Array2<f64>)
 pub fn angular_distance_and_bearing(
     coords1: &[GeographicalPoint],
     coords2: &[GeographicalPoint],
-) -> (Array2<f32>, Array2<f32>) {
+) -> (Array2<f64>, Array2<f64>) {
     let rows = coords1.len();
     let cols = coords2.len();
 
@@ -47,7 +47,7 @@ pub fn angular_distance_and_bearing(
             let y = cos_lat1 * sin_lat2 - sin_lat1 * cos_lat2 * cos_dlon;
 
             // The formula: alpha = π/2 - arctan2(x, y)
-            alpha[[i, j]] = std::f32::consts::FRAC_PI_2 - x.atan2(y);
+            alpha[[i, j]] = std::f64::consts::FRAC_PI_2 - x.atan2(y);
         }
     }
 
@@ -61,7 +61,7 @@ mod tests {
     use ndarray::Array2;
 
     // Helper function to check if two 2D arrays are approximately equal
-    fn assert_arrays_approx_eq(actual: &Array2<f32>, expected: &Array2<f32>, epsilon: f32) {
+    fn assert_arrays_approx_eq(actual: &Array2<f64>, expected: &Array2<f64>, epsilon: f64) {
         assert_eq!(
             actual.shape(),
             expected.shape(),
@@ -77,7 +77,7 @@ mod tests {
     }
 
     // Helper function to convert nested Vec to Array2
-    fn vec_to_array2(vec_data: &Vec<Vec<f32>>) -> Array2<f32> {
+    fn vec_to_array2(vec_data: &Vec<Vec<f64>>) -> Array2<f64> {
         let rows = vec_data.len();
         let cols = if rows > 0 { vec_data[0].len() } else { 0 };
 

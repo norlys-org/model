@@ -8,16 +8,17 @@ edition = "2021"
 [lib]
 crate-type = ["cdylib", "rlib"]
 
-# [workspace]
-# members = [".", "protobufs/build"]
-
 [dependencies]
-# protobufs = { path = "./protobufs/build" }
-# console_error_panic_hook = "0.1.7"
-# web-sys = { version = "0.3", features = ["console"] }
 approx = "0.5.1"
-ndarray = "0.16.1"
+
+ndarray = { version = "0.16.1", features = ["serde"] }
+# used for svd
 nalgebra = "0.33.2"
+# used for tensordot
+ndarray-einsum = "0.8.0"
+
 ic-cdk = "0.17.2"
+canbench-rs = { version = "0.1.1", optional = true }
 candid = "0.10"
+
 serde = "1.0.219"
