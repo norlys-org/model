@@ -36,8 +36,7 @@ impl IntoScores for Vec<PredictionVector> {
             .map(|pv| ScoreVector {
                 lat: pv.lat,
                 lon: pv.lon,
-                score: pv.i,
-                // score: ponderate_i(pv.i),
+                score: ponderate_i(pv.i),
             })
             .collect()
     }
@@ -117,8 +116,7 @@ impl Overlays for Vec<ScoreVector> {
 
     fn encode(self) -> Vec<u8> {
         self.into_iter()
-            .map(|v| v.score as u8)
-            // .map(|v| encode_score(v.score, false))
+            .map(|v| encode_score(v.score, false))
             .collect()
     }
 }
