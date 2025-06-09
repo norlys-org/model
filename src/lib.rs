@@ -1,8 +1,12 @@
 use geo::geographical_grid;
+use ic_cdk::caller;
 use model::{ObservationVector, SECS};
 use overlays::{IntoScores, Overlays};
 
 use std::cell::RefCell;
+use std::collections::HashSet;
+
+use candid::Principal;
 
 mod geo;
 mod model;
@@ -11,9 +15,11 @@ mod sphere;
 mod svd;
 mod t_df;
 
+// MARK: Storage
 // storage in heap memory since it is not sensitive and can suffer from a refresh on install
 thread_local! {
     static STORED_SECS: RefCell<Option<SECS>> = RefCell::new(None);
+    static AUTHORIZED_USERS: RefCell<HashSet<Principal>> = RefCell::new(HashSet::new());
 }
 
 impl SECS {
@@ -34,8 +40,69 @@ impl SECS {
     }
 }
 
+// MARK: Authorization calls
+
+fn is_authorized() -> bool {
+    let caller = caller();
+
+    if caller == Principal::anonymous() {
+        return false;
+    }
+
+    AUTHORIZED_USERS.with(|users| users.borrow().contains(&caller))
+}
+
+fn require_authorization() {
+    if !is_authorized() {
+        ic_cdk::trap("Access denied: caller not authorized");
+    }
+}
+
+// prefix a_ for authorization
+
 #[ic_cdk::update]
-pub fn fit_obs(obs: Vec<ObservationVector>) {
+pub fn a_add_authorized_user(user_principal: Principal) {
+    require_authorization();
+    AUTHORIZED_USERS.with(|users| {
+        users.borrow_mut().insert(user_principal);
+    });
+}
+
+#[ic_cdk::update]
+pub fn a_remove_authorized_user(user_principal: Principal) {
+    require_authorization();
+    AUTHORIZED_USERS.with(|users| {
+        users.borrow_mut().remove(&user_principal);
+    });
+}
+
+#[ic_cdk::query]
+pub fn a_list_authorized_users() -> Vec<Principal> {
+    require_authorization();
+    AUTHORIZED_USERS.with(|users| users.borrow().iter().cloned().collect())
+}
+
+// Initialize function to add the first authorized user (call this after deployment)
+#[ic_cdk::update]
+pub fn a_initialize_authorized_user(user_principal: Principal) {
+    // only allow if no users are authorized yet
+    AUTHORIZED_USERS.with(|users| {
+        if users.borrow().is_empty() {
+            users.borrow_mut().insert(user_principal);
+        } else {
+            ic_cdk::trap("Authorized users already exist");
+        }
+    });
+}
+
+// MARK: Model calls
+// Requiring authorization on all update calls since we rely on the memory set after each
+// prefix m_ for model
+
+#[ic_cdk::update]
+pub fn m_fit_obs(obs: Vec<ObservationVector>) {
+    require_authorization();
+
     let mut secs: SECS = if STORED_SECS.with(|storage| storage.borrow().is_some()) {
         SECS::load()
     } else {
@@ -47,7 +114,9 @@ pub fn fit_obs(obs: Vec<ObservationVector>) {
 }
 
 #[ic_cdk::update]
-pub fn fit_pred() {
+pub fn m_fit_pred() {
+    require_authorization();
+
     let pred_grid = geographical_grid(45.0..85.0, 37, -180.0..179.0, 130);
     let mut secs = SECS::load();
     secs.calc_t_pred(&pred_grid, 110e3);
@@ -55,7 +124,9 @@ pub fn fit_pred() {
 }
 
 #[ic_cdk::update]
-pub fn predict() -> Vec<u8> {
+pub fn m_predict() -> Vec<u8> {
+    require_authorization();
+
     let secs = SECS::load();
     secs.predict()
         .into_scores()

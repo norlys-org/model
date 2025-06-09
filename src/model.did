@@ -6,7 +6,11 @@ type ObservationVector = record {
   lon : float64;
 };
 service : {
-  fit_obs : (vec ObservationVector) -> ();
-  fit_pred : () -> ();
-  predict : () -> (blob);
+  a_add_authorized_user : (principal) -> ();
+  a_initialize_authorized_user : (principal) -> ();
+  a_list_authorized_users : () -> (vec principal) query;
+  a_remove_authorized_user : (principal) -> ();
+  m_fit_obs : (vec ObservationVector) -> ();
+  m_fit_pred : () -> ();
+  m_predict : () -> (blob);
 }
