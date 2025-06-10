@@ -1,0 +1,22 @@
+{
+  "name": "@norlys-org/model",
+  "version": "25.06.10",
+  "description": "norlys model canister declarations",
+  "type": "module",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/norlys-org/model.git"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com/"
+  },
+  "author": "Hugo Lageneste <hugo.lageneste@pm.me>",
+  "homepage": "https://github.com/norlys-org/model",
+  "dependencies": {
+    "@dfinity/agent": "^2.4.1"
+  }
+}

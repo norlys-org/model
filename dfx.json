@@ -3,7 +3,14 @@
     "model": {
       "candid": "src/model.did",
       "package": "model",
-      "type": "rust"
+      "type": "rust",
+      "declarations": {
+        "output": "declarations/src",
+        "bindings": [
+          "ts",
+          "js"
+        ]
+      }
     }
   },
   "defaults": {
