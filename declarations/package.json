@@ -1,5 +1,5 @@
 {
-  "name": "@norlys-org/model",
+  "name": "@norlys-org/declarations",
   "version": "25.06.10",
   "description": "norlys model canister declarations",
   "type": "module",
