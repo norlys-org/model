@@ -1,7 +1,7 @@
 use geo::geographical_grid;
 use ic_cdk::caller;
 use model::{ObservationVector, SECS};
-use overlays::{IntoScores, Overlays};
+use overlays::{IntoScores, Overlays, ScoreVector};
 
 use std::cell::RefCell;
 use std::collections::HashSet;
@@ -124,7 +124,7 @@ pub fn m_fit_pred() {
 }
 
 #[ic_cdk::update]
-pub fn m_predict() -> Vec<u8> {
+pub fn m_predict() -> Vec<u16> {
     require_authorization();
 
     let secs = SECS::load();

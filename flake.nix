@@ -2,7 +2,7 @@
   description = "norlys model";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/release-24.11";
+    nixpkgs.url = "github:NixOS/nixpkgs/release-25.05";
     flake-utils.url = "github:numtide/flake-utils";
     naersk.url = "github:nix-community/naersk";
     rust-overlay = {
@@ -27,6 +27,44 @@
           cargo = toolchain;
           rustc = toolchain;
         };
+
+        dfx = pkgs.rustPlatform.buildRustPackage (finalAttrs: {
+          pname = "dfx";
+          version = "0.27.0";
+
+          src = pkgs.fetchFromGitHub {
+            owner = "dfinity";
+            repo = "sdk";
+            tag = "0.27.0";
+            hash = "sha256-nBc64mgkZiAji8YbV5a8ltPNHMvoGgU/AmgGdCKDuD4=";
+          };
+
+          cargoHash = "sha256-0Gi5/4it9rt/AT6LDb3ThfemN+R6EFhZ4xa2jRXg4GE=";
+          useFetchCargoVendor = true;
+
+          nativeBuildInputs = [ pkgs.cmake ];
+
+          env = { CRATE_CC_NO_DEFAULTS = "1"; };
+
+          buildAndTestSubdir = "src/dfx";
+
+          # Disable tests as they require network access and specific setup
+          doCheck = false;
+
+          meta = {
+            description =
+              "SDK for canister smart contracts on the ICP blockchain";
+            longDescription = ''
+              The DFINITY Canister SDK (dfx) is the primary tool for creating,
+              deploying, and managing canisters for the Internet Computer.
+            '';
+            homepage = "https://github.com/dfinity/sdk";
+            license = pkgs.lib.licenses.asl20;
+            maintainers = with pkgs.lib.maintainers; [ hugolgst ];
+            platforms = [ "x86_64-linux" "x86_64-darwin" "aarch64-darwin" ];
+            mainProgram = "dfx";
+          };
+        });
 
         buildWasmDrv = pkgs.writeShellApplication {
           name = "build-wasm";
@@ -54,6 +92,16 @@
 
         apps = {
           "build:wasm" = flake-utils.lib.mkApp { drv = buildWasmDrv; };
+
+          deploy = flake-utils.lib.mkApp {
+            drv = pkgs.writeShellApplication {
+              name = "deploy";
+              runtimeInputs = [ dfx toolchain ];
+              text = ''
+                dfx deploy
+              '';
+            };
+          };
 
           test = flake-utils.lib.mkApp {
             drv = pkgs.writeShellApplication {

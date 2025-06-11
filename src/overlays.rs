@@ -90,17 +90,18 @@ pub fn ponderate_auroral_zone(lon: f64, lat: f64, score: f64) -> f64 {
 }
 
 /// Encodes the score and the derivative flag into a single byte, see specification document
-pub fn encode_score(val: f64, flag: bool) -> u8 {
-    let clamped = val.clamp(0.0, 10.0);
-    let rounded = (clamped * 10.0).round() as u8;
-    assert!(rounded <= 100);
-    let flag_bit = if flag { 1 << 7 } else { 0 };
-    flag_bit | (rounded & 0b0111_1111)
+pub fn encode_score(score: f64, derivative: u8) -> u16 {
+    let clamped = score.clamp(0.0, 10.0);
+    let scaled = (clamped * 1000.0).round() as u16;
+
+    let u2 = derivative & 0b11;
+
+    (scaled << 2) | (u2 as u16)
 }
 
 pub trait Overlays {
     fn ponderate_auroral_zone(self) -> Self;
-    fn encode(self) -> Vec<u8>;
+    fn encode(self) -> Vec<u16>;
 }
 
 impl Overlays for Vec<ScoreVector> {
@@ -114,13 +115,21 @@ impl Overlays for Vec<ScoreVector> {
             .collect()
     }
 
-    fn encode(self) -> Vec<u8> {
+    fn encode(self) -> Vec<u16> {
         self.into_iter()
-            .map(|v| encode_score(v.score, false))
+            .map(|v| {
+                encode_score(
+                    v.score,
+                    // derivative not implemented yet, 0
+                    // TODO: include derivative
+                    0,
+                )
+            })
             .collect()
     }
 }
 
+// TODO: derivative
 ///// Ponderate the derivative of the `i` component of the vector
 //pub fn ponderate_didt(didt: f64) -> f64 {
 //    if didt < 10f64 {

@@ -12,5 +12,5 @@ service : {
   a_remove_authorized_user : (principal) -> ();
   m_fit_obs : (vec ObservationVector) -> ();
   m_fit_pred : () -> ();
-  m_predict : () -> (blob);
+  m_predict : () -> (vec nat16);
 }
