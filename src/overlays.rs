@@ -26,8 +26,18 @@ fn ponderate_i(i: f64) -> f64 {
     f64::min(10.0, result)
 }
 
+/// Ponderate the derivative of the `i` component of the vector
+pub fn ponderate_didt(didt: f64) -> f64 {
+    if didt < 10f64 {
+        0f64
+    } else {
+        didt / 10f64
+    }
+}
+
 pub trait IntoScores {
     fn into_scores(self) -> Vec<ScoreVector>;
+    fn into_derivative_scores(self) -> Vec<ScoreVector>;
 }
 
 impl IntoScores for Vec<PredictionVector> {
@@ -37,6 +47,16 @@ impl IntoScores for Vec<PredictionVector> {
                 lat: pv.lat,
                 lon: pv.lon,
                 score: ponderate_i(pv.i),
+            })
+            .collect()
+    }
+
+    fn into_derivative_scores(self) -> Vec<ScoreVector> {
+        self.into_iter()
+            .map(|pv| ScoreVector {
+                lat: pv.lat,
+                lon: pv.lon,
+                score: ponderate_didt(pv.i),
             })
             .collect()
     }
@@ -102,6 +122,7 @@ pub fn encode_score(score: f64, derivative: u8) -> u16 {
 pub trait Overlays {
     fn ponderate_auroral_zone(self) -> Self;
     fn encode(self) -> Vec<u16>;
+    fn max_score_vectors(self, vec: Vec<ScoreVector>) -> Self;
 }
 
 impl Overlays for Vec<ScoreVector> {
@@ -127,14 +148,16 @@ impl Overlays for Vec<ScoreVector> {
             })
             .collect()
     }
-}
 
-// TODO: derivative
-///// Ponderate the derivative of the `i` component of the vector
-//pub fn ponderate_didt(didt: f64) -> f64 {
-//    if didt < 10f64 {
-//        0f64
-//    } else {
-//        didt / 10f64
-//    }
-//}
+    /// Select max score between two identical score vectors
+    fn max_score_vectors(self, vec: Vec<ScoreVector>) -> Self {
+        self.iter()
+            .zip(vec.iter())
+            .map(|(v1, v2)| ScoreVector {
+                lat: v1.lat,
+                lon: v1.lon,
+                score: v1.score.max(v2.score),
+            })
+            .collect()
+    }
+}
