@@ -25,7 +25,7 @@ jobs:
           registry-url: https://npm.pkg.github.com/
 
       - name: Install dependencies and publish
-        working-directory: declarations
+        working-directory: contours
         run: |
           npm install
           npm run build
