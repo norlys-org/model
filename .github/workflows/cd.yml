@@ -45,11 +45,11 @@ jobs:
           submodules: true
           token: ${{ secrets.API_TOKEN }}
 
-      - name: Install Nix
-        uses: cachix/install-nix-action@v24
+      - name: Install dfx
+        uses: dfinity/setup-dfx@main
 
-      - name: Build Declarations with Nix
-        run: nix run --option sandbox false .#build:declarations
+      - name: Run DFX generate
+        run: dfx generate
 
       - name: Set up Node.js for GitHub Packages
         uses: actions/setup-node@v4
