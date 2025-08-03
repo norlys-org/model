@@ -49,7 +49,7 @@ jobs:
         uses: cachix/install-nix-action@v24
 
       - name: Build Declarations with Nix
-        run: nix run .#build:declarations --impure
+        run: nix run --option sandbox false .#build:declarations
 
       - name: Set up Node.js for GitHub Packages
         uses: actions/setup-node@v4
