@@ -16,7 +16,8 @@ export interface _SERVICE {
   'a_remove_authorized_user' : ActorMethod<[Principal], undefined>,
   'm_fit_obs' : ActorMethod<[Array<ObservationVector>], undefined>,
   'm_fit_pred' : ActorMethod<[], undefined>,
-  'm_predict' : ActorMethod<[], Uint8Array | number[]>,
+  'm_predict' : ActorMethod<[boolean], undefined>,
+  'm_scores' : ActorMethod<[], Uint16Array | number[]>,
 }
 export declare const idlFactory: IDL.InterfaceFactory;
 export declare const init: (args: { IDL: typeof IDL }) => IDL.Type[];

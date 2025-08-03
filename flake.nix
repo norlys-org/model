@@ -103,6 +103,16 @@
             };
           };
 
+          "build:declarations" = flake-utils.lib.mkApp {
+            drv = pkgs.writeShellApplication {
+              name = "declarations";
+              runtimeInputs = [ dfx toolchain ];
+              text = ''
+                dfx generate
+              '';
+            };
+          };
+
           test = flake-utils.lib.mkApp {
             drv = pkgs.writeShellApplication {
               name = "test";
