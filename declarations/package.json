@@ -1,6 +1,6 @@
 {
   "name": "@norlys-org/declarations",
-  "version": "25.06.10",
+  "version": "25.08.03",
   "description": "norlys model canister declarations",
   "type": "module",
   "main": "src/index.js",

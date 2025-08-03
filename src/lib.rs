@@ -1,7 +1,7 @@
 use geo::geographical_grid;
 use ic_cdk::caller;
-use model::{ObservationVector, SECS};
-use overlays::{IntoScores, Overlays};
+use model::{ObservationVector, PredictionVector, SECS};
+use overlays::{IntoScores, Overlays, ScoreVector};
 
 use std::cell::RefCell;
 use std::collections::HashSet;
@@ -15,11 +15,45 @@ mod sphere;
 mod svd;
 mod t_df;
 
+#[derive(Clone)]
+struct PredictionStorage {
+    /// Predictions from the absolute observations
+    abs: Option<Vec<ScoreVector>>,
+    /// Predictions from the derivative
+    drv: Option<Vec<ScoreVector>>,
+}
+
 // MARK: Storage
 // storage in heap memory since it is not sensitive and can suffer from a refresh on install
 thread_local! {
     static STORED_SECS: RefCell<Option<SECS>> = RefCell::new(None);
+    static PREDICTIONS: RefCell<PredictionStorage> = RefCell::new(PredictionStorage { abs: None, drv: None });
     static AUTHORIZED_USERS: RefCell<HashSet<Principal>> = RefCell::new(HashSet::new());
+}
+
+impl PredictionStorage {
+    pub fn load() -> Self {
+        PREDICTIONS.with(|p| p.borrow().clone())
+    }
+
+    /// Store the given data either in `.abs` or `.drv` depending on `is_derivative`
+    pub fn store(data: Vec<ScoreVector>, is_derivative: bool) {
+        let buf = PREDICTIONS.with(|p| p.borrow().clone());
+
+        PREDICTIONS.with(|p| {
+            if is_derivative {
+                *p.borrow_mut() = PredictionStorage {
+                    abs: buf.abs,
+                    drv: Some(data),
+                };
+            } else {
+                *p.borrow_mut() = PredictionStorage {
+                    drv: buf.drv,
+                    abs: Some(data),
+                };
+            }
+        });
+    }
 }
 
 impl SECS {
@@ -124,14 +158,33 @@ pub fn m_fit_pred() {
 }
 
 #[ic_cdk::update]
-pub fn m_predict() -> Vec<u8> {
+pub fn m_predict(is_derivative: bool) {
     require_authorization();
 
     let secs = SECS::load();
-    secs.predict()
-        .into_scores()
-        .ponderate_auroral_zone()
-        .encode()
+    let raw_prediction: Vec<PredictionVector> = secs.predict();
+    let prediction: Vec<ScoreVector> = if is_derivative {
+        raw_prediction.into_derivative_scores()
+    } else {
+        raw_prediction.into_scores()
+    };
+
+    PredictionStorage::store(prediction.ponderate_auroral_zone(), is_derivative);
+}
+
+#[ic_cdk::update]
+pub fn m_scores() -> Vec<u16> {
+    require_authorization();
+
+    let predictions = PredictionStorage::load();
+    match predictions.drv {
+        None => predictions.abs.unwrap_or_default().encode(),
+        Some(drv) => predictions
+            .abs
+            .unwrap_or_default()
+            .max_score_vectors(drv)
+            .encode(),
+    }
 }
 
 ic_cdk::export_candid!();

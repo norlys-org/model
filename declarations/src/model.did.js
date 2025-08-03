@@ -17,7 +17,8 @@ export const idlFactory = ({ IDL }) => {
     'a_remove_authorized_user' : IDL.Func([IDL.Principal], [], []),
     'm_fit_obs' : IDL.Func([IDL.Vec(ObservationVector)], [], []),
     'm_fit_pred' : IDL.Func([], [], []),
-    'm_predict' : IDL.Func([], [IDL.Vec(IDL.Nat8)], []),
+    'm_predict' : IDL.Func([IDL.Bool], [], []),
+    'm_scores' : IDL.Func([], [IDL.Vec(IDL.Nat16)], []),
   });
 };
 export const init = ({ IDL }) => { return []; };
