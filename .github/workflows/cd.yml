@@ -1,4 +1,4 @@
-name: Publish WASM to GitHub Packages
+name: Build + Publish Node
 
 on:
   push:
