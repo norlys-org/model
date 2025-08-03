@@ -48,7 +48,7 @@ jobs:
       - name: Install Nix
         uses: cachix/install-nix-action@v24
 
-      - name: Build WASM with Nix
+      - name: Build Declarations with Nix
         run: nix run .#build:declarations
 
       - name: Set up Node.js for GitHub Packages
