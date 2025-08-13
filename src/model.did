@@ -10,7 +10,7 @@ service : {
   a_initialize_authorized_user : (principal) -> ();
   a_list_authorized_users : () -> (vec principal) query;
   a_remove_authorized_user : (principal) -> ();
-  m_fit_obs : (vec ObservationVector) -> ();
+  m_fit_obs : (vec ObservationVector) -> (bool);
   m_fit_pred : () -> ();
   m_predict : (bool) -> ();
   m_scores : () -> (vec nat16);

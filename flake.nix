@@ -66,6 +66,24 @@
           };
         });
 
+        candidExtractor = pkgs.rustPlatform.buildRustPackage rec {
+          pname = "candid-extractor";
+          version = "0.1.4";
+
+          src = pkgs.fetchCrate {
+            inherit pname version;
+            hash = "sha256-WXloakYszZkAdSRYRkIiSEO6xYL2D0prVxc5yecJ0Ss=";
+          };
+
+          cargoHash = "sha256-bMnT/4RqmUbzMvZNcjmZsAF86j3TzH/FT2OVSh7Q7UE=";
+
+          meta = {
+            description = "Tool to extract Candid interface from Wasm binaries";
+            homepage = "https://crates.io/crates/candid-extractor";
+            license = pkgs.lib.licenses.asl20;
+          };
+        };
+
         buildWasmDrv = pkgs.writeShellApplication {
           name = "build-wasm";
           runtimeInputs = [ pkgs.wasm-pack toolchain ];
@@ -92,6 +110,22 @@
 
         apps = {
           "build:wasm" = flake-utils.lib.mkApp { drv = buildWasmDrv; };
+
+          "build:candid" = flake-utils.lib.mkApp {
+            drv = pkgs.writeShellApplication {
+              name = "build-candid";
+              runtimeInputs = [ toolchain candidExtractor ];
+              text = ''
+                echo "$ cargo build --release --target wasm32-unknown-unknown --package model"
+                cargo build --release --target wasm32-unknown-unknown --package model
+
+                echo "$ candid-extractor target/wasm32-unknown-unknown/release/model.wasm > src/model.did"
+                candid-extractor target/wasm32-unknown-unknown/release/model.wasm > src/model.did
+
+                echo "Candid interface extracted to src/model.did"
+              '';
+            };
+          };
 
           deploy = flake-utils.lib.mkApp {
             drv = pkgs.writeShellApplication {
@@ -149,7 +183,7 @@
         };
 
         devShell = pkgs.mkShell {
-          buildInputs = with pkgs; [ rustc cargo clippy ];
+          buildInputs = with pkgs; [ rustc cargo clippy candidExtractor ];
           shellHook = ''
             echo "norlys model development environment"
           '';

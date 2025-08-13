@@ -133,8 +133,9 @@ pub fn a_initialize_authorized_user(user_principal: Principal) {
 // Requiring authorization on all update calls since we rely on the memory set after each
 // prefix m_ for model
 
+// Returns whether fiting predictions is neccesary
 #[ic_cdk::update]
-pub fn m_fit_obs(obs: Vec<ObservationVector>) {
+pub fn m_fit_obs(obs: Vec<ObservationVector>) -> bool {
     require_authorization();
 
     let mut secs: SECS = if STORED_SECS.with(|storage| storage.borrow().is_some()) {
@@ -144,7 +145,9 @@ pub fn m_fit_obs(obs: Vec<ObservationVector>) {
     };
 
     secs.fit(&obs, 0.0, 0.05);
+    let needs_pred_fit = secs.t_pred_cache.is_none();
     secs.store();
+    needs_pred_fit
 }
 
 #[ic_cdk::update]
