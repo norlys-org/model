@@ -64,7 +64,7 @@ impl IntoScores for Vec<PredictionVector> {
 
 /// Approximate the distance between two points on a sphere given in degrees
 fn approx_distance(lat1: f64, lon1: f64, lat2: f64, lon2: f64) -> f64 {
-    let to_rad = |angle: f64| -> f64 { angle * PI };
+    let to_rad = |angle: f64| -> f64 { angle * PI / 180.0 };
     let lat1_rad = to_rad(lat1);
     let lat2_rad = to_rad(lat2);
 
