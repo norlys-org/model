@@ -161,18 +161,20 @@ pub fn m_fit_pred() {
 }
 
 #[ic_cdk::update]
-pub fn m_predict(is_derivative: bool) {
+pub fn m_predict(is_derivative: bool) -> Vec<PredictionVector> {
     require_authorization();
 
     let secs = SECS::load();
     let raw_prediction: Vec<PredictionVector> = secs.predict();
     let prediction: Vec<ScoreVector> = if is_derivative {
-        raw_prediction.into_derivative_scores()
+        raw_prediction.clone().into_derivative_scores()
     } else {
-        raw_prediction.into_scores()
+        raw_prediction.clone().into_scores()
     };
 
     PredictionStorage::store(prediction.ponderate_auroral_zone(), is_derivative);
+
+    raw_prediction
 }
 
 #[ic_cdk::update]

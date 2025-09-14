@@ -5,6 +5,13 @@ type ObservationVector = record {
   lat : float64;
   lon : float64;
 };
+type PredictionVector = record {
+  i : float64;
+  j : float64;
+  k : float64;
+  lat : float64;
+  lon : float64;
+};
 service : {
   a_add_authorized_user : (principal) -> ();
   a_initialize_authorized_user : (principal) -> ();
@@ -12,6 +19,6 @@ service : {
   a_remove_authorized_user : (principal) -> ();
   m_fit_obs : (vec ObservationVector) -> (bool);
   m_fit_pred : () -> ();
-  m_predict : (bool) -> ();
+  m_predict : (bool) -> (vec PredictionVector);
   m_scores : () -> (vec nat16);
 }

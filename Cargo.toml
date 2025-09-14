@@ -2,7 +2,7 @@
 name = "model"
 description = "norlys.live model"
 repository = "https://github.com/norlys-org/model"
-version = "0.25.8"
+version = "0.25.9"
 edition = "2021"
 
 [lib]
