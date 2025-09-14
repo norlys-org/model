@@ -46,7 +46,7 @@ impl IntoScores for Vec<PredictionVector> {
             .map(|pv| ScoreVector {
                 lat: pv.lat,
                 lon: pv.lon,
-                score: ponderate_i(pv.i),
+                score: ponderate_i(pv.i.abs()),
             })
             .collect()
     }
@@ -56,7 +56,7 @@ impl IntoScores for Vec<PredictionVector> {
             .map(|pv| ScoreVector {
                 lat: pv.lat,
                 lon: pv.lon,
-                score: ponderate_didt(pv.i),
+                score: ponderate_didt(pv.i.abs()),
             })
             .collect()
     }
@@ -102,7 +102,7 @@ fn auroral_zone_weight(d: f64) -> f64 {
 pub fn ponderate_auroral_zone(lon: f64, lat: f64, score: f64) -> f64 {
     let geomag_n_pole: (f64, f64) = (-72.6_f64, 80.9_f64);
 
-    let d = approx_distance(lat, lon, geomag_n_pole.0, geomag_n_pole.1);
+    let d = approx_distance(lat, lon, geomag_n_pole.1, geomag_n_pole.0);
     let w = auroral_zone_weight(d);
 
     // score: f64::max(vec.score * w, ponderate_didt())
