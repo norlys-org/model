@@ -23,7 +23,7 @@ fn ponderate_i(i: f64) -> f64 {
     let denominator = 1.0 + (i / 1055.17).powf(0.8849212);
     let result = 22.81964 + numerator / denominator;
 
-    f64::min(10.0, result)
+    result.clamp(0.0, 10.0)
 }
 
 /// Ponderate the derivative of the `i` component of the vector
