@@ -1,6 +1,6 @@
 {
   "name": "@norlys-org/contours",
-  "version": "25.08.13",
+  "version": "25.09.14",
   "description": "contour generator for norlys model",
   "main": "index.js",
   "types": "index.d.ts",
