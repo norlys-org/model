@@ -141,10 +141,17 @@ pub fn m_fit_obs(obs: Vec<ObservationVector>) -> bool {
     let mut secs: SECS = if STORED_SECS.with(|storage| storage.borrow().is_some()) {
         SECS::load()
     } else {
-        SECS::new(geographical_grid(45.0..85.0, 37, -170.0..35.0, 74), 0.0)
+        SECS::new(geographical_grid(45.0..85.0, 50, -170.0..35.0, 50), 110e3)
     };
 
-    secs.fit(&obs, 0.0, 0.05);
+    let obs_zero_k: Vec<ObservationVector> = obs
+        .into_iter()
+        .map(|mut o| {
+            o.k = 0.0;
+            o
+        })
+        .collect();
+    secs.fit(&obs_zero_k, 0.0, 0.1);
     let needs_pred_fit = secs.t_pred_cache.is_none();
     secs.store();
     needs_pred_fit
@@ -215,9 +222,12 @@ mod benches {
 #[cfg(test)]
 mod tests {
     use approx::assert_relative_eq;
+    use ndarray::Array2;
 
     use super::*;
     use crate::{geo::GeographicalPoint, model::PredictionVector};
+    use serde_json;
+    use std::fs;
 
     // #[test]
     // fn test_large_infer() {
@@ -240,6 +250,518 @@ mod tests {
     //
     //     println!("{:?}", pred);
     // }
+    //
+
+    #[test]
+    fn test_ic() {
+        let obs = vec![
+            ObservationVector {
+                lon: 11.95,
+                lat: 78.92,
+                i: 4.0,
+                j: 2.0,
+                k: 0.0,
+            },
+            ObservationVector {
+                lon: 15.82,
+                lat: 78.2,
+                i: -34.0,
+                j: -32.0,
+                k: 2.0,
+            },
+            ObservationVector {
+                lon: 25.01,
+                lat: 76.51,
+                i: -61.0,
+                j: 4.0,
+                k: 0.0,
+            },
+            ObservationVector {
+                lon: 19.2,
+                lat: 74.5,
+                i: -123.0,
+                j: -30.0,
+                k: 1.0,
+            },
+            ObservationVector {
+                lon: 351.3,
+                lat: 70.9,
+                i: 5.0,
+                j: -25.0,
+                k: 0.0,
+            },
+            ObservationVector {
+                lon: 25.79,
+                lat: 71.09,
+                i: 17.0,
+                j: -24.0,
+                k: 1.0,
+            },
+            ObservationVector {
+                lon: 12.1,
+                lat: 67.53,
+                i: 74.0,
+                j: -21.0,
+                k: 4.0,
+            },
+            ObservationVector {
+                lon: 22.22,
+                lat: 70.54,
+                i: 17.0,
+                j: -26.0,
+                k: 1.0,
+            },
+            ObservationVector {
+                lon: 27.01,
+                lat: 69.76,
+                i: 10.66666666666606,
+                j: -25.0,
+                k: 0.0,
+            },
+            ObservationVector {
+                lon: 18.94,
+                lat: 69.66,
+                i: 38.0,
+                j: -31.0,
+                k: 3.0,
+            },
+            ObservationVector {
+                lon: 26.63,
+                lat: 67.37,
+                i: 56.089285714286234,
+                j: -11.428571428571558,
+                k: 0.0,
+            },
+            ObservationVector {
+                lon: 23.7,
+                lat: 69.46,
+                i: 19.33333333333394,
+                j: -24.888888888888914,
+                k: 6.0,
+            },
+            ObservationVector {
+                lon: 16.03,
+                lat: 69.3,
+                i: 53.0,
+                j: -35.0,
+                k: 2.0,
+            },
+            ObservationVector {
+                lon: 16.98,
+                lat: 66.4,
+                i: 47.0,
+                j: -18.0,
+                k: 1.0,
+            },
+            ObservationVector {
+                lon: 27.29,
+                lat: 68.56,
+                i: 24.0,
+                j: -23.0,
+                k: 0.0,
+            },
+            ObservationVector {
+                lon: 24.08,
+                lat: 66.9,
+                i: 46.33333333333394,
+                j: -12.888888888888687,
+                k: 0.0,
+            },
+            ObservationVector {
+                lon: 12.5,
+                lat: 66.11,
+                i: 82.0,
+                j: 1697.0,
+                k: 2.0,
+            },
+            ObservationVector {
+                lon: 26.25,
+                lat: 65.54,
+                i: 31.0,
+                j: -12.0,
+                k: 0.0,
+            },
+            ObservationVector {
+                lon: 10.98,
+                lat: 64.94,
+                i: 27.0,
+                j: -16.0,
+                k: 1.0,
+            },
+            ObservationVector {
+                lon: 27.23,
+                lat: 64.52,
+                i: 17.83333333333212,
+                j: -10.41666666666697,
+                k: 0.0,
+            },
+            ObservationVector {
+                lon: 30.97,
+                lat: 62.77,
+                i: 12.66666666666606,
+                j: -7.0,
+                k: 0.0,
+            },
+            ObservationVector {
+                lon: 26.6,
+                lat: 62.25,
+                i: 11.33333333333394,
+                j: -12.0,
+                k: 0.0,
+            },
+            ObservationVector {
+                lon: 9.11,
+                lat: 62.07,
+                i: 15.0,
+                j: -17.0,
+                k: 0.0,
+            },
+            ObservationVector {
+                lon: 4.84,
+                lat: 61.08,
+                i: 13.0,
+                j: -17.0,
+                k: 1.0,
+            },
+            ObservationVector {
+                lon: 10.75,
+                lat: 60.21,
+                i: 51.0,
+                j: -10.0,
+                k: 1.0,
+            },
+            ObservationVector {
+                lon: 24.65,
+                lat: 60.5,
+                i: 13.33333333333394,
+                j: -12.0,
+                k: 0.0,
+            },
+            ObservationVector {
+                lon: 5.24,
+                lat: 59.21,
+                i: 12.0,
+                j: -18.0,
+                k: 0.0,
+            },
+            ObservationVector {
+                lon: 26.46,
+                lat: 58.26,
+                i: 17.70833333333212,
+                j: -14.0,
+                k: 0.0,
+            },
+            ObservationVector {
+                lon: 290.77,
+                lat: 77.47,
+                i: -25.0,
+                j: 8.0,
+                k: 0.0,
+            },
+            ObservationVector {
+                lon: 321.7,
+                lat: 72.3,
+                i: -34.0,
+                j: 29.0,
+                k: -1.0,
+            },
+            ObservationVector {
+                lon: 306.47,
+                lat: 69.25,
+                i: -1.0,
+                j: 26.0,
+                k: -2.0,
+            },
+            ObservationVector {
+                lon: 314.56,
+                lat: 61.16,
+                i: -6.0,
+                j: 20.66666666666697,
+                k: 0.0,
+            },
+            ObservationVector {
+                lon: 254.763,
+                lat: 40.137,
+                i: 13.0,
+                j: -15.0,
+                k: 0.0,
+            },
+            ObservationVector {
+                lon: 203.378,
+                lat: 71.322,
+                i: 5.0,
+                j: 18.0,
+                k: 5.0,
+            },
+            ObservationVector {
+                lon: 242.878,
+                lat: 48.265,
+                i: -2.0,
+                j: -9.0,
+                k: -1.0,
+            },
+            ObservationVector {
+                lon: 224.675,
+                lat: 57.058,
+                i: -11.0,
+                j: 14.0,
+                k: -2.0,
+            },
+            ObservationVector {
+                lon: 297.647,
+                lat: 82.497,
+                i: -27.4949951171875,
+                j: -24.8551025390625,
+                k: -6.679931640625,
+            },
+            ObservationVector {
+                lon: 264.0,
+                lat: 64.3,
+                i: -4.070068359375,
+                j: -17.900009155273438,
+                k: 0.22998046875,
+            },
+            ObservationVector {
+                lon: 262.9,
+                lat: 49.6,
+                i: -12.27490234375,
+                j: -20.7900390625,
+                k: 2.1796875,
+            },
+            ObservationVector {
+                lon: 255.0,
+                lat: 69.2,
+                i: -36.534912109375,
+                j: -20.865020751953125,
+                k: 3.02978515625,
+            },
+            ObservationVector {
+                lon: 274.1,
+                lat: 80.0,
+                i: 66.070068359375,
+                j: -163.27001953125,
+                k: -1.730224609375,
+            },
+            ObservationVector {
+                lon: 265.9,
+                lat: 58.8,
+                i: -4.642578125,
+                j: -28.399993896484375,
+                k: -0.5,
+            },
+            ObservationVector {
+                lon: 291.5,
+                lat: 63.8,
+                i: 51.789794921875,
+                j: -14.5950927734375,
+                k: -1.8896484375,
+            },
+            ObservationVector {
+                lon: 246.7,
+                lat: 54.6,
+                i: -9.5390625,
+                j: -1.630126953125,
+                k: 0.7392578125,
+            },
+            ObservationVector {
+                lon: 284.5,
+                lat: 45.4,
+                i: -5.079345703125,
+                j: -29.310302734375,
+                k: -1.23046875,
+            },
+            ObservationVector {
+                lon: 265.1,
+                lat: 74.7,
+                i: -41.2532324598551,
+                j: -140.4658432006836,
+                k: 17.650146484375,
+            },
+            ObservationVector {
+                lon: 245.5,
+                lat: 62.4,
+                i: -4.810546875,
+                j: -32.288499124005284,
+                k: 0.080078125,
+            },
+            ObservationVector {
+                lon: 307.3,
+                lat: 47.6,
+                i: 0.5225824004955939,
+                j: -31.922744140625582,
+                k: 0.470703125,
+            },
+            ObservationVector {
+                lon: 236.6,
+                lat: 48.6,
+                i: 19.917784737219336,
+                j: 22.48283650507892,
+                k: 0.41015625,
+            },
+            ObservationVector {
+                lon: -147.447,
+                lat: 65.136,
+                i: 46.95000000000073,
+                j: 23.0,
+                k: -1.090909090909091,
+            },
+            ObservationVector {
+                lon: -141.205,
+                lat: 64.786,
+                i: 37.0,
+                j: 5.0,
+                k: 3.5999999999999996,
+            },
+            ObservationVector {
+                lon: -149.592,
+                lat: 68.627,
+                i: -23.183333333333394,
+                j: 139.14166666666665,
+                k: -3.272727272727273,
+            },
+            ObservationVector {
+                lon: 18.823,
+                lat: 68.358,
+                i: 83.90833333333285,
+                j: -32.11666666666679,
+                k: -2.0,
+            },
+            ObservationVector {
+                lon: 58.567,
+                lat: 56.433,
+                i: 37.65476190476147,
+                j: -1.5714285714284415,
+                k: -2.0,
+            },
+            ObservationVector {
+                lon: 20.789,
+                lat: 51.836,
+                i: 28.458408679929562,
+                j: -2.423146473779525,
+                k: -2.0,
+            },
+            ObservationVector {
+                lon: 2.26,
+                lat: 48.025,
+                i: 26.0,
+                j: -25.0,
+                k: 0.0,
+            },
+            ObservationVector {
+                lon: 4.6,
+                lat: 50.1,
+                i: 17.0,
+                j: -17.0,
+                k: 1.0,
+            },
+            ObservationVector {
+                lon: 343.559,
+                lat: 28.321,
+                i: 16.16666666666788,
+                j: -25.0,
+                k: 1.0,
+            },
+            ObservationVector {
+                lon: 18.811,
+                lat: 54.603,
+                i: 38.0,
+                j: 19.0,
+                k: -3.0,
+            },
+            ObservationVector {
+                lon: 15.55,
+                lat: 77.0,
+                i: 56.0,
+                j: 17.0,
+                k: -2.0,
+            },
+            ObservationVector {
+                lon: 18.748,
+                lat: 64.612,
+                i: 35.0,
+                j: -31.0,
+                k: -2.0,
+            },
+            ObservationVector {
+                lon: 5.682,
+                lat: 50.298,
+                i: 21.0,
+                j: -20.0,
+                k: 0.0,
+            },
+            ObservationVector {
+                lon: 26.25,
+                lat: 44.68,
+                i: 30.0,
+                j: -16.0,
+                k: 1.0,
+            },
+            ObservationVector {
+                lon: 249.27,
+                lat: 32.17,
+                i: 23.0,
+                j: -6.0,
+                k: 0.0,
+            },
+            ObservationVector {
+                lon: 17.353,
+                lat: 59.903,
+                i: 10.0,
+                j: -17.0,
+                k: -3.0,
+            },
+        ];
+
+        let mut secs = SECS::new(geographical_grid(45.0..85.0, 50, -170.0..35.0, 50), 110e3);
+        let obs_zero_k: Vec<ObservationVector> = obs
+            .into_iter()
+            .map(|mut o| {
+                o.k = 0.0;
+                o
+            })
+            .collect();
+        secs.fit(&obs_zero_k, 0.0, 0.1);
+
+        // MARK: Amplitudes
+        let json_content =
+            fs::read_to_string("resources/sec_amps.json").expect("Failed to read JSON file");
+        let expected_vec: Vec<Vec<f64>> =
+            serde_json::from_str(&json_content).expect("Failed to parse JSON");
+
+        let rows = expected_vec.len();
+        let cols = expected_vec[0].len();
+        let flat_expected: Vec<f64> = expected_vec.into_iter().flatten().collect();
+        let expected = Array2::from_shape_vec((rows, cols), flat_expected)
+            .expect("Failed to create Array2 from JSON data");
+
+        let calculated = secs.sec_amps.as_ref().expect("sec_amps should be Some");
+
+        assert_eq!(
+            calculated.shape(),
+            expected.shape(),
+            "Sec ampls dimensions don't match: calculated {:?} vs expected {:?}",
+            calculated.shape(),
+            expected.shape()
+        );
+        assert_relative_eq!(
+            calculated.as_slice().unwrap(),
+            expected.as_slice().unwrap(),
+            max_relative = 1e-15
+        );
+
+        std::fs::write(
+            "rust_sec_amps.json",
+            serde_json::to_string(&secs.sec_amps).unwrap(),
+        )
+        .unwrap();
+
+        let pred_grid = geographical_grid(45.0..85.0, 37, -180.0..179.0, 130);
+        secs.calc_t_pred(&pred_grid, 110e3);
+
+        let pred: Vec<PredictionVector> = secs.predict();
+
+        std::fs::write("pred.json", serde_json::to_string(&pred).unwrap()).unwrap();
+    }
 
     #[test]
     fn test_infer() {
