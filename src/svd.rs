@@ -65,6 +65,58 @@ mod tests {
     use approx::assert_relative_eq;
 
     use super::*;
+    use std::fs;
+
+    #[test]
+    fn test_svd_real() {
+        let json_content =
+            fs::read_to_string("resources/t_obs_flat.json").expect("Failed to read JSON file");
+        let input_vec: Vec<Vec<f64>> =
+            serde_json::from_str(&json_content).expect("Failed to parse JSON");
+
+        let rows = input_vec.len();
+        let cols = input_vec[0].len();
+        let flat_input: Vec<f64> = input_vec.into_iter().flatten().collect();
+        let input = Array2::from_shape_vec((rows, cols), flat_input)
+            .expect("Failed to create Array2 from JSON data");
+
+        let calculated = svd(&input, 0.1);
+
+        let json_content =
+            fs::read_to_string("resources/vwu.json").expect("Failed to read JSON file");
+        let expected_vec: Vec<Vec<f64>> =
+            serde_json::from_str(&json_content).expect("Failed to parse JSON");
+
+        let rows = expected_vec.len();
+        let cols = expected_vec[0].len();
+        let flat_expected: Vec<f64> = expected_vec.into_iter().flatten().collect();
+        let expected = Array2::from_shape_vec((rows, cols), flat_expected)
+            .expect("Failed to create Array2 from JSON data");
+
+        let calc = calculated.as_slice().unwrap();
+        let exp = expected.as_slice().unwrap();
+        assert_eq!(calculated.shape(), expected.shape());
+        let mut failed = false;
+        for i in 0..calc.len().min(10) {
+            let rel_err = ((calc[i] - exp[i]) / exp[i]).abs();
+            if rel_err > 1e-10 {
+                println!(
+                    "idx {}: calc={:.6e}, exp={:.6e}, rel_err={:.2e}",
+                    i, calc[i], exp[i], rel_err
+                );
+                failed = true;
+            }
+        }
+        assert!(!failed, "First 10 values already show large error");
+        assert_eq!(
+            calculated.shape(),
+            expected.shape(),
+            "VWU dimensions don't match: calculated {:?} vs expected {:?}",
+            calculated.shape(),
+            expected.shape()
+        );
+        assert_relative_eq!(calc, exp, max_relative = 1e-5);
+    }
 
     #[test]
     fn test_svd_few_points() {
