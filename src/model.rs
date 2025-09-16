@@ -98,7 +98,6 @@ impl SECS {
         }
 
         // SVD
-        println!("{:?}", self.t_obs_flat_cache);
         let vwu: Array2<f64> = svd(self.t_obs_flat_cache.as_ref().unwrap(), epsilon);
         self.sec_amps = Some(obs_b.dot(&vwu.t()));
     }
